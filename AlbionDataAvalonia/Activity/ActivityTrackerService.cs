@@ -1171,6 +1171,7 @@ public sealed partial class ActivityTrackerService : IDisposable
                 InterruptIfGameLeft(now);
                 FlushStalePath(now);
                 if (headersDirty) SaveHeaders();
+                FlushRememberedResources(now);
             }
             catch (Exception error) { Log.Warning(error, "Failed to update activity recording state."); }
         }
@@ -1358,7 +1359,7 @@ public sealed partial class ActivityTrackerService : IDisposable
 
     public void Dispose()
     {
-        lock (sync) { if (disposed) return; disposed = true; }
+        lock (sync) { if (disposed) return; disposed = true; FlushRememberedResources(DateTime.UtcNow, force: true); }
         timer.Dispose(); loot.Dispose();
         settings.UserSettings.PropertyChanged -= SettingsChanged;
         persistence.StatusChanged -= StorageChanged;

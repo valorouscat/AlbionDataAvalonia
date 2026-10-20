@@ -43,6 +43,8 @@ public sealed class ActivityMapCanvas : Control
     // Markers of one kind closer than this on screen are drawn as one group.
     private const double ClusterRadius = 16;
     private const int GroupLinesShown = 6;
+    private const double RememberedOpacity = 0.55;
+    private const double RememberedGatheredOpacity = 0.4;
     private const double SpotSpacing = 22;
     // The live position updates a few times a second. The marker, and the view while following, glide to
     // each new one over about as long as the last update took, so walking reads as movement, not hops.
@@ -372,16 +374,34 @@ public sealed class ActivityMapCanvas : Control
             group.Nodes.Add(node);
         }
 
-        // The lowest groups first, so the best nodes end up on top.
+        // The lowest groups first, so the best nodes end up on top. A node remembered from an earlier visit is drawn
+        // faded, and one gathered out is only a ring, so the nodes in view now stand out.
         foreach (var group in Enumerable.Reverse(groups))
         {
             var best = group.Nodes[0];
             var count = group.Nodes.Count;
             var radius = count > 1 ? 8.5 : 7.5;
-            var edge = best.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(best.Enchantment), 2.4) : OutlinePen;
-            context.DrawEllipse(UiPalette.Brush(ActivityPalette.Resource(best.Family)), edge, group.At, radius, radius);
-            var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 9, UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
-            tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
+            var color = ActivityPalette.Resource(best.Family);
+            var gathered = best.GatheredAtUtc is not null;
+            using (context.PushOpacity(best.Live ? 1 : gathered ? RememberedGatheredOpacity : RememberedOpacity))
+            {
+                var edge = gathered ? UiPalette.Pen(color, 2.2)
+                    : best.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(best.Enchantment), 2.4) : OutlinePen;
+                context.DrawEllipse(gathered ? null : UiPalette.Brush(color), edge, group.At, radius, radius);
+                var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 9,
+                    gathered ? color : UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
+                tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
+                // What a single node has left, under it, so a glance tells a full node from a picked one.
+                if (count == 1 && !gathered && best.Charges > 0)
+                {
+                    var left = ChartDrawing.Text(UiFormat.Whole(best.Charges), 8, UiPalette.Color("UiMapResourceChargesColor"), FontWeight.Bold);
+                    var origin = new Point(group.At.X - left.Width / 2, group.At.Y + radius + 1);
+                    context.DrawRectangle(UiPalette.Brush(UiPalette.WithAlpha(UiPalette.Color("UiMapResourceTextColor"), 190)), null,
+                        new Rect(origin.X - 2, origin.Y, left.Width + 4, left.Height), 3, 3);
+                    left.Draw(context, origin);
+                }
+            }
+
             if (count > 1) ChartDrawing.DrawCountBadge(context, group.At, count);
             hits.Add(count == 1 ? ResourceHit(group.At, best, scene) : ResourceGroupHit(group.At, group.Nodes));
         }
@@ -390,20 +410,39 @@ public sealed class ActivityMapCanvas : Control
     private static string ResourceLabel(ActivityResourceNode node) =>
         $"T{node.Tier}{(node.Enchantment > 0 ? $".{node.Enchantment}" : "")} {node.Family}";
 
-    private static Hit ResourceHit(Point at, ActivityResourceNode node, ActivityMapScene scene) =>
-        new(at, 9, ResourceLabel(node), [$"Seen {UiFormat.Ago(node.SeenAtUtc, scene.NowUtc)}"],
-            [new ItemRow(node.ItemUniqueName, 1, node.Charges > 0 ? $"{UiFormat.Whole(node.Charges)} left" : "Charges unknown", "")]);
+    private static Hit ResourceHit(Point at, ActivityResourceNode node, ActivityMapScene scene)
+    {
+        if (node.GatheredAtUtc is { } gathered)
+            return new(at, 9, ResourceLabel(node), [$"Gathered out {UiFormat.TimeAgo(gathered, scene.NowUtc)}",
+                "It may have grown back since; the game shows it again once you're near"], [new ItemRow(node.ItemUniqueName, 1, "None left", "")]);
+        var left = node.Charges > 0 ? $"{UiFormat.Whole(node.Charges)} left" : "Charges unknown";
+        return node.Live
+            ? new(at, 9, ResourceLabel(node), [$"Seen {UiFormat.Ago(node.SeenAtUtc, scene.NowUtc)}"], [new ItemRow(node.ItemUniqueName, 1, left, "")])
+            : new(at, 9, ResourceLabel(node), [$"Remembered: last seen {UiFormat.TimeAgo(node.SeenAtUtc, scene.NowUtc)}",
+                "Not in view this visit, so it may have changed"], [new ItemRow(node.ItemUniqueName, 1, $"{left} when seen", "")]);
+    }
 
-    // A group lists its kinds of resource, the best first, with how many nodes of each it holds.
+    // A group lists its kinds of resource, the best first, with how many nodes of each it holds and how many of
+    // those are remembered rather than in view.
     private static Hit ResourceGroupHit(Point at, IReadOnlyList<ActivityResourceNode> nodes)
     {
         var kinds = nodes.GroupBy(x => (x.Family, x.Tier, x.Enchantment)).ToArray();
         var rows = kinds.Take(GroupLinesShown).Select(x => new ItemRow(x.First().ItemUniqueName, 1, ResourceLabel(x.First()),
-            UiFormat.Count(x.Count(), "node"))).ToArray();
+            KindCount(x.ToArray()))).ToArray();
         var lines = new List<string>();
         if (kinds.Length > GroupLinesShown) lines.Add($"and {UiFormat.Count(kinds.Length - GroupLinesShown, "more kind")}");
         lines.Add("Zoom in to see each node");
         return new(at, 11, UiFormat.Count(nodes.Count, "resource node"), lines, rows);
+    }
+
+    private static string KindCount(IReadOnlyList<ActivityResourceNode> nodes)
+    {
+        var remembered = nodes.Count(x => !x.Live && x.GatheredAtUtc is null);
+        var gathered = nodes.Count(x => x.GatheredAtUtc is not null);
+        var parts = new List<string> { UiFormat.Count(nodes.Count, "node") };
+        if (remembered > 0) parts.Add($"{remembered} remembered");
+        if (gathered > 0) parts.Add($"{gathered} gathered out");
+        return string.Join(", ", parts);
     }
 
     private void DrawPath(DrawingContext context, ActivityMapScene scene, double scale)

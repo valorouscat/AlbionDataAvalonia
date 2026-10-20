@@ -150,6 +150,7 @@
     <Color x:Key="UiEnchant3Color">#B06CF0</Color>
     <Color x:Key="UiEnchant4Color">#F2C14E</Color>
     <Color x:Key="UiMapResourceTextColor">#161616</Color>
+    <Color x:Key="UiMapResourceChargesColor">#F4F1EA</Color>
     <SolidColorBrush x:Key="UiResourceWoodBrush" Color="{StaticResource UiResourceWoodColor}" />
     <SolidColorBrush x:Key="UiResourceStoneBrush" Color="{StaticResource UiResourceStoneColor}" />
     <SolidColorBrush x:Key="UiResourceOreBrush" Color="{StaticResource UiResourceOreColor}" />
