@@ -120,6 +120,20 @@
                             <TextBlock Text="Exits &amp; icons" />
                         </StackPanel>
                     </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResources}" IsVisible="{Binding IsLive}"
+                                  ToolTip.Tip="Resource nodes the game has shown near you on this map, with their tier. A colored ring marks an enchanted node. Nodes stay until gathered out or you leave the map.">
+                        <StackPanel Orientation="Horizontal" Spacing="2">
+                            <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceWoodBrush}" VerticalAlignment="Center" />
+                            <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceOreBrush}" VerticalAlignment="Center" />
+                            <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceFiberBrush}" VerticalAlignment="Center" />
+                            <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceHideBrush}" VerticalAlignment="Center" />
+                            <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceStoneBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Resources" Margin="4,0,0,0" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ComboBox ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceTier}" VerticalAlignment="Center"
+                              IsVisible="{Binding ShowResourceTier}" AutomationProperties.Name="Lowest resource tier shown"
+                              ToolTip.Tip="Show only resource nodes of this tier and higher" Margin="4,0,0,0" />
                 </WrapPanel>
             </Border>
 

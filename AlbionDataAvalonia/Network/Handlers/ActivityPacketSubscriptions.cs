@@ -71,8 +71,15 @@ internal static class ActivityPacketSubscriptions
         // Wisp spawns and border exits stand at fixed points of a Mists layout and place it.
         builder.SubscribeEvent<MistsLandmarkEvent>((int)EventCodes.NewMistsWispSpawn, packet => { activity.ObserveMistsLandmark(packet); return Task.CompletedTask; });
         builder.SubscribeEvent<MistsLandmarkEvent>((int)EventCodes.NewMistsBorderExit, packet => { activity.ObserveMistsLandmark(packet); return Task.CompletedTask; });
+        // Resource nodes for the live map. The shared packet models don't cover them yet, so they are read from raw parameters.
+        ResourceNodes(builder, EventCodes.NewHarvestableObject, activity);
+        ResourceNodes(builder, EventCodes.NewSimpleHarvestableObjectList, activity);
+        ResourceNodes(builder, EventCodes.HarvestableChangeState, activity);
         builder.AddHandler(new AcquisitionIntentHandler(activity));
     }
+
+    private static void ResourceNodes(ReceiverBuilder builder, EventCodes code, ActivityTrackerService activity)
+        => builder.SubscribeEvent<DebugEventProbeEvent>((int)code, packet => { activity.ObserveResourceNodes(packet, code); return Task.CompletedTask; });
 
     private static void Event<T>(ReceiverBuilder builder, EventCodes code, ActivityTrackerService activity) where T : BaseEvent
         => builder.SubscribeEvent<T>((int)code, packet => { activity.Observe(packet); return Task.CompletedTask; });

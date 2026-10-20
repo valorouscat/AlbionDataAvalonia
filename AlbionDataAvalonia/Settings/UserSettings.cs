@@ -400,6 +400,35 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // The live map's resource nodes are opt-in: they come from packets the game sends about nodes near the character.
+    private bool mapShowResources;
+    public bool MapShowResources
+    {
+        get => mapShowResources;
+        set
+        {
+            if (mapShowResources == value) return;
+            mapShowResources = value;
+            OnPropertyChanged(nameof(MapShowResources));
+            Log.Information("Map resources set to {MapShowResources}", mapShowResources);
+        }
+    }
+
+    // The lowest tier of resource node the live map shows; 1 shows every tier.
+    private int mapResourceMinTier = 1;
+    public int MapResourceMinTier
+    {
+        get => mapResourceMinTier;
+        set
+        {
+            var clamped = Math.Clamp(value, 1, 8);
+            if (mapResourceMinTier == clamped) return;
+            mapResourceMinTier = clamped;
+            OnPropertyChanged(nameof(MapResourceMinTier));
+            Log.Information("Map resource minimum tier set to {MapResourceMinTier}", mapResourceMinTier);
+        }
+    }
+
     private void SetStreamerOption(ref bool field, bool value, string propertyName)
     {
         if (field == value) return;

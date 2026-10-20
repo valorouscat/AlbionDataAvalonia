@@ -18,7 +18,7 @@ using System.Linq;
 
 namespace AlbionDataAvalonia.Views;
 
-/// <summary>Draws a zone minimap with the character's path, events, exits and icons, and handles zoom, panning and hover details.</summary>
+/// <summary>Draws a zone minimap with the character's path, events, exits, icons and resource nodes, and handles zoom, panning and hover details.</summary>
 public sealed class ActivityMapCanvas : Control
 {
     public static readonly StyledProperty<ActivityMapScene?> SceneProperty =
@@ -269,6 +269,8 @@ public sealed class ActivityMapCanvas : Control
             DrawExits(context, scene, scale);
         }
 
+        if (scene.Layers.HasFlag(ActivityMapLayers.Resources)) DrawResources(context, scene, scale);
+
         if (scene.Layers.HasFlag(ActivityMapLayers.Path)) DrawPath(context, scene, scale);
         DrawMarkers(context, scene, scale);
         DrawPosition(context, scene, scale, shown);
@@ -339,6 +341,69 @@ public sealed class ActivityMapCanvas : Control
             context.DrawEllipse(UiPalette.Brush(ActivityPalette.Zone(exit.Zone)), OutlinePen, at, 6, 6);
             hits.Add(new Hit(at, 9, exit.Label, [], []));
         }
+    }
+
+    // Nodes close together on screen merge into the best of them (the scene lists the highest tier first) with a
+    // count, so a field of nodes reads as one spot zoomed out; zooming in spreads them apart again.
+    private void DrawResources(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        if (scene.Resources is not { Count: > 0 } resources) return;
+        var groups = new List<ResourceGroup>();
+        var grid = new Dictionary<(int X, int Y), List<ResourceGroup>>();
+        foreach (var node in resources)
+        {
+            var at = ToScreen(ImagePoint(scene, node.X, node.Y), scale);
+            if (!Visible(at, ClusterRadius)) continue;
+            var cellX = (int)Math.Floor(at.X / ClusterRadius);
+            var cellY = (int)Math.Floor(at.Y / ClusterRadius);
+            ResourceGroup? group = null;
+            for (var dx = -1; dx <= 1 && group is null; dx++)
+                for (var dy = -1; dy <= 1 && group is null; dy++)
+                    if (grid.TryGetValue((cellX + dx, cellY + dy), out var nearby))
+                        group = nearby.FirstOrDefault(x => Distance(x.At, at) <= ClusterRadius);
+            if (group is null)
+            {
+                group = new ResourceGroup(at);
+                groups.Add(group);
+                if (!grid.TryGetValue((cellX, cellY), out var cell)) grid[(cellX, cellY)] = cell = new List<ResourceGroup>();
+                cell.Add(group);
+            }
+
+            group.Nodes.Add(node);
+        }
+
+        // The lowest groups first, so the best nodes end up on top.
+        foreach (var group in Enumerable.Reverse(groups))
+        {
+            var best = group.Nodes[0];
+            var count = group.Nodes.Count;
+            var radius = count > 1 ? 8.5 : 7.5;
+            var edge = best.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(best.Enchantment), 2.4) : OutlinePen;
+            context.DrawEllipse(UiPalette.Brush(ActivityPalette.Resource(best.Family)), edge, group.At, radius, radius);
+            var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 9, UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
+            tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
+            if (count > 1) ChartDrawing.DrawCountBadge(context, group.At, count);
+            hits.Add(count == 1 ? ResourceHit(group.At, best, scene) : ResourceGroupHit(group.At, group.Nodes));
+        }
+    }
+
+    private static string ResourceLabel(ActivityResourceNode node) =>
+        $"T{node.Tier}{(node.Enchantment > 0 ? $".{node.Enchantment}" : "")} {node.Family}";
+
+    private static Hit ResourceHit(Point at, ActivityResourceNode node, ActivityMapScene scene) =>
+        new(at, 9, ResourceLabel(node), [$"Seen {UiFormat.Ago(node.SeenAtUtc, scene.NowUtc)}"],
+            [new ItemRow(node.ItemUniqueName, 1, node.Charges > 0 ? $"{UiFormat.Whole(node.Charges)} left" : "Charges unknown", "")]);
+
+    // A group lists its kinds of resource, the best first, with how many nodes of each it holds.
+    private static Hit ResourceGroupHit(Point at, IReadOnlyList<ActivityResourceNode> nodes)
+    {
+        var kinds = nodes.GroupBy(x => (x.Family, x.Tier, x.Enchantment)).ToArray();
+        var rows = kinds.Take(GroupLinesShown).Select(x => new ItemRow(x.First().ItemUniqueName, 1, ResourceLabel(x.First()),
+            UiFormat.Count(x.Count(), "node"))).ToArray();
+        var lines = new List<string>();
+        if (kinds.Length > GroupLinesShown) lines.Add($"and {UiFormat.Count(kinds.Length - GroupLinesShown, "more kind")}");
+        lines.Add("Zoom in to see each node");
+        return new(at, 11, UiFormat.Count(nodes.Count, "resource node"), lines, rows);
     }
 
     private void DrawPath(DrawingContext context, ActivityMapScene scene, double scale)
@@ -808,6 +873,12 @@ public sealed class ActivityMapCanvas : Control
         public Color Color { get; } = color;
         public double Width { get; } = width;
         public ImmutablePen? Pen { get; set; }
+    }
+
+    private sealed class ResourceGroup(Point at)
+    {
+        public Point At { get; } = at;
+        public List<ActivityResourceNode> Nodes { get; } = new();
     }
 
     private sealed class MarkerCluster(ActivityMapMarkerKind kind, Point at, double opacity)

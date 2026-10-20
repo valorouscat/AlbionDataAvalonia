@@ -63,6 +63,26 @@ public static class ActivityPalette
         _ => Death
     };
 
+    /// <summary>A resource spot's fill, by the family ActivityResourceIdentity names.</summary>
+    public static Color Resource(string family) => UiPalette.Color(family switch
+    {
+        "Wood" => "UiResourceWoodColor",
+        "Stone" => "UiResourceStoneColor",
+        "Ore" => "UiResourceOreColor",
+        "Fiber" => "UiResourceFiberColor",
+        "Hide" => "UiResourceHideColor",
+        _ => "UiResourceOtherColor"
+    });
+
+    /// <summary>The ring of an enchanted resource, as the game colors .1 to .4.</summary>
+    public static Color Enchantment(int level) => UiPalette.Color(level switch
+    {
+        1 => "UiEnchant1Color",
+        2 => "UiEnchant2Color",
+        3 => "UiEnchant3Color",
+        _ => "UiEnchant4Color"
+    });
+
     public static Color Zone(MapZoneKind kind) => UiPalette.Color(kind switch
     {
         MapZoneKind.Blue => "UiZoneBlueColor",

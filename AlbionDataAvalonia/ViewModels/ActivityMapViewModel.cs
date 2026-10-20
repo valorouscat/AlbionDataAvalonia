@@ -64,6 +64,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         selectedScopeIndex = settings.MapPartyEvents ? 1 : 0;
         selectedFadeIndex = Math.Max(0, Array.FindIndex(FadeOptionValues, x => x == settings.MapFadeMinutes));
         if (FadeOptionValues[selectedFadeIndex] != settings.MapFadeMinutes) selectedFadeIndex = 1;
+        showResources = settings.MapShowResources;
+        selectedResourceTier = UiOptions.Find(ResourceTierOptions, settings.MapResourceMinTier);
         liveTimer.Tick += (_, _) => RefreshLive();
         replayTimer.Tick += (_, _) => AdvanceReplay();
     }
@@ -72,9 +74,11 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     public IReadOnlyList<Option<int>> ModeOptions { get; } = [new(0, "Live"), new(1, "History")];
     public IReadOnlyList<Option<int>> FadeOptions { get; } = [new(1, "1 min"), new(5, "5 min"), new(15, "15 min"), new(0, "Never")];
     public IReadOnlyList<Option<int>> ScopeOptions { get; } = [new(0, "Personal"), new(1, "Party")];
+    public IReadOnlyList<Option<int>> ResourceTierOptions { get; } =
+        [new(1, "All tiers"), new(4, "T4+"), new(5, "T5+"), new(6, "T6+"), new(7, "T7+"), new(8, "T8")];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLive), nameof(IsHistory), nameof(ShowFollow))]
+    [NotifyPropertyChangedFor(nameof(IsLive), nameof(IsHistory), nameof(ShowFollow), nameof(ShowResourceTier))]
     private int selectedModeIndex;
 
     [ObservableProperty] private int selectedFadeIndex;
@@ -96,6 +100,10 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool showGathering = true;
     [ObservableProperty] private bool showDeaths = true;
     [ObservableProperty] private bool showFeatures = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowResourceTier))]
+    private bool showResources;
+    [ObservableProperty] private Option<int> selectedResourceTier;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasRuns))]
@@ -125,6 +133,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     public bool IsHistory => SelectedModeIndex == 1;
     public bool ShowFollow => IsLive && Scene?.Position is not null;
     public bool HasNote => !string.IsNullOrEmpty(Note);
+    public bool ShowResourceTier => IsLive && ShowResources;
     public bool HasRuns => Runs.Count > 0;
     public bool HasMultipleRunMaps => RunMaps.Count > 1;
     public string PlayButtonText => IsPlaying ? "❚❚" : "▶";
@@ -133,7 +142,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
     private ActivityMapLayers Layers =>
         (ShowPath ? ActivityMapLayers.Path : 0) | (ShowKills ? ActivityMapLayers.Kills : 0) | (ShowLoot ? ActivityMapLayers.Loot : 0)
-        | (ShowGathering ? ActivityMapLayers.Gathering : 0) | (ShowDeaths ? ActivityMapLayers.Deaths : 0) | (ShowFeatures ? ActivityMapLayers.Features : 0);
+        | (ShowGathering ? ActivityMapLayers.Gathering : 0) | (ShowDeaths ? ActivityMapLayers.Deaths : 0) | (ShowFeatures ? ActivityMapLayers.Features : 0)
+        | (ShowResources ? ActivityMapLayers.Resources : 0);
 
     private double FadeSeconds => FadeOptionValues[Math.Clamp(SelectedFadeIndex, 0, FadeOptionValues.Length - 1)] * 60d;
 
@@ -178,6 +188,18 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     partial void OnShowGatheringChanged(bool value) => Rebuild();
     partial void OnShowDeathsChanged(bool value) => Rebuild();
     partial void OnShowFeaturesChanged(bool value) => Rebuild();
+
+    partial void OnShowResourcesChanged(bool value)
+    {
+        settings.MapShowResources = value;
+        Rebuild();
+    }
+
+    partial void OnSelectedResourceTierChanged(Option<int> value)
+    {
+        settings.MapResourceMinTier = value.Value;
+        Rebuild();
+    }
 
     partial void OnSelectedRunChanged(ActivityMapRunOption? value)
     {
@@ -295,7 +317,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var turns = LayoutTurns(zone, live.Layout, live.LayoutTurns);
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
-            null, null, Layers, turns);
+            null, null, Layers, turns, ShownResources(live.Resources));
     }
 
     // Grows with the path so the view stays steady while walking a zone without a minimap.
@@ -513,6 +535,11 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             return new ZoneView(rawMapId, null, null, null, [], [], fallbackName, "", null, true);
         }
     }
+
+    // Only nodes at or above the chosen tier, the best first, so a group of nodes on screen shows its best one.
+    private IReadOnlyList<ActivityResourceNode> ShownResources(IReadOnlyList<ActivityResourceNode>? nodes) =>
+        !ShowResources || nodes is not { Count: > 0 } ? [] : nodes.Where(x => x.Tier >= SelectedResourceTier.Value)
+            .OrderByDescending(x => x.Tier).ThenByDescending(x => x.Enchantment).ThenByDescending(x => x.Charges).ToArray();
 
     // The path is always the character's own; events follow the Personal or Party choice.
     private IReadOnlyList<ActivityMapMarker> Shown(IReadOnlyList<ActivityMapMarker> markers) =>
