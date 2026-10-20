@@ -71,6 +71,7 @@ internal sealed class ActivityGatheringCollector
             })
         };
         if (packet.ResourceObjectId is { } source) value = ActivityTrackerService.WithTarget(value, tracker.ResolveActor(source));
+        if (actor.Relationship == ActorRelationship.Self) tracker.NoteHarvestedNode(packet.ResourceObjectId, identity, item.UniqueName);
         tracker.RecordResource(Estimate(value));
         if (actor.Relationship == ActorRelationship.Self) loot.NoteHarvestAcquisition(packet.ItemId, value.Quantity, at);
         for (var index = 0; index < packet.BonusRewards.Count; index++)

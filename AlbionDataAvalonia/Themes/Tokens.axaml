@@ -138,6 +138,24 @@
     <Color x:Key="UiMapCountEdgeColor">#80FFFFFF</Color>
     <SolidColorBrush x:Key="UiTooltipBrush" Color="{StaticResource UiTooltipColor}" />
 
+    <!-- Resource spots on the map: a fill for each kind, a ring for each enchantment level, and the tier written on top. -->
+    <Color x:Key="UiResourceWoodColor">#B98552</Color>
+    <Color x:Key="UiResourceStoneColor">#AFAAA0</Color>
+    <Color x:Key="UiResourceOreColor">#7FA7D9</Color>
+    <Color x:Key="UiResourceFiberColor">#D8CF6B</Color>
+    <Color x:Key="UiResourceHideColor">#D7836A</Color>
+    <Color x:Key="UiResourceOtherColor">#8CC9A8</Color>
+    <Color x:Key="UiEnchant1Color">#6CCB5F</Color>
+    <Color x:Key="UiEnchant2Color">#4FA3F7</Color>
+    <Color x:Key="UiEnchant3Color">#B06CF0</Color>
+    <Color x:Key="UiEnchant4Color">#F2C14E</Color>
+    <Color x:Key="UiMapResourceTextColor">#161616</Color>
+    <SolidColorBrush x:Key="UiResourceWoodBrush" Color="{StaticResource UiResourceWoodColor}" />
+    <SolidColorBrush x:Key="UiResourceStoneBrush" Color="{StaticResource UiResourceStoneColor}" />
+    <SolidColorBrush x:Key="UiResourceOreBrush" Color="{StaticResource UiResourceOreColor}" />
+    <SolidColorBrush x:Key="UiResourceFiberBrush" Color="{StaticResource UiResourceFiberColor}" />
+    <SolidColorBrush x:Key="UiResourceHideBrush" Color="{StaticResource UiResourceHideColor}" />
+
     <!-- Zone danger levels, for the exits drawn on the map. -->
     <Color x:Key="UiZoneBlueColor">#4A90E2</Color>
     <Color x:Key="UiZoneYellowColor">#F2C94C</Color>

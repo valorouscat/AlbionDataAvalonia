@@ -188,6 +188,7 @@ Click **Open map** on the Activity page to open the map in its own window.
 
 - **Live** follows you through the zone and draws your path, kills, loot, gathering, deaths, zone exits and map icons. Choose whether they fade after 1, 5 or 15 minutes, or never.
 - **History** replays any past run. Pick it from the list and press play, or drag along the timeline.
+- **Resources** (Live only, off until you turn it on) marks the gathering nodes the game has shown near you: wood, ore, fiber, hide and stone, with the tier written on each and a colored ring for enchanted nodes. Nodes stay on the map after you walk past them until they're gathered out or you change zone. Pick a lowest tier to hide the rest.
 
 ### Streamer window
 

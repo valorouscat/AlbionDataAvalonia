@@ -10,8 +10,8 @@ namespace AlbionDataAvalonia.ViewModels;
 [Flags]
 public enum ActivityMapLayers
 {
-    None = 0, Path = 1, Kills = 2, Loot = 4, Gathering = 8, Deaths = 16, Features = 32,
-    All = Path | Kills | Loot | Gathering | Deaths | Features
+    None = 0, Path = 1, Kills = 2, Loot = 4, Gathering = 8, Deaths = 16, Features = 32, Resources = 64,
+    All = Path | Kills | Loot | Gathering | Deaths | Features | Resources
 }
 
 /// <summary>A zone's danger level, which colors its exits.</summary>
@@ -26,6 +26,7 @@ public sealed record ActivityMapIcon(MapPoint Position, string Label, Bitmap? Im
 /// Everything the map canvas draws for one frame. ViewKey changes when a different zone, run or mode is shown,
 /// which resets zoom and panning; the rest can change every frame. Frame is the in-game paper frame drawn around the zone.
 /// ImageQuarterTurns turns the minimap clockwise about its centre, as a Mists instance turns its layout.
+/// Resources are the live map's resource nodes, already filtered by tier and sorted best first.
 /// </summary>
 public sealed record ActivityMapScene(
     string ViewKey,
@@ -44,4 +45,5 @@ public sealed record ActivityMapScene(
     DateTime? StartUtc,
     DateTime? UntilUtc,
     ActivityMapLayers Layers,
-    int ImageQuarterTurns = 0);
+    int ImageQuarterTurns = 0,
+    IReadOnlyList<ActivityResourceNode>? Resources = null);

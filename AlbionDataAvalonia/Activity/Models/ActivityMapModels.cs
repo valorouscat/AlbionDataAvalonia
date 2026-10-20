@@ -66,12 +66,22 @@ public sealed record ActivityMapMarker(ActivityMapMarkerKind Kind, string RawMap
         string.IsNullOrWhiteSpace(alliance) ? guild : string.IsNullOrWhiteSpace(guild) ? $"[{alliance}]" : $"[{alliance}] {guild}";
 }
 
-/// <summary>The current map as the live map window shows it: where the character is, where it walked, and what it did.</summary>
+/// <summary>The current map as the live map window shows it: where the character is, where it walked, what it did, and the
+/// resource nodes the client has seen there.</summary>
 public sealed record ActivityLiveMap(long Version, string RawMapId, string MapName, ActivityPathPoint? Position, double? Heading,
-    IReadOnlyList<ActivityPathPoint> Trail, IReadOnlyList<ActivityMapMarker> Markers, string? Layout = null, int? LayoutTurns = null)
+    IReadOnlyList<ActivityPathPoint> Trail, IReadOnlyList<ActivityMapMarker> Markers, string? Layout = null, int? LayoutTurns = null,
+    IReadOnlyList<ActivityResourceNode>? Resources = null)
 {
     public static ActivityLiveMap Empty { get; } = new(0, "", "", null, null, [], []);
 }
 
 /// <summary>A recorded run with its path and placed events, for the history map.</summary>
 public sealed record ActivityRunMap(ActivitySession Run, IReadOnlyList<ActivityPathSegment> Segments, IReadOnlyList<ActivityMapMarker> Markers);
+
+/// <summary>
+/// A gatherable node the game client was told about on the current map: its kind (Wood, Stone, Fiber, Hide or Ore, as
+/// ActivityResourceIdentity names them), tier and enchantment, where it stands, and how many units it has left.
+/// ItemUniqueName is the raw resource it yields, for its icon.
+/// </summary>
+public sealed record ActivityResourceNode(long Id, string Family, int Tier, int Enchantment, double X, double Y, int Charges,
+    DateTime SeenAtUtc, string ItemUniqueName);
