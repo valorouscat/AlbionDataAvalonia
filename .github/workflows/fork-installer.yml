@@ -1,0 +1,50 @@
+name: Fork installer
+
+# Builds a Windows installer from any branch for testing the fork in game.
+# It installs over the official client (same AppId) and keeps its settings and history.
+# The version is raised to 0.99.<run>.0 so the built-in updater doesn't replace it
+# with the next official release.
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [master, beta]
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          dotnet-quality: "ga"
+
+      - name: Set fork version
+        run: |
+          $version = "0.99.${{ github.run_number }}.0"
+          (Get-Content AlbionDataAvalonia.Desktop/pkg/inno.iss) -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$version`"" |
+            Set-Content AlbionDataAvalonia.Desktop/pkg/inno.iss -Encoding utf8
+          echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        shell: pwsh
+
+      - name: Publish Windows client
+        run: dotnet publish ./AlbionDataAvalonia.Desktop/AlbionDataAvalonia.Desktop.csproj --configuration Release -p:Version=${{ env.VERSION }}
+
+      - name: Compile installer
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
+        with:
+          path: AlbionDataAvalonia.Desktop/pkg/inno.iss
+          options: /O+
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AFMDataClientSetup_v_${{ env.VERSION }}
+          path: C:/Users/runneradmin/Documents/Inno Setup Output/AFMDataClientSetup_v_${{ env.VERSION }}.exe
+          if-no-files-found: error
