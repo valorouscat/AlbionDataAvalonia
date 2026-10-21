@@ -172,9 +172,6 @@
     <Color x:Key="UiMapPoiWispColor">#8FD3F4</Color>
     <SolidColorBrush x:Key="UiMapPoiBossBrush" Color="{StaticResource UiMapPoiBossColor}" />
     <SolidColorBrush x:Key="UiMapPoiShrineBrush" Color="{StaticResource UiMapPoiShrineColor}" />
-    <!-- Other players on the live map; party members use UiActivityPartyColor. -->
-    <Color x:Key="UiMapPlayerColor">#FF4D6D</Color>
-    <SolidColorBrush x:Key="UiMapPlayerBrush" Color="{StaticResource UiMapPlayerColor}" />
 
     <!-- Zone danger levels, for the exits drawn on the map. -->
     <Color x:Key="UiZoneBlueColor">#4A90E2</Color>

@@ -79,8 +79,6 @@ internal static class ActivityPacketSubscriptions
         ResourceMobs(builder, EventCodes.NewMob, activity);
         ResourceMobs(builder, EventCodes.MobChangeState, activity);
         ResourceMobs(builder, EventCodes.Move, activity);
-        // Other players for the live map: NewCharacter read again for its position; they move with the Move above.
-        builder.SubscribeEvent<DebugEventProbeEvent>((int)EventCodes.NewCharacter, packet => { activity.ObservePlayers(packet); return Task.CompletedTask; });
         builder.AddHandler(new AcquisitionIntentHandler(activity));
     }
 

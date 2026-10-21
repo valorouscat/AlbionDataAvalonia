@@ -165,13 +165,6 @@
                             <TextBlock Text="Roaming bosses" />
                         </StackPanel>
                     </ToggleButton>
-                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowPlayers}" IsVisible="{Binding IsLive}"
-                                  ToolTip.Tip="Other players the game has shown near you, with their name, guild and alliance: blue for your party, red for anyone else. Players close together merge into one dot with a count. Read from the game's packets, like the resource nodes.">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse Width="9" Height="9" Fill="{DynamicResource UiMapPlayerBrush}" Stroke="{DynamicResource UiMarkerOutlineBrush}" StrokeThickness="1" VerticalAlignment="Center" />
-                            <TextBlock Text="Players" />
-                        </StackPanel>
-                    </ToggleButton>
                 </WrapPanel>
                 <!-- The resource choices get their own row, shown while resources or spawn spots are on. -->
                 <WrapPanel MaxWidth="560" IsVisible="{Binding ShowResourceFilters}">

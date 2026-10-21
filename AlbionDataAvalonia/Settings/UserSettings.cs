@@ -527,20 +527,6 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
-    // Whether the live map shows the other players near the character, read from packets.
-    private bool mapShowPlayers;
-    public bool MapShowPlayers
-    {
-        get => mapShowPlayers;
-        set
-        {
-            if (mapShowPlayers == value) return;
-            mapShowPlayers = value;
-            OnPropertyChanged(nameof(MapShowPlayers));
-            Log.Information("Map players set to {MapShowPlayers}", mapShowPlayers);
-        }
-    }
-
     private void SetStreamerOption(ref bool field, bool value, string propertyName)
     {
         if (field == value) return;

@@ -67,11 +67,11 @@ public sealed record ActivityMapMarker(ActivityMapMarkerKind Kind, string RawMap
 }
 
 /// <summary>The current map as the live map window shows it: where the character is, where it walked, what it did, and the
-/// resource nodes, resource mobs, roaming bosses and other players the client has seen there.</summary>
+/// resource nodes, resource mobs and roaming bosses the client has seen there.</summary>
 public sealed record ActivityLiveMap(long Version, string RawMapId, string MapName, ActivityPathPoint? Position, double? Heading,
     IReadOnlyList<ActivityPathPoint> Trail, IReadOnlyList<ActivityMapMarker> Markers, string? Layout = null, int? LayoutTurns = null,
     IReadOnlyList<ActivityResourceNode>? Resources = null, IReadOnlyList<ActivityResourceMob>? ResourceMobs = null,
-    IReadOnlyList<ActivityLiveActor>? RoamingBosses = null, IReadOnlyList<ActivityLiveActor>? Players = null)
+    IReadOnlyList<ActivityLiveActor>? RoamingBosses = null)
 {
     public static ActivityLiveMap Empty { get; } = new(0, "", "", null, null, [], []);
 }
@@ -96,11 +96,9 @@ public sealed record ActivityResourceNode(long Id, string Family, int Tier, int 
 public sealed record ActivityResourceMob(long Id, string Family, int Tier, int Enchantment, double X, double Y, DateTime SeenAtUtc,
     string MobUniqueName, string MobName, string ItemUniqueName);
 
-public enum ActivityLiveActorKind { Boss, Miniboss, Player }
+public enum ActivityLiveActorKind { Boss, Miniboss }
 
-/// <summary>
-/// A roaming boss or another player near the character, where it was last seen moving. A boss has its mob's unique name
-/// (for its portrait) and tier; a player has its guild and alliance, and Party is set for a member of the character's party.
-/// </summary>
+/// <summary>A roaming boss near the character, where it was last seen moving, with its mob's unique name (for its
+/// portrait) and tier.</summary>
 public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, double X, double Y, DateTime SeenAtUtc, string Name,
-    string Guild = "", string Alliance = "", string MobUniqueName = "", int Tier = 0, bool Party = false);
+    string MobUniqueName = "", int Tier = 0);

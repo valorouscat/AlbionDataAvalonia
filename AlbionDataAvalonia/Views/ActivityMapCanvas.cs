@@ -52,7 +52,6 @@ public sealed class ActivityMapCanvas : Control
     private const double SpawnOpacity = 0.6;
     // Points of interest are few and worth finding, so they stay opaque and merge only when nearly on top of each other.
     private const double PoiClusterRadius = 14;
-    private const double PlayerClusterRadius = 12;
     // The live position updates a few times a second. The marker, and the view while following, glide to
     // each new one over about as long as the last update took, so walking reads as movement, not hops.
     private static readonly TimeSpan MaxGlide = TimeSpan.FromMilliseconds(400);
@@ -287,7 +286,6 @@ public sealed class ActivityMapCanvas : Control
         }
 
         if (scene.Layers.HasFlag(ActivityMapLayers.RoamingBosses)) DrawRoamingBosses(context, scene, scale);
-        if (scene.Layers.HasFlag(ActivityMapLayers.Players)) DrawPlayers(context, scene, scale);
         if (scene.Layers.HasFlag(ActivityMapLayers.Path)) DrawPath(context, scene, scale);
         DrawMarkers(context, scene, scale);
         DrawPosition(context, scene, scale, shown);
@@ -650,53 +648,6 @@ public sealed class ActivityMapCanvas : Control
                     "It moves; the map follows it while it stays in view"],
                 [new ItemRow(boss.MobUniqueName, 1, boss.Name, "", Mob: true)]));
         }
-    }
-
-    // Another player is a dot with a white edge, blue for a party member and red for anyone else. Players close
-    // together on screen merge into one dot with a count, as a group or a zerg reads as one spot zoomed out.
-    private void DrawPlayers(DrawingContext context, ActivityMapScene scene, double scale)
-    {
-        if (scene.Players is not { Count: > 0 } players) return;
-        var groups = new List<(Point At, List<ActivityLiveActor> Players)>();
-        foreach (var player in players)
-        {
-            var at = ToScreen(ImagePoint(scene, player.X, player.Y), scale);
-            if (!Visible(at, PoiClusterRadius)) continue;
-            var index = groups.FindIndex(x => Distance(x.At, at) <= PlayerClusterRadius);
-            if (index < 0) groups.Add((at, [player]));
-            else groups[index].Players.Add(player);
-        }
-
-        foreach (var (at, members) in groups)
-        {
-            var others = members.Count(x => !x.Party);
-            var color = others > 0 ? UiPalette.Color("UiMapPlayerColor") : ActivityPalette.Party;
-            var radius = members.Count > 1 ? 7 : 5.5;
-            context.DrawEllipse(UiPalette.Brush(color), WhitePen, at, radius, radius);
-            if (members.Count > 1) ChartDrawing.DrawCountBadge(context, at, members.Count);
-            hits.Add(PlayerHit(at, members, scene));
-        }
-    }
-
-    private static Hit PlayerHit(Point at, IReadOnlyList<ActivityLiveActor> players, ActivityMapScene scene)
-    {
-        if (players.Count == 1)
-        {
-            var player = players[0];
-            var lines = new List<string>();
-            var guild = string.IsNullOrWhiteSpace(player.Alliance) ? player.Guild
-                : string.IsNullOrWhiteSpace(player.Guild) ? $"[{player.Alliance}]" : $"[{player.Alliance}] {player.Guild}";
-            if (!string.IsNullOrWhiteSpace(guild)) lines.Add(guild);
-            if (player.Party) lines.Add("In your party");
-            lines.Add($"Seen {UiFormat.Ago(player.SeenAtUtc, scene.NowUtc)}");
-            return new(at, 8, string.IsNullOrWhiteSpace(player.Name) ? "Player" : player.Name, lines, []);
-        }
-
-        var shown = players.OrderBy(x => x.Party).ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase).Take(GroupLinesShown)
-            .Select(x => string.IsNullOrWhiteSpace(x.Guild) ? x.Name : $"{x.Name} · {x.Guild}").ToList();
-        if (players.Count > GroupLinesShown) shown.Add($"and {UiFormat.Count(players.Count - GroupLinesShown, "more")}");
-        if (players.Count(x => x.Party) is var party and > 0) shown.Add($"{UiFormat.Count(party, "party member")} among them");
-        return new(at, 10, UiFormat.Count(players.Count, "player"), shown, []);
     }
 
     private static StreamGeometry Polygon(params Point[] corners)
