@@ -13,6 +13,16 @@ A free, open-source companion app for Albion Online on Windows, Linux and macOS.
 
 > **Run only one data client.** If you use this client, uninstall the official AODP client, or both will upload the same data twice.
 
+> **About this fork.** This is [valorouscat/AlbionDataAvalonia](https://github.com/valorouscat/AlbionDataAvalonia), a fork of [JPCodeCraft/AlbionDataAvalonia](https://github.com/JPCodeCraft/AlbionDataAvalonia). On top of the official client it adds:
+>
+> - **Live resource nodes** on the Activity [map](#map): wood, ore, fiber, hide and stone with tier, enchantment and units left, behind the **Resources** toggle (off by default).
+> - **Remembered nodes**: open-world nodes are kept per server and map for 7 days and shown faded with when they were last seen and how many units they had.
+> - **Filters**: a lowest tier and each kind of resource on or off, kept between restarts.
+> - **Resource mobs**: hide animals and resource critters as diamonds with their tier, ringed when enchanted.
+> - **Fork releases**: every push to `master` publishes a [release of the fork](https://github.com/valorouscat/AlbionDataAvalonia/releases/latest) (version 1.0.x), and the installed client updates itself from it instead of the official releases. Other branches build a test installer as an Actions artifact.
+>
+> The download links and instructions below point to the official client.
+
 ![The Main tab checking that capture is ready](docs/screenshots/main.png)
 
 ## Contents
