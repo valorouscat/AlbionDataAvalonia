@@ -289,6 +289,7 @@ public sealed class ActivityMapCanvas : Control
         if (scene.Layers.HasFlag(ActivityMapLayers.Path)) DrawPath(context, scene, scale);
         DrawMarkers(context, scene, scale);
         DrawPosition(context, scene, scale, shown);
+        if (scene.Layers.HasFlag(ActivityMapLayers.HostileAlert)) DrawHostileAlert(context, scene, scale, shown);
         // Icons are asked for only for the tooltip on view; one that arrives later redraws it.
         if (hovered is { } hover && pointer is { } at)
             ChartDrawing.DrawTooltip(context, bounds, at, hover.Title,
@@ -1099,6 +1100,34 @@ public sealed class ActivityMapCanvas : Control
         var screenAngle = Math.Atan2(ahead.Y - at.Y, ahead.X - at.X);
         using (context.PushTransform(Matrix.CreateRotation(screenAngle) * Matrix.CreateTranslation(at.X, at.Y)))
             context.DrawGeometry(UiPalette.Brush(you), WhitePen, arrow ??= CreateArrow());
+    }
+
+    // A hostile player who just came into view is an exclamation mark in a red badge over the character, with a count
+    // when several came at once: the game gives no position for them, only that they are near.
+    private void DrawHostileAlert(DrawingContext context, ActivityMapScene scene, double scale, (ActivityPathPoint Point, double? Heading)? glide)
+    {
+        if (!scene.IsLive || scene.Hostiles is not { Count: > 0 } hostiles || (glide?.Point ?? scene.Position) is not { } point) return;
+        var you = ToScreen(ImagePoint(scene, point.X, point.Y), scale);
+        var at = new Point(you.X, you.Y - 30);
+        var color = UiPalette.Color("UiMapHostileColor");
+        context.DrawLine(UiPalette.Pen(color, 2), new Point(you.X, you.Y - 17), new Point(at.X, at.Y + 10));
+        context.DrawEllipse(UiPalette.Brush(color), WhitePen, at, 10, 10);
+        var mark = ChartDrawing.Text("!", 14, UiPalette.Color("UiMapHostileTextColor"), FontWeight.Bold);
+        mark.Draw(context, new Point(at.X - mark.Width / 2, at.Y - mark.Height / 2));
+        if (hostiles.Count > 1) ChartDrawing.DrawCountBadge(context, at, hostiles.Count);
+
+        var lines = hostiles.OrderByDescending(x => x.SeenAtUtc).Take(GroupLinesShown).Select(Hostile).ToList();
+        if (hostiles.Count > GroupLinesShown) lines.Add($"and {UiFormat.Count(hostiles.Count - GroupLinesShown, "more")}");
+        lines.Add("Outside your party, guild and alliance. The game doesn't say where they are.");
+        hits.Add(new Hit(at, 11, hostiles.Count == 1 ? "Hostile player nearby" : $"{UiFormat.Count(hostiles.Count, "hostile player")} nearby", lines, []));
+    }
+
+    private static string Hostile(ActivityHostileSighting player)
+    {
+        var name = string.IsNullOrWhiteSpace(player.Name) ? "Unknown player" : player.Name;
+        var guild = string.IsNullOrWhiteSpace(player.Alliance) ? player.Guild
+            : string.IsNullOrWhiteSpace(player.Guild) ? $"[{player.Alliance}]" : $"[{player.Alliance}] {player.Guild}";
+        return string.IsNullOrWhiteSpace(guild) ? name : $"{name} · {guild}";
     }
 
     // Points along +X; drawing turns it to the heading.

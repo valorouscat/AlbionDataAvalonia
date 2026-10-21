@@ -165,6 +165,15 @@
                             <TextBlock Text="Roaming bosses" />
                         </StackPanel>
                     </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowHostileAlert}" IsVisible="{Binding IsLive}"
+                                  ToolTip.Tip="Flashes a red exclamation mark over you for 3 seconds when a player outside your party, guild and alliance comes into view. The game encrypts where other players stand, so the map can't show them, only that one arrived. Off in blue zones.">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Border Width="13" Height="13" CornerRadius="7" Background="{DynamicResource UiMapHostileBrush}" VerticalAlignment="Center">
+                                <TextBlock Text="!" FontSize="{StaticResource UiFontSizeCaption}" FontWeight="Bold" Foreground="{DynamicResource UiMapHostileTextBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            </Border>
+                            <TextBlock Text="Hostile alert" />
+                        </StackPanel>
+                    </ToggleButton>
                 </WrapPanel>
                 <!-- The resource choices get their own row, shown while resources or spawn spots are on. -->
                 <WrapPanel MaxWidth="560" IsVisible="{Binding ShowResourceFilters}">

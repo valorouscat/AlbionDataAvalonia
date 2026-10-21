@@ -70,6 +70,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         showResourceSpawns = settings.MapShowResourceSpawns;
         showPois = settings.MapShowPois;
         showRoamingBosses = settings.MapShowRoamingBosses;
+        showHostileAlert = settings.MapShowHostileAlert;
         legendCollapsed = settings.MapLegendCollapsed;
         var hidden = HiddenFamilies(settings.MapResourceHiddenFamilies);
         showWood = !hidden.Contains("Wood");
@@ -120,6 +121,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private bool showResourceSpawns;
     [ObservableProperty] private bool showPois;
     [ObservableProperty] private bool showRoamingBosses;
+    [ObservableProperty] private bool showHostileAlert;
     [ObservableProperty] private Option<int> selectedResourceTier;
     [ObservableProperty] private bool showRememberedResources;
     [ObservableProperty] private bool showResourceMobs;
@@ -171,7 +173,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         (ShowPath ? ActivityMapLayers.Path : 0) | (ShowKills ? ActivityMapLayers.Kills : 0) | (ShowLoot ? ActivityMapLayers.Loot : 0)
         | (ShowGathering ? ActivityMapLayers.Gathering : 0) | (ShowDeaths ? ActivityMapLayers.Deaths : 0) | (ShowFeatures ? ActivityMapLayers.Features : 0)
         | (ShowResources ? ActivityMapLayers.Resources : 0) | (ShowResourceSpawns ? ActivityMapLayers.ResourceSpawns : 0)
-        | (ShowPois ? ActivityMapLayers.Pois : 0) | (ShowRoamingBosses ? ActivityMapLayers.RoamingBosses : 0);
+        | (ShowPois ? ActivityMapLayers.Pois : 0) | (ShowRoamingBosses ? ActivityMapLayers.RoamingBosses : 0)
+        | (ShowHostileAlert ? ActivityMapLayers.HostileAlert : 0);
 
     private double FadeSeconds => FadeOptionValues[Math.Clamp(SelectedFadeIndex, 0, FadeOptionValues.Length - 1)] * 60d;
 
@@ -254,6 +257,12 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     partial void OnShowRoamingBossesChanged(bool value)
     {
         settings.MapShowRoamingBosses = value;
+        Rebuild();
+    }
+
+    partial void OnShowHostileAlertChanged(bool value)
+    {
+        settings.MapShowHostileAlert = value;
         Rebuild();
     }
 
@@ -371,6 +380,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
             RebuildLive();
         }
+        // A hostile player's warning goes once its few seconds are up.
+        else if (Scene?.Hostiles is { Count: > 0 } hostiles && hostiles.Any(x => DateTime.UtcNow - x.SeenAtUtc >= ActivityTrackerService.HostileAlertLength))
+            RebuildLive();
         // Fading moves on even when nothing new happens.
         else if (FadeSeconds > 0 && DateTime.UtcNow - liveRenderedAt >= FadeRefresh) RebuildLive();
     }
@@ -416,7 +428,16 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
             ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownPois(Turned(zone?.Pois ?? [], turns)),
-            zone?.Zone?.Rooms, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : []);
+            zone?.Zone?.Rooms, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
+            ShownHostiles(live.Hostiles, zone?.Zone));
+    }
+
+    // No one can attack the character in a blue zone, so a player there is no threat.
+    private IReadOnlyList<ActivityHostileSighting> ShownHostiles(IReadOnlyList<ActivityHostileSighting>? hostiles, MapZone? zone)
+    {
+        if (!ShowHostileAlert || hostiles is not { Count: > 0 } || zone?.PvpCategory == "blue") return [];
+        var now = DateTime.UtcNow;
+        return hostiles.Where(x => now - x.SeenAtUtc < ActivityTrackerService.HostileAlertLength).ToArray();
     }
 
     // Grows with the path so the view stays steady while walking a zone without a minimap.

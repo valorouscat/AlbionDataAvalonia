@@ -271,6 +271,7 @@ public sealed partial class ActivityTrackerService : IDisposable
                     break;
                 case NewCharacterEvent character:
                     actors.Character(character);
+                    ObserveHostile(character, at);
                     // A member first listed without a name is recorded once a nearby character names it.
                     if (partyHasUnnamedMembers) SyncParty(at, Origin(packet, "Party"));
                     break;

@@ -11,8 +11,8 @@ namespace AlbionDataAvalonia.ViewModels;
 public enum ActivityMapLayers
 {
     None = 0, Path = 1, Kills = 2, Loot = 4, Gathering = 8, Deaths = 16, Features = 32, Resources = 64, ResourceSpawns = 128,
-    Pois = 256, RoamingBosses = 512,
-    All = Path | Kills | Loot | Gathering | Deaths | Features | Resources | ResourceSpawns | Pois | RoamingBosses
+    Pois = 256, RoamingBosses = 512, HostileAlert = 1024,
+    All = Path | Kills | Loot | Gathering | Deaths | Features | Resources | ResourceSpawns | Pois | RoamingBosses | HostileAlert
 }
 
 /// <summary>A zone's danger level, which colors its exits.</summary>
@@ -32,7 +32,8 @@ public sealed record ActivityMapIcon(MapPoint Position, string Label, Bitmap? Im
 /// resource spots from the game files, filtered the same way and sorted best last. Pois are the zone's possible
 /// loot chest spots from the game files, sorted best last. Rooms outline a zone drawn without a minimap, such as a Mists
 /// dungeon; the layout never turns them. RoamingBosses are the live map's roaming bosses in
-/// view, sorted best last.
+/// view, sorted best last. Hostiles are the hostile players who came into view in the last few seconds, which the
+/// map flags over the character since the game gives no position for them.
 /// </summary>
 public sealed record ActivityMapScene(
     string ViewKey,
@@ -57,4 +58,5 @@ public sealed record ActivityMapScene(
     IReadOnlyList<MapResourceSpawn>? ResourceSpawns = null,
     IReadOnlyList<MapPoi>? Pois = null,
     IReadOnlyList<MapRect>? Rooms = null,
-    IReadOnlyList<ActivityLiveActor>? RoamingBosses = null);
+    IReadOnlyList<ActivityLiveActor>? RoamingBosses = null,
+    IReadOnlyList<ActivityHostileSighting>? Hostiles = null);

@@ -172,6 +172,11 @@
     <Color x:Key="UiMapPoiWispColor">#8FD3F4</Color>
     <SolidColorBrush x:Key="UiMapPoiBossBrush" Color="{StaticResource UiMapPoiBossColor}" />
     <SolidColorBrush x:Key="UiMapPoiShrineBrush" Color="{StaticResource UiMapPoiShrineColor}" />
+    <!-- The live map's warning over the character when a hostile player comes into view. -->
+    <Color x:Key="UiMapHostileColor">#E5383B</Color>
+    <Color x:Key="UiMapHostileTextColor">#FFFFFF</Color>
+    <SolidColorBrush x:Key="UiMapHostileBrush" Color="{StaticResource UiMapHostileColor}" />
+    <SolidColorBrush x:Key="UiMapHostileTextBrush" Color="{StaticResource UiMapHostileTextColor}" />
 
     <!-- Zone danger levels, for the exits drawn on the map. -->
     <Color x:Key="UiZoneBlueColor">#4A90E2</Color>

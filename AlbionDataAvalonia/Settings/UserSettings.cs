@@ -527,6 +527,20 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // Whether the live map flashes a warning over the character when a hostile player comes into view.
+    private bool mapShowHostileAlert;
+    public bool MapShowHostileAlert
+    {
+        get => mapShowHostileAlert;
+        set
+        {
+            if (mapShowHostileAlert == value) return;
+            mapShowHostileAlert = value;
+            OnPropertyChanged(nameof(MapShowHostileAlert));
+            Log.Information("Map hostile alert set to {MapShowHostileAlert}", mapShowHostileAlert);
+        }
+    }
+
     private void SetStreamerOption(ref bool field, bool value, string propertyName)
     {
         if (field == value) return;

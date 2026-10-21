@@ -80,6 +80,17 @@ internal sealed class ActivityActorContext(PartyTrackerService party, MobsServic
         party.UpdatePartyMemberName(packet.Guid, packet.Name, id);
     }
 
+    /// <summary>Whether a character in view is another player outside the character's party, guild and alliance.</summary>
+    public bool Hostile(long? objectId)
+    {
+        if (objectId is not { } id || id == localObjectId || !entities.TryGetValue(id, out var entity)
+            || entity.Kind != ActivityActorKind.Player || party.IsPartyMember(entity.CharacterId)) return false;
+        return !Same(entity.Guild, localGuild) && !Same(entity.Alliance, localAlliance);
+    }
+
+    private static bool Same(string theirs, string ours) =>
+        ours.Length > 0 && string.Equals(theirs, ours, StringComparison.OrdinalIgnoreCase);
+
     public MobDescriptor? DescribeMob(int? index) => mobs.GetMobDescriptor(index);
 
     public void Mob(long objectId, int? index, double? health)
