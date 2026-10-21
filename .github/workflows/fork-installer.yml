@@ -2,8 +2,9 @@ name: Fork installer
 
 # Builds a Windows installer from any branch for testing the fork in game.
 # It installs over the official client (same AppId) and keeps its settings and history.
-# The version is raised to 0.99.<run>.0 so the built-in updater doesn't replace it
-# with the next official release.
+# The version is 1.0.<commit count>.<run>: above the master release it branched from,
+# so the fork updater doesn't replace it right away, and below the release made
+# once the branch is merged into master.
 
 on:
   workflow_dispatch:
@@ -19,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           submodules: recursive
 
       - uses: actions/setup-dotnet@v4
@@ -28,7 +30,7 @@ jobs:
 
       - name: Set fork version
         run: |
-          $version = "0.99.${{ github.run_number }}.0"
+          $version = "1.0.$(git rev-list --count HEAD).${{ github.run_number }}"
           (Get-Content AlbionDataAvalonia.Desktop/pkg/inno.iss) -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$version`"" |
             Set-Content AlbionDataAvalonia.Desktop/pkg/inno.iss -Encoding utf8
           echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append

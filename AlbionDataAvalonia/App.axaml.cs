@@ -260,8 +260,8 @@ public partial class App : Application
             _updateTimer.Interval = TimeSpan.FromHours(settings.AppSettings.UpdateCheckIntervalHours).TotalMilliseconds;
 
             var updateResult = await ClientUpdater.CheckForUpdatesAsync(
-                settings.AppSettings.LatestVersionUrl,
-                settings.AppSettings.LatesVersionDownloadUrl,
+                ClientUpdater.ForkLatestVersionUrl,
+                ClientUpdater.ForkLatestDownloadUrl,
                 settings.AppSettings.FileNameFormat,
                 settings.UserSettings.JoinBetaProgram);
 
@@ -340,8 +340,8 @@ public partial class App : Application
             await settings.InitializeSettings();
 
             var updateResult = await ClientUpdater.CheckForUpdatesAsync(
-                settings.AppSettings.LatestVersionUrl,
-                settings.AppSettings.LatesVersionDownloadUrl,
+                ClientUpdater.ForkLatestVersionUrl,
+                ClientUpdater.ForkLatestDownloadUrl,
                 settings.AppSettings.FileNameFormat,
                 settings.UserSettings.JoinBetaProgram);
 
