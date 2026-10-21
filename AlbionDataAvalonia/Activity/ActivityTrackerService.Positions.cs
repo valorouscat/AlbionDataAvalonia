@@ -48,7 +48,7 @@ public sealed partial class ActivityTrackerService
                 ? [.. liveTrail, head] : liveTrail.ToArray();
             return new(liveMapVersion, map?.RawLocationId ?? "", map?.DisplayName ?? "", current, heading,
                 trail, liveMarkers.ToArray(), mapMetadata.Layout, mapMetadata.LayoutTurns, CurrentResourceNodes(),
-                CurrentResourceMobs());
+                CurrentResourceMobs(), CurrentRoamingBosses(), CurrentPlayers());
         }
     }
 

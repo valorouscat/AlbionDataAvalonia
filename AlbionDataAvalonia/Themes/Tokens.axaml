@@ -165,6 +165,16 @@
     <Color x:Key="UiMapChestLidColor">#5A3B12</Color>
     <Color x:Key="UiMapChestAreaColor">#B3E3A93B</Color>
     <SolidColorBrush x:Key="UiMapChestBrush" Color="{StaticResource UiMapChestColor}" />
+    <!-- The other points of interest: a boss spot, a shrine, a mob camp spot and a Mists wisp spawn. -->
+    <Color x:Key="UiMapPoiBossColor">#E0524A</Color>
+    <Color x:Key="UiMapPoiShrineColor">#A77BE8</Color>
+    <Color x:Key="UiMapPoiCampColor">#E8893B</Color>
+    <Color x:Key="UiMapPoiWispColor">#8FD3F4</Color>
+    <SolidColorBrush x:Key="UiMapPoiBossBrush" Color="{StaticResource UiMapPoiBossColor}" />
+    <SolidColorBrush x:Key="UiMapPoiShrineBrush" Color="{StaticResource UiMapPoiShrineColor}" />
+    <!-- Other players on the live map; party members use UiActivityPartyColor. -->
+    <Color x:Key="UiMapPlayerColor">#FF4D6D</Color>
+    <SolidColorBrush x:Key="UiMapPlayerBrush" Color="{StaticResource UiMapPlayerColor}" />
 
     <!-- Zone danger levels, for the exits drawn on the map. -->
     <Color x:Key="UiZoneBlueColor">#4A90E2</Color>

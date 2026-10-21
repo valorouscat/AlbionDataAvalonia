@@ -133,7 +133,7 @@ public sealed class MapDataService : IDisposable
         }
     }
 
-    /// <summary>The zone's minimap icons, resource spawn spots and chest spots; empty when its feature file can't be had,
+    /// <summary>The zone's minimap icons, resource spawn spots and points of interest; empty when its feature file can't be had,
     /// but for the Mists chest spots that come with the app.</summary>
     public Task<MapZoneFeatures> GetFeaturesAsync(MapZone zone) =>
         // A zone the client draws itself has no AlbionWorld feature file.
@@ -317,7 +317,7 @@ public sealed class MapDataService : IDisposable
                 .Where(x => x.X is { } featureX && x.Z is { } featureZ && double.IsFinite(featureX) && double.IsFinite(featureZ))
                 .ToArray();
             return new(placed.Select(Icon).OfType<MapZoneIcon>().ToArray(), placed.Select(ResourceSpawn).OfType<MapResourceSpawn>().ToArray(),
-                [.. placed.Select(ChestSpawn).OfType<MapChestSpawn>(), .. MistsMapData.Chests(zone.Id)]);
+                [.. placed.Select(Poi).OfType<MapPoi>(), .. MistsMapData.Chests(zone.Id)]);
         }
         catch (Exception error) when (error is HttpRequestException or IOException or JsonException or TaskCanceledException)
         {
@@ -328,27 +328,56 @@ public sealed class MapDataService : IDisposable
         }
     }
 
-    // AlbionWorld lists the chests a layout places as "lootchestspawnpoint", named after the game's spawn point
-    // ("Spawn Point Lootchest Static Morgana Veteran"), and a Hellgate's objective chest as a named marker point. A chest
-    // with a minimap icon, such as a Roads chest, already shows as that icon.
-    private static MapChestSpawn? ChestSpawn(Feature feature)
+    // AlbionWorld lists what a layout places by the game's spawn point names ("Spawn Point Lootchest Static Morgana
+    // Veteran", "Spawn Point Random Demon Cd Endboss"): loot chests, mobs (of which bosses are shown), shrines, the spots
+    // the game picks mob camps from and the Mists wisp spawns. A Hellgate's objective chest is a named marker point. A
+    // chest with a minimap icon, such as a Roads chest, already shows as that icon.
+    private static MapPoi? Poi(Feature feature)
     {
         var position = new MapPoint(feature.X!.Value, feature.Z!.Value);
-        if (feature.Type == "namedmarkerpoint" && feature.Label == "HellgateObjectiveChest") return new("Hellgate chest", 3, position);
-        if (feature.Type != "lootchestspawnpoint" || !string.IsNullOrWhiteSpace(feature.MarkerType)) return null;
-        const string prefix = "Spawn Point Lootchest";
-        var name = Humanize(feature.Label ?? "");
-        if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) name = name[prefix.Length..].Trim();
-        // A raw spawn point name is all capitals.
-        if (!name.Any(char.IsLower)) name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.ToLowerInvariant());
-        if (name.Length == 0) name = "Chest";
-        else if (!name.Contains("chest", StringComparison.OrdinalIgnoreCase)) name += " chest";
-        return new(name, ChestGrade(name), position);
+        switch (feature.Type)
+        {
+            case "lootchestspawnpoint" when string.IsNullOrWhiteSpace(feature.MarkerType):
+                var chest = SpawnName(feature.Label, "Spawn Point Lootchest");
+                if (chest.Length == 0) chest = "Chest";
+                else if (!chest.Contains("chest", StringComparison.OrdinalIgnoreCase)) chest += " chest";
+                return new(MapPoiKind.Chest, chest, ChestGrade(chest), position);
+            case "namedmarkerpoint" when feature.Label == "HellgateObjectiveChest":
+                return new(MapPoiKind.Chest, "Hellgate chest", 3, position);
+            case "mobspawnpoint":
+                var mob = SpawnName(feature.Label, "Spawn Point Random");
+                var words = Words(mob);
+                if (!words.Any(x => x is "BOSS" or "ENDBOSS" or "MINIBOSS")) return null;
+                return new(MapPoiKind.Boss, mob, words.Contains("MINIBOSS") ? 2 : 3, position);
+            case "mobcamp_candidate":
+                var grade = feature.Band?.ToLowerInvariant() switch { "high" => 3, "medium" => 2, _ => 1 };
+                var band = string.IsNullOrWhiteSpace(feature.Band) ? "" : $"{char.ToUpperInvariant(feature.Band[0])}{feature.Band[1..].ToLowerInvariant()} ";
+                return new(MapPoiKind.Camp, $"{band}mob camp spot{(feature.Tier is >= 1 and <= 8 ? $", T{feature.Tier}" : "")}".Trim(), grade, position);
+            case "mistswispspawn":
+                return new(MapPoiKind.Wisp, "Mists wisp spawn", 1, position);
+            case { } type when type.Contains("shrine", StringComparison.OrdinalIgnoreCase):
+                var shrine = Humanize(string.IsNullOrWhiteSpace(feature.Label) ? type : feature.Label);
+                return new(MapPoiKind.Shrine, shrine.Contains("shrine", StringComparison.OrdinalIgnoreCase) ? shrine : $"{shrine} shrine", 2, position);
+            default:
+                return null;
+        }
     }
+
+    // "Spawn Point Lootchest Static Morgana Veteran" reads as "Static Morgana Veteran"; a raw name is all capitals.
+    private static string SpawnName(string? label, string prefix)
+    {
+        var name = Humanize(label ?? "");
+        if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) name = name[prefix.Length..].Trim();
+        if (!name.Any(char.IsLower)) name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.ToLowerInvariant());
+        // A mob spawn point that takes any kind of mob ends in "Any".
+        return name.EndsWith(" Any", StringComparison.Ordinal) ? name[..^4] : name;
+    }
+
+    private static string[] Words(string name) => name.ToUpperInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
     private static int ChestGrade(string name)
     {
-        var words = name.ToUpperInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var words = Words(name);
         if (words.Any(x => x is "BOSS" or "ENDBOSS" or "MINIBOSS" or "VETERAN" or "ELITE" or "LARGE" or "RAID" or "LEGENDARY" or "EPIC")) return 3;
         return words.Any(x => x is "MEDIUM" or "GROUP" or "DUO" or "UNCOMMON" or "RARE" or "STANDARD") ? 2 : 1;
     }
@@ -547,6 +576,7 @@ public sealed class MapDataService : IDisposable
         public string? Label { get; set; }
         public string? Mob { get; set; }
         public string? ResourceType { get; set; }
+        public string? Band { get; set; }
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
         public int? Tier { get; set; }
         public double? X { get; set; }

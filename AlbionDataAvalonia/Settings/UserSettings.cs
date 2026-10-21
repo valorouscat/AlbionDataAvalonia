@@ -499,17 +499,45 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
-    // Whether the map shows where the zone can hold loot chests, from the game files.
-    private bool mapShowChestSpawns;
-    public bool MapShowChestSpawns
+    // Whether the map shows the zone's points of interest (chests, bosses, shrines, camps, wisps), from the game files.
+    private bool mapShowPois;
+    public bool MapShowPois
     {
-        get => mapShowChestSpawns;
+        get => mapShowPois;
         set
         {
-            if (mapShowChestSpawns == value) return;
-            mapShowChestSpawns = value;
-            OnPropertyChanged(nameof(MapShowChestSpawns));
-            Log.Information("Map chest spawns set to {MapShowChestSpawns}", mapShowChestSpawns);
+            if (mapShowPois == value) return;
+            mapShowPois = value;
+            OnPropertyChanged(nameof(MapShowPois));
+            Log.Information("Map points of interest set to {MapShowPois}", mapShowPois);
+        }
+    }
+
+    // Whether the live map shows the roaming bosses near the character, read from packets.
+    private bool mapShowRoamingBosses;
+    public bool MapShowRoamingBosses
+    {
+        get => mapShowRoamingBosses;
+        set
+        {
+            if (mapShowRoamingBosses == value) return;
+            mapShowRoamingBosses = value;
+            OnPropertyChanged(nameof(MapShowRoamingBosses));
+            Log.Information("Map roaming bosses set to {MapShowRoamingBosses}", mapShowRoamingBosses);
+        }
+    }
+
+    // Whether the live map shows the other players near the character, read from packets.
+    private bool mapShowPlayers;
+    public bool MapShowPlayers
+    {
+        get => mapShowPlayers;
+        set
+        {
+            if (mapShowPlayers == value) return;
+            mapShowPlayers = value;
+            OnPropertyChanged(nameof(MapShowPlayers));
+            Log.Information("Map players set to {MapShowPlayers}", mapShowPlayers);
         }
     }
 

@@ -23,17 +23,27 @@ public sealed record MapZoneIcon(string? MarkerType, string Label, MapPoint Posi
 /// </summary>
 public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false, bool Candidate = false);
 
-/// <summary>
-/// A spot where a loot chest can stand, from the game files: a chest the zone's layout places (open-world camp, faction
-/// and static chests, Corrupted Dungeon and Hellgate chests) or, when Radius is set, a Mists camp slot whose chest stands
-/// within Radius of it if the instance puts a camp there, or a Mists dungeon's boss chest. Grade orders them: 1 small, 2 medium, 3 boss or large.
-/// Roads chests are left out, since the game gives them an icon of their own.
-/// </summary>
-public sealed record MapChestSpawn(string Label, int Grade, MapPoint Position, double Radius = 0);
+/// <summary>The kinds of point of interest the map shows in one layer, each drawn its own way.</summary>
+public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp }
 
-/// <summary>A zone's minimap icons, resource spawn spots and chest spots, read from one AlbionWorld feature file.</summary>
+/// <summary>
+/// A point of interest from the game files, a spot where something can stand rather than what stands there now:
+/// <list type="bullet">
+/// <item>Chest: a loot chest the zone's layout places (open-world camp, faction and static chests, Corrupted Dungeon and
+/// Hellgate chests, a Mists dungeon's boss chests) or, when Radius is set, a Mists camp slot whose chest stands within
+/// Radius of it if the instance puts a camp there. Roads chests are left out, since the game gives them an icon.</item>
+/// <item>Boss: where the layout spawns a boss or miniboss.</item>
+/// <item>Shrine: a Corrupted Dungeon's shrine and other shrines.</item>
+/// <item>Camp: one of the spots the game picks a zone's mob camps from.</item>
+/// <item>Wisp: where a Mists wisp can appear.</item>
+/// </list>
+/// Grade orders the spots of a kind: 1 small, 2 medium, 3 boss, large or high-tier.
+/// </summary>
+public sealed record MapPoi(MapPoiKind Kind, string Label, int Grade, MapPoint Position, double Radius = 0);
+
+/// <summary>A zone's minimap icons, resource spawn spots and points of interest, read from one AlbionWorld feature file.</summary>
 public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns,
-    IReadOnlyList<MapChestSpawn> ChestSpawns)
+    IReadOnlyList<MapPoi> Pois)
 {
     public static MapZoneFeatures Empty { get; } = new([], [], []);
 }

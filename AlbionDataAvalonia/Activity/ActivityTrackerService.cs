@@ -284,6 +284,7 @@ public sealed partial class ActivityTrackerService : IDisposable
                     break;
                 case LeaveEvent leave:
                     ForgetResourceMob(leave.userObjectId);
+                    ForgetLiveActor(leave.userObjectId);
                     actors.Leave(leave.userObjectId, at);
                     locations.Leave(leave.userObjectId, at);
                     // A local Leave may be a map transition, never a confirmed logout/death.
@@ -308,6 +309,7 @@ public sealed partial class ActivityTrackerService : IDisposable
                 case TakeSilverEvent silver when CanRecord: Silver(silver, at); break;
                 case DiedEvent death:
                     ForgetResourceMob(death.VictimObjectId);
+                    ForgetLiveActor(death.VictimObjectId);
                     if (CanRecord) Death(death, at);
                     break;
                 case KnockedDownEvent knockdown when CanRecord: Knockdown(knockdown, at); break;

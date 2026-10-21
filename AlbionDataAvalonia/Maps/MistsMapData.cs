@@ -15,12 +15,12 @@ internal static partial class MistsMapData
     private const string DungeonName = "Knightfall Abbey";
 
     /// <summary>The layout's camp slots and, for a Mists dungeon, its boss chest spots.</summary>
-    public static IReadOnlyList<MapChestSpawn> Chests(string layout)
+    public static IReadOnlyList<MapPoi> Chests(string layout)
     {
         if (Dungeons.TryGetValue(layout, out var dungeon))
-            return dungeon.Chests.Select(chest => new MapChestSpawn("Boss chest", 3, new MapPoint(chest.X, chest.Z))).ToArray();
+            return dungeon.Chests.Select(chest => new MapPoi(MapPoiKind.Chest, "Boss chest", 3, new MapPoint(chest.X, chest.Z))).ToArray();
         return Slots.TryGetValue(layout, out var slots)
-            ? slots.Select(slot => new MapChestSpawn(slot.Medium ? "Medium camp chest" : "Small camp chest", slot.Medium ? 2 : 1,
+            ? slots.Select(slot => new MapPoi(MapPoiKind.Chest, slot.Medium ? "Medium camp chest" : "Small camp chest", slot.Medium ? 2 : 1,
                 new MapPoint(slot.X, slot.Z), slot.Medium ? MediumChestRadius : SmallChestRadius)).ToArray()
             : [];
     }

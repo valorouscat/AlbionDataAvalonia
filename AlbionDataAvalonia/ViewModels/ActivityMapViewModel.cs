@@ -68,7 +68,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         showRememberedResources = settings.MapShowRememberedResources;
         showResourceMobs = settings.MapShowResourceMobs;
         showResourceSpawns = settings.MapShowResourceSpawns;
-        showChestSpawns = settings.MapShowChestSpawns;
+        showPois = settings.MapShowPois;
+        showRoamingBosses = settings.MapShowRoamingBosses;
+        showPlayers = settings.MapShowPlayers;
         legendCollapsed = settings.MapLegendCollapsed;
         var hidden = HiddenFamilies(settings.MapResourceHiddenFamilies);
         showWood = !hidden.Contains("Wood");
@@ -117,7 +119,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowResourceFilters))]
     private bool showResourceSpawns;
-    [ObservableProperty] private bool showChestSpawns;
+    [ObservableProperty] private bool showPois;
+    [ObservableProperty] private bool showRoamingBosses;
+    [ObservableProperty] private bool showPlayers;
     [ObservableProperty] private Option<int> selectedResourceTier;
     [ObservableProperty] private bool showRememberedResources;
     [ObservableProperty] private bool showResourceMobs;
@@ -169,7 +173,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         (ShowPath ? ActivityMapLayers.Path : 0) | (ShowKills ? ActivityMapLayers.Kills : 0) | (ShowLoot ? ActivityMapLayers.Loot : 0)
         | (ShowGathering ? ActivityMapLayers.Gathering : 0) | (ShowDeaths ? ActivityMapLayers.Deaths : 0) | (ShowFeatures ? ActivityMapLayers.Features : 0)
         | (ShowResources ? ActivityMapLayers.Resources : 0) | (ShowResourceSpawns ? ActivityMapLayers.ResourceSpawns : 0)
-        | (ShowChestSpawns ? ActivityMapLayers.ChestSpawns : 0);
+        | (ShowPois ? ActivityMapLayers.Pois : 0) | (ShowRoamingBosses ? ActivityMapLayers.RoamingBosses : 0)
+        | (ShowPlayers ? ActivityMapLayers.Players : 0);
 
     private double FadeSeconds => FadeOptionValues[Math.Clamp(SelectedFadeIndex, 0, FadeOptionValues.Length - 1)] * 60d;
 
@@ -243,9 +248,21 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Rebuild();
     }
 
-    partial void OnShowChestSpawnsChanged(bool value)
+    partial void OnShowPoisChanged(bool value)
     {
-        settings.MapShowChestSpawns = value;
+        settings.MapShowPois = value;
+        Rebuild();
+    }
+
+    partial void OnShowRoamingBossesChanged(bool value)
+    {
+        settings.MapShowRoamingBosses = value;
+        Rebuild();
+    }
+
+    partial void OnShowPlayersChanged(bool value)
+    {
+        settings.MapShowPlayers = value;
         Rebuild();
     }
 
@@ -407,8 +424,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
-            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownChestSpawns(Turned(zone?.ChestSpawns ?? [], turns)),
-            zone?.Zone?.Rooms);
+            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownPois(Turned(zone?.Pois ?? [], turns)),
+            zone?.Zone?.Rooms, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
+            ShowPlayers ? live.Players : []);
     }
 
     // Grows with the path so the view stays steady while walking a zone without a minimap.
@@ -557,7 +575,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
             Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)),
-            ChestSpawns: ShownChestSpawns(Turned(zone?.ChestSpawns ?? [], turns)), Rooms: zone?.Zone?.Rooms);
+            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: zone?.Zone?.Rooms);
     }
 
     // Only a minimap found by its layout follows the instance's turn.
@@ -574,7 +592,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private static IReadOnlyList<MapResourceSpawn> Turned(IReadOnlyList<MapResourceSpawn> spawns, int turns) =>
         turns % 4 == 0 ? spawns : spawns.Select(spawn => spawn with { Position = Turn(spawn.Position, turns) }).ToArray();
 
-    private static IReadOnlyList<MapChestSpawn> Turned(IReadOnlyList<MapChestSpawn> chests, int turns) =>
+    private static IReadOnlyList<MapPoi> Turned(IReadOnlyList<MapPoi> chests, int turns) =>
         turns % 4 == 0 ? chests : chests.Select(chest => chest with { Position = Turn(chest.Position, turns) }).ToArray();
 
     private static MapPoint Turn(MapPoint point, int turns)
@@ -623,7 +641,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
                 Log.Warning(error, "Could not load the minimap for {RawMapId}", rawMapId);
                 failed = true;
             }
-            return new ZoneView(rawMapId, zone, image, await frameTask, exits, shownIcons, features.ResourceSpawns, features.ChestSpawns, zone.DisplayName,
+            return new ZoneView(rawMapId, zone, image, await frameTask, exits, shownIcons, features.ResourceSpawns, features.Pois, zone.DisplayName,
                 ZoneDescription(zone), zone.Geometry, failed);
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.IO.IOException or JsonException)
@@ -659,9 +677,19 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family))
             .OrderBy(x => x.Tier).ThenBy(x => x.Mob).ToArray();
 
-    // Chest spots are few, so they follow only their own switch; the best are drawn last so they end up on top.
-    private IReadOnlyList<MapChestSpawn> ShownChestSpawns(IReadOnlyList<MapChestSpawn> chests) =>
-        !ShowChestSpawns || chests.Count == 0 ? [] : chests.OrderBy(x => x.Grade).ToArray();
+    // Points of interest follow only their own switch. Wisps and camp spots, the most numerous, are drawn first and
+    // bosses and chests last, the best of each kind on top.
+    private IReadOnlyList<MapPoi> ShownPois(IReadOnlyList<MapPoi> pois) =>
+        !ShowPois || pois.Count == 0 ? [] : pois.OrderBy(x => PoiOrder(x.Kind)).ThenBy(x => x.Grade).ToArray();
+
+    private static int PoiOrder(MapPoiKind kind) => kind switch
+    {
+        MapPoiKind.Wisp => 0,
+        MapPoiKind.Camp => 1,
+        MapPoiKind.Shrine => 2,
+        MapPoiKind.Chest => 3,
+        _ => 4
+    };
 
     // The path is always the character's own; events follow the Personal or Party choice.
     private IReadOnlyList<ActivityMapMarker> Shown(IReadOnlyList<ActivityMapMarker> markers) =>
@@ -766,5 +794,5 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     }
 
     private sealed record ZoneView(string RawMapId, MapZone? Zone, Bitmap? Image, Bitmap? Frame, IReadOnlyList<ActivityMapExit> Exits,
-        IReadOnlyList<ActivityMapIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns, IReadOnlyList<MapChestSpawn> ChestSpawns, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed);
+        IReadOnlyList<ActivityMapIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns, IReadOnlyList<MapPoi> Pois, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed);
 }

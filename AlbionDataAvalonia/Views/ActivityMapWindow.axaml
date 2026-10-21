@@ -149,11 +149,27 @@
                             <TextBlock Text="Spawn spots" />
                         </StackPanel>
                     </ToggleButton>
-                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowChestSpawns}"
-                                  ToolTip.Tip="Where this zone can hold loot chests, from the game files: open-world camp, faction and static chests, Corrupted Dungeon and Hellgate chests, and the boss chests of Knightfall Abbey. In the Mists, the camp slots of the layout, each with a ring where its chest stands if the game puts a camp there. Roads chests show as the game's own icons under Exits &amp; icons. These are possible spots, not what stands there now.">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowPois}"
+                                  ToolTip.Tip="This zone's points of interest from the game files, in one layer: loot chests (gold: open-world camp, faction and static chests, Corrupted Dungeon and Hellgate chests, Knightfall Abbey's boss chests, and in the Mists the layout's camp slots with a ring where a camp's chest stands), boss spawn spots (red diamonds), shrines (violet triangles), mob camp spots (orange squares) and Mists wisp spawns (blue dots). Roads chests show as the game's own icons under Exits &amp; icons. These are possible spots, not what stands there now.">
+                        <StackPanel Orientation="Horizontal" Spacing="4">
                             <Border Width="11" Height="8" CornerRadius="2" Background="{DynamicResource UiMapChestBrush}" VerticalAlignment="Center" />
-                            <TextBlock Text="Chest spots" />
+                            <Path Data="M5,0 L10,5 L5,10 L0,5 Z" Fill="{DynamicResource UiMapPoiBossBrush}" VerticalAlignment="Center" />
+                            <Path Data="M5,0 L10,9 L0,9 Z" Fill="{DynamicResource UiMapPoiShrineBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Points of interest" Margin="2,0,0,0" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowRoamingBosses}" IsVisible="{Binding IsLive}"
+                                  ToolTip.Tip="Roaming bosses and minibosses the game has shown near you, with their portrait and tier. They follow the bosses as they move and go when the game says they left or died. Read from the game's packets, like the resource nodes.">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="10" Height="10" Stroke="{DynamicResource UiMapPoiBossBrush}" StrokeThickness="2" VerticalAlignment="Center" />
+                            <TextBlock Text="Roaming bosses" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowPlayers}" IsVisible="{Binding IsLive}"
+                                  ToolTip.Tip="Other players the game has shown near you, with their name, guild and alliance: blue for your party, red for anyone else. Players close together merge into one dot with a count. Read from the game's packets, like the resource nodes.">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="9" Height="9" Fill="{DynamicResource UiMapPlayerBrush}" Stroke="{DynamicResource UiMarkerOutlineBrush}" StrokeThickness="1" VerticalAlignment="Center" />
+                            <TextBlock Text="Players" />
                         </StackPanel>
                     </ToggleButton>
                 </WrapPanel>
