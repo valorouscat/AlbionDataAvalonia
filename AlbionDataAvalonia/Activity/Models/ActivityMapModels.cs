@@ -67,10 +67,10 @@ public sealed record ActivityMapMarker(ActivityMapMarkerKind Kind, string RawMap
 }
 
 /// <summary>The current map as the live map window shows it: where the character is, where it walked, what it did, and the
-/// resource nodes the client has seen there.</summary>
+/// resource nodes and resource mobs the client has seen there.</summary>
 public sealed record ActivityLiveMap(long Version, string RawMapId, string MapName, ActivityPathPoint? Position, double? Heading,
     IReadOnlyList<ActivityPathPoint> Trail, IReadOnlyList<ActivityMapMarker> Markers, string? Layout = null, int? LayoutTurns = null,
-    IReadOnlyList<ActivityResourceNode>? Resources = null)
+    IReadOnlyList<ActivityResourceNode>? Resources = null, IReadOnlyList<ActivityResourceMob>? ResourceMobs = null)
 {
     public static ActivityLiveMap Empty { get; } = new(0, "", "", null, null, [], []);
 }
@@ -86,3 +86,11 @@ public sealed record ActivityRunMap(ActivitySession Run, IReadOnlyList<ActivityP
 /// </summary>
 public sealed record ActivityResourceNode(long Id, string Family, int Tier, int Enchantment, double X, double Y, int Charges,
     DateTime SeenAtUtc, string ItemUniqueName, bool Live = true, DateTime? GatheredAtUtc = null);
+
+/// <summary>
+/// A mob near the character that yields a gathering resource: a hide animal, or a wood, stone, fiber or ore critter,
+/// guardian or treasure mob. Family, tier and enchantment are the resource's, ItemUniqueName is that resource for its
+/// icon, and MobUniqueName and MobName name the mob. X and Y are where it was last seen moving.
+/// </summary>
+public sealed record ActivityResourceMob(long Id, string Family, int Tier, int Enchantment, double X, double Y, DateTime SeenAtUtc,
+    string MobUniqueName, string MobName, string ItemUniqueName);

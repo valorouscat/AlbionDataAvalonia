@@ -80,6 +80,8 @@ internal sealed class ActivityActorContext(PartyTrackerService party, MobsServic
         party.UpdatePartyMemberName(packet.Guid, packet.Name, id);
     }
 
+    public MobDescriptor? DescribeMob(int? index) => mobs.GetMobDescriptor(index);
+
     public void Mob(long objectId, int? index, double? health)
     {
         if (objectId <= 0) return;

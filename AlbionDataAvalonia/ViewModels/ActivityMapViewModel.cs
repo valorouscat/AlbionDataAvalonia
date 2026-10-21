@@ -66,6 +66,13 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         if (FadeOptionValues[selectedFadeIndex] != settings.MapFadeMinutes) selectedFadeIndex = 1;
         showResources = settings.MapShowResources;
         showRememberedResources = settings.MapShowRememberedResources;
+        showResourceMobs = settings.MapShowResourceMobs;
+        var hidden = HiddenFamilies(settings.MapResourceHiddenFamilies);
+        showWood = !hidden.Contains("Wood");
+        showStone = !hidden.Contains("Stone");
+        showFiber = !hidden.Contains("Fiber");
+        showHide = !hidden.Contains("Hide");
+        showOre = !hidden.Contains("Ore");
         selectedResourceTier = UiOptions.Find(ResourceTierOptions, settings.MapResourceMinTier);
         liveTimer.Tick += (_, _) => RefreshLive();
         replayTimer.Tick += (_, _) => AdvanceReplay();
@@ -106,6 +113,13 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private bool showResources;
     [ObservableProperty] private Option<int> selectedResourceTier;
     [ObservableProperty] private bool showRememberedResources;
+    [ObservableProperty] private bool showResourceMobs;
+    // The kinds of resource shown; the choice is saved as the kinds left out, so a kind added later starts shown.
+    [ObservableProperty] private bool showWood;
+    [ObservableProperty] private bool showStone;
+    [ObservableProperty] private bool showFiber;
+    [ObservableProperty] private bool showHide;
+    [ObservableProperty] private bool showOre;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasRuns))]
@@ -205,6 +219,40 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void ForgetRememberedResources() => tracker.ForgetRememberedResources();
+
+    partial void OnShowResourceMobsChanged(bool value)
+    {
+        settings.MapShowResourceMobs = value;
+        Rebuild();
+    }
+
+    partial void OnShowWoodChanged(bool value) => ResourceFamiliesChanged();
+    partial void OnShowStoneChanged(bool value) => ResourceFamiliesChanged();
+    partial void OnShowFiberChanged(bool value) => ResourceFamiliesChanged();
+    partial void OnShowHideChanged(bool value) => ResourceFamiliesChanged();
+    partial void OnShowOreChanged(bool value) => ResourceFamiliesChanged();
+
+    private void ResourceFamiliesChanged()
+    {
+        settings.MapResourceHiddenFamilies = string.Join(",", ResourceFamilies.Where(x => !ShowsFamily(x)));
+        Rebuild();
+    }
+
+    private static readonly string[] ResourceFamilies = ["Wood", "Stone", "Fiber", "Hide", "Ore"];
+
+    private static HashSet<string> HiddenFamilies(string? saved) =>
+        new((saved ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), StringComparer.OrdinalIgnoreCase);
+
+    // A kind outside the five, should the game add one, shows with them.
+    private bool ShowsFamily(string family) => family switch
+    {
+        "Wood" => ShowWood,
+        "Stone" => ShowStone,
+        "Fiber" => ShowFiber,
+        "Hide" => ShowHide,
+        "Ore" => ShowOre,
+        _ => true
+    };
 
     partial void OnSelectedResourceTierChanged(Option<int> value)
     {
@@ -328,7 +376,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var turns = LayoutTurns(zone, live.Layout, live.LayoutTurns);
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
-            null, null, Layers, turns, ShownResources(live.Resources));
+            null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs));
     }
 
     // Grows with the path so the view stays steady while walking a zone without a minimap.
@@ -551,9 +599,15 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     // gathered out comes after the rest, and one in view before a remembered one of the same kind.
     private IReadOnlyList<ActivityResourceNode> ShownResources(IReadOnlyList<ActivityResourceNode>? nodes) =>
         !ShowResources || nodes is not { Count: > 0 } ? [] : nodes
-            .Where(x => x.Tier >= SelectedResourceTier.Value && (x.Live || ShowRememberedResources))
+            .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family) && (x.Live || ShowRememberedResources))
             .OrderBy(x => x.GatheredAtUtc is not null).ThenByDescending(x => x.Tier).ThenByDescending(x => x.Enchantment)
             .ThenByDescending(x => x.Live).ThenByDescending(x => x.Charges).ToArray();
+
+    // Resource mobs follow the same tier and kind choices as the nodes, the best drawn last so it ends up on top.
+    private IReadOnlyList<ActivityResourceMob> ShownResourceMobs(IReadOnlyList<ActivityResourceMob>? mobs) =>
+        !ShowResources || !ShowResourceMobs || mobs is not { Count: > 0 } ? [] : mobs
+            .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family))
+            .OrderBy(x => x.Tier).ThenBy(x => x.Enchantment).ToArray();
 
     // The path is always the character's own; events follow the Personal or Party choice.
     private IReadOnlyList<ActivityMapMarker> Shown(IReadOnlyList<ActivityMapMarker> markers) =>
