@@ -328,6 +328,29 @@ public sealed class ActivityMapCanvas : Control
             context.DrawLine(pen, ToScreen(ImagePoint(scene, x, geometry.Min.Y), scale), ToScreen(ImagePoint(scene, x, geometry.Max.Y), scale));
         for (var y = Math.Ceiling(geometry.Min.Y / step) * step; y <= geometry.Max.Y; y += step)
             context.DrawLine(pen, ToScreen(ImagePoint(scene, geometry.Min.X, y), scale), ToScreen(ImagePoint(scene, geometry.Max.X, y), scale));
+        DrawRooms(context, scene, scale);
+    }
+
+    // A zone the client draws itself, such as a Mists dungeon, shows its rooms over the grid in place of a minimap.
+    private void DrawRooms(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        if (scene.Rooms is not { Count: > 0 } rooms) return;
+        var fill = UiPalette.Brush("UiMapRoomColor");
+        var edge = UiPalette.Pen(UiPalette.Color("UiMapRoomEdgeColor"), 1, join: PenLineJoin.Round);
+        foreach (var room in rooms)
+        {
+            var shape = new StreamGeometry();
+            using (var path = shape.Open())
+            {
+                path.BeginFigure(ToScreen(ImagePoint(scene, room.Min.X, room.Min.Y), scale), true);
+                path.LineTo(ToScreen(ImagePoint(scene, room.Max.X, room.Min.Y), scale));
+                path.LineTo(ToScreen(ImagePoint(scene, room.Max.X, room.Max.Y), scale));
+                path.LineTo(ToScreen(ImagePoint(scene, room.Min.X, room.Max.Y), scale));
+                path.EndFigure(true);
+            }
+
+            context.DrawGeometry(fill, edge, shape);
+        }
     }
 
     private void DrawIcons(DrawingContext context, ActivityMapScene scene, double scale)

@@ -150,7 +150,7 @@
                         </StackPanel>
                     </ToggleButton>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowChestSpawns}"
-                                  ToolTip.Tip="Where this zone can hold loot chests, from the game files: open-world camp, faction and static chests, Corrupted Dungeon and Hellgate chests. In the Mists, the camp slots of the layout, each with a ring where its chest stands if the game puts a camp there. Roads chests show as the game's own icons under Exits &amp; icons. These are possible spots, not what stands there now.">
+                                  ToolTip.Tip="Where this zone can hold loot chests, from the game files: open-world camp, faction and static chests, Corrupted Dungeon and Hellgate chests, and the boss chests of Knightfall Abbey. In the Mists, the camp slots of the layout, each with a ring where its chest stands if the game puts a camp there. Roads chests show as the game's own icons under Exits &amp; icons. These are possible spots, not what stands there now.">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Border Width="11" Height="8" CornerRadius="2" Background="{DynamicResource UiMapChestBrush}" VerticalAlignment="Center" />
                             <TextBlock Text="Chest spots" />

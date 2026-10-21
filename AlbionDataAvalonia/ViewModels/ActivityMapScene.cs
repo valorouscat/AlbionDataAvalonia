@@ -30,7 +30,8 @@ public sealed record ActivityMapIcon(MapPoint Position, string Label, Bitmap? Im
 /// Resources are the live map's resource nodes, already filtered by tier and kind and sorted best first; ResourceMobs are
 /// the mobs that yield resources, filtered the same way and sorted best last. ResourceSpawns are the zone's possible
 /// resource spots from the game files, filtered the same way and sorted best last. ChestSpawns are the zone's possible
-/// loot chest spots from the game files, sorted best last.
+/// loot chest spots from the game files, sorted best last. Rooms outline a zone drawn without a minimap, such as a Mists
+/// dungeon; the layout never turns them.
 /// </summary>
 public sealed record ActivityMapScene(
     string ViewKey,
@@ -53,4 +54,5 @@ public sealed record ActivityMapScene(
     IReadOnlyList<ActivityResourceNode>? Resources = null,
     IReadOnlyList<ActivityResourceMob>? ResourceMobs = null,
     IReadOnlyList<MapResourceSpawn>? ResourceSpawns = null,
-    IReadOnlyList<MapChestSpawn>? ChestSpawns = null);
+    IReadOnlyList<MapChestSpawn>? ChestSpawns = null,
+    IReadOnlyList<MapRect>? Rooms = null);

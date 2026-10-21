@@ -69,14 +69,16 @@ public sealed class MapDataService : IDisposable
     private static string LastVersionFile => Path.Combine(CacheRoot, "version.txt");
 
     /// <summary>The catalog zone for a captured map id, trying the full id first and then its '@' parts.
-    /// A Mists instance has no zone of its own, so its fixed layout is tried last.</summary>
+    /// A Mists instance has no zone of its own, so its fixed layout is tried last; a Mists dungeon's layout has no catalog
+    /// zone either, so the client's own map of it stands in.</summary>
     public async Task<MapZone?> FindZoneAsync(string rawMapId, string? layout = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(rawMapId)) return null;
         var zones = await GetCatalogAsync(cancellationToken).ConfigureAwait(false);
         foreach (var candidate in Candidates(rawMapId))
             if (zones.TryGetValue(candidate, out var zone)) return zone;
-        return !string.IsNullOrWhiteSpace(layout) && zones.TryGetValue(layout, out var layoutZone) ? layoutZone : null;
+        if (string.IsNullOrWhiteSpace(layout)) return null;
+        return zones.TryGetValue(layout, out var layoutZone) ? layoutZone : MistsMapData.DungeonZone(layout);
     }
 
     public async Task<string?> ZoneNameAsync(string id, CancellationToken cancellationToken = default) =>
@@ -88,6 +90,7 @@ public sealed class MapDataService : IDisposable
     /// <summary>The zone's minimap, or null when the CDN has none. A failed download throws.</summary>
     public Task<Bitmap?> GetImageAsync(MapZone zone)
     {
+        if (zone.ImageFile.Length == 0) return Task.FromResult<Bitmap?>(null);
         lock (sync)
         {
             var cached = images.FirstOrDefault(x => x.File == zone.ImageFile);
@@ -131,9 +134,11 @@ public sealed class MapDataService : IDisposable
     }
 
     /// <summary>The zone's minimap icons, resource spawn spots and chest spots; empty when its feature file can't be had,
-    /// but for the Mists camp slots that come with the app.</summary>
+    /// but for the Mists chest spots that come with the app.</summary>
     public Task<MapZoneFeatures> GetFeaturesAsync(MapZone zone) =>
-        features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
+        // A zone the client draws itself has no AlbionWorld feature file.
+        zone.ImageFile.Length == 0 ? Task.FromResult(new MapZoneFeatures([], [], MistsMapData.Chests(zone.Id)))
+            : features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
 
     public Task<Bitmap?> GetIconImageAsync(string markerType) =>
         iconImages.GetOrAdd(markerType, LoadIconImageAsync);
@@ -312,14 +317,14 @@ public sealed class MapDataService : IDisposable
                 .Where(x => x.X is { } featureX && x.Z is { } featureZ && double.IsFinite(featureX) && double.IsFinite(featureZ))
                 .ToArray();
             return new(placed.Select(Icon).OfType<MapZoneIcon>().ToArray(), placed.Select(ResourceSpawn).OfType<MapResourceSpawn>().ToArray(),
-                [.. placed.Select(ChestSpawn).OfType<MapChestSpawn>(), .. MistsCampSlots.For(zone.Id)]);
+                [.. placed.Select(ChestSpawn).OfType<MapChestSpawn>(), .. MistsMapData.Chests(zone.Id)]);
         }
         catch (Exception error) when (error is HttpRequestException or IOException or JsonException or TaskCanceledException)
         {
             Log.Warning(error, "Could not load map features for {ZoneId}", zone.Id);
             features.TryRemove(zone.Id, out _);
-            // The Mists camp slots come with the app, so they still show.
-            return new([], [], MistsCampSlots.For(zone.Id));
+            // The Mists chest spots come with the app, so they still show.
+            return new([], [], MistsMapData.Chests(zone.Id));
         }
     }
 

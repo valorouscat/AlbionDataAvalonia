@@ -394,6 +394,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             : zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
             : zone is { Zone: null } && live.Layout is null && AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.Mists
                 ? "Finding this Mists layout. The map shows once a wisp or exit comes into view."
+            : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing your path only."
             : "";
         if (geometry is null)
@@ -406,7 +407,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
-            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownChestSpawns(Turned(zone?.ChestSpawns ?? [], turns)));
+            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownChestSpawns(Turned(zone?.ChestSpawns ?? [], turns)),
+            zone?.Zone?.Rooms);
     }
 
     // Grows with the path so the view stays steady while walking a zone without a minimap.
@@ -542,6 +544,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var geometry = zone?.Geometry ?? (points.Length == 0 ? null
             : FallbackGeometry((points.Min(x => x.X), points.Min(x => x.Y), points.Max(x => x.X), points.Max(x => x.Y))));
         Note = zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
+            : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing your path only."
             : "";
         if (geometry is null)
@@ -554,7 +557,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
             Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)),
-            ChestSpawns: ShownChestSpawns(Turned(zone?.ChestSpawns ?? [], turns)));
+            ChestSpawns: ShownChestSpawns(Turned(zone?.ChestSpawns ?? [], turns)), Rooms: zone?.Zone?.Rooms);
     }
 
     // Only a minimap found by its layout follows the instance's turn.
@@ -593,7 +596,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             foreach (var exit in zone.Exits)
             {
                 var target = await maps.ZoneAsync(exit.TargetId);
-                exits.Add(new ActivityMapExit(exit.Position, $"To {target?.DisplayName ?? exit.TargetId}", Zone(target?.PvpCategory)));
+                // A Mists dungeon's exits lead back to the Mists, which has no zone of its own.
+                var label = exit.TargetId.Length == 0 ? "Exit to the Mists" : $"To {target?.DisplayName ?? exit.TargetId}";
+                exits.Add(new ActivityMapExit(exit.Position, label, Zone(target?.PvpCategory)));
             }
 
             var features = await featuresTask;
@@ -690,6 +695,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             "roads" => "Roads of Avalon",
             "dungeon" => "Dungeon",
             "corrupted" => "Corrupted dungeon",
+            "mistsdungeon" => "Mists dungeon",
             "hellden" => "Hellgate",
             "hideout" => "Hideout area",
             "expedition" => "Expedition",

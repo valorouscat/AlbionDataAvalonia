@@ -130,6 +130,9 @@
     <Color x:Key="UiMapBackgroundColor">#1C1E1E</Color>
     <Color x:Key="UiMapGridColor">#22FFFFFF</Color>
     <Color x:Key="UiMapZoneColor">#14FFFFFF</Color>
+    <!-- The rooms of a zone drawn without a minimap, such as a Mists dungeon. -->
+    <Color x:Key="UiMapRoomColor">#2EC9B98F</Color>
+    <Color x:Key="UiMapRoomEdgeColor">#80C9B98F</Color>
     <Color x:Key="UiMapMarkerOutlineColor">#CC111111</Color>
     <Color x:Key="UiMapMarkerEdgeColor">#FFFFFF</Color>
     <Color x:Key="UiMapDeathFillColor">#E0212121</Color>
