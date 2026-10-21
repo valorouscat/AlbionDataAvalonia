@@ -510,7 +510,8 @@ public sealed partial class SetupStatusViewModel : ViewModelBase
         if (trafficRouters.Count == 0) return null;
         var one = trafficRouters.Count == 1;
         var advice = $"{TrafficRouterDetector.JoinNames(trafficRouters)} {(one ? "is" : "are")} running and may be sending the game’s traffic " +
-            $"where the client can’t see it. Pause {(one ? "it" : "them")}, then change zones.";
+            $"where the client can’t see it. Pause {(one ? "it" : "them")}, then change zones. If the game needs the VPN, " +
+            "choose its tunnel adapter in Settings › General › Network adapter.";
         // The README's ExitLag fix, for players who want to keep it on.
         return trafficRouters.Contains("ExitLag")
             ? advice + " In ExitLag you can instead set Tools › Packets redirection method to Legacy - NDIS."

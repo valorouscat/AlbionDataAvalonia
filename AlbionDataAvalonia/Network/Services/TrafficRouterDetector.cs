@@ -34,6 +34,14 @@ public static class TrafficRouterDetector
         new("Tailscale", ["tailscale"], ["tailscale"]),
         new("OpenVPN", ["openvpn"], ["openvpn"]),
         new("WireGuard", ["wireguard"], ["wireguard"]),
+        new("sing-box", ["singbox"], ["sing-box", "singbox"]),
+        new("Hiddify", ["hiddify"], ["hiddify"]),
+        new("NekoRay", ["nekoray", "nekobox"], ["nekoray", "nekobox"]),
+        new("v2rayN", ["v2rayn"], []),
+        new("Clash", ["clash", "mihomo"], ["clash", "mihomo"]),
+        new("Xray", ["xray"], ["xray"]),
+        new("Outline", ["outline"], ["outline"]),
+        new("AmneziaVPN", ["amnezia"], ["amnezia"]),
         // Shared tunnel drivers that many VPNs install.
         new("VPN", [], ["tap-windows", "wintun", "tap adapter"])
     ];

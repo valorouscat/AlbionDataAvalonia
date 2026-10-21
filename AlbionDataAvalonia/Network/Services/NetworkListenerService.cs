@@ -15,13 +15,16 @@ using PacketDotNet;
 using PhotonPackageParser;
 using Serilog;
 using SharpPcap;
+using SharpPcap.LibPcap;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -42,6 +45,11 @@ namespace AlbionDataAvalonia.Network.Services
         // Adapter names and why one couldn't open, for Copy diagnostics. Keyed by the driver's device name.
         private volatile IReadOnlyDictionary<string, string> _knownAdapters = new Dictionary<string, string>();
         private readonly ConcurrentDictionary<string, bool> _adapterOpenFailures = new(StringComparer.Ordinal);
+        private readonly ConcurrentDictionary<string, LinkLayers> _adapterLinkTypes = new(StringComparer.Ordinal);
+        // Adapters the system has up that the capture driver doesn't list, such as a VPN tunnel Npcap isn't bound to.
+        private volatile IReadOnlyList<string> _adaptersMissingFromCapture = [];
+        private readonly HashSet<string> _loggedMissingAdapters = new(StringComparer.Ordinal);
+        private string? _lastPinnedAdapterLog;
         private int _gameTrafficTransport;
         private int _captureRestartCount;
         private CaptureRestart? _lastCaptureRestart;
@@ -97,6 +105,7 @@ namespace AlbionDataAvalonia.Network.Services
             }
 
             _tradeService = tradeService;
+            _settingsManager.UserSettings.PropertyChanged += OnUserSettingsPropertyChanged;
             IsMacOSCapturePermissionSetupOutdated =
                 RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
                 && HasLegacyMacOSCapturePermissionSetup();
@@ -131,7 +140,10 @@ namespace AlbionDataAvalonia.Network.Services
                     : registration is not null && Volatile.Read(ref registration.IsRetired) == 0 ? "open"
                     : _adapterOpenFailures.TryGetValue(deviceName, out var denied) ? denied ? "permission denied" : "couldn't open"
                     : selected is not null ? "not used" : "closed";
-                adapters.Add(new CaptureAdapterState(displayName, state));
+                var linkType = _adapterLinkTypes.TryGetValue(deviceName, out var link) && link != LinkLayers.Ethernet
+                    ? link.ToString()
+                    : null;
+                adapters.Add(new CaptureAdapterState(displayName, state, linkType));
             }
 
             string[] unknownServerIps;
@@ -145,7 +157,65 @@ namespace AlbionDataAvalonia.Network.Services
                 unknownServerIps,
                 (GameTrafficTransport)Volatile.Read(ref _gameTrafficTransport),
                 Volatile.Read(ref _captureRestartCount),
-                Volatile.Read(ref _lastCaptureRestart));
+                Volatile.Read(ref _lastCaptureRestart),
+                _adaptersMissingFromCapture,
+                _settingsManager.UserSettings.CaptureAdapterName is { Length: > 0 } pinned ? pinned : null);
+        }
+
+        /// <summary>The adapters the capture driver lists now, for the adapter picker in settings.</summary>
+        public IReadOnlyList<CaptureAdapterInfo> ListCaptureAdapters()
+        {
+            var adapters = new List<CaptureAdapterInfo>();
+            try
+            {
+                foreach (ILiveDevice device in CaptureDeviceList.New())
+                {
+                    try
+                    {
+                        var key = GetAdapterKey(device);
+                        var label = GetAdapterLabel(device);
+                        var isTunnel = _adapterLinkTypes.TryGetValue(device.Name, out var link)
+                            ? CapturedPacketParser.IsTunnelLinkType(link)
+                            : TrafficRouterDetector.MatchAdapter(label) is not null;
+                        if (adapters.All(adapter => adapter.Key != key))
+                        {
+                            adapters.Add(new CaptureAdapterInfo(key, label, isTunnel));
+                        }
+                    }
+                    finally
+                    {
+                        DisposeUnownedCaptureDevice(device);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Unable to list network adapters for the adapter picker.");
+            }
+
+            return adapters
+                .OrderByDescending(adapter => adapter.IsTunnel)
+                .ThenBy(adapter => adapter.Label, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private void OnUserSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName != nameof(UserSettings.CaptureAdapterName))
+            {
+                return;
+            }
+
+            lock (_lifecycleStateLock)
+            {
+                if (_disposed || _isPowerSuspended || !_listeningRequested)
+                {
+                    return;
+                }
+            }
+
+            Log.Information("Network adapter choice changed; restarting capture.");
+            _ = RequestStartAsync(forceRestart: true, applyStartDelay: false);
         }
 
         public Task StartNetworkListeningAsync()
@@ -470,11 +540,20 @@ namespace AlbionDataAvalonia.Network.Services
                 device.Open(configuration);
                 device.Filter = filter;
                 device.StartCapture();
-
+                var linkType = device.LinkType;
+                _adapterLinkTypes[registration.DeviceName] = linkType;
                 Log.Debug(
-                    "Opened network device: {Device} with filter: {Filter}",
+                    "Opened network device: {Device} ({LinkType}) with filter: {Filter}",
                     registration.DisplayName,
+                    linkType,
                     filter);
+                if (CapturedPacketParser.IsTunnelLinkType(linkType))
+                {
+                    Log.Information(
+                        "Listening on tunnel adapter {Device} ({LinkType}) for game traffic routed through a VPN.",
+                        registration.DisplayName,
+                        linkType);
+                }
                 ClearFailureLog($"open:{registration.DeviceName}");
                 _adapterOpenFailures.TryRemove(registration.DeviceName, out _);
                 return new CaptureDeviceOpenResult(true, false);
@@ -736,12 +815,150 @@ namespace AlbionDataAvalonia.Network.Services
                     entry => entry.Key,
                     entry => GetDeviceDisplayName(entry.Value),
                     StringComparer.Ordinal);
-                return devicesByName;
+                UpdateAdaptersMissingFromCapture(devicesByName.Keys);
+                return ApplyPinnedAdapter(devicesByName);
             }
             catch
             {
                 DisposeUnownedCaptureDevices(devicesByName.Values);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Keeps only the adapter chosen in settings when it is present. While it is missing, for example before the
+        /// VPN connects, every adapter stays a candidate; the rescan notices when it appears and restarts capture on it.
+        /// </summary>
+        private Dictionary<string, ILiveDevice> ApplyPinnedAdapter(Dictionary<string, ILiveDevice> devicesByName)
+        {
+            var pinned = _settingsManager.UserSettings.CaptureAdapterName;
+            if (string.IsNullOrEmpty(pinned))
+            {
+                LogPinnedAdapterOnce(null, () => { });
+                return devicesByName;
+            }
+
+            var match = devicesByName.FirstOrDefault(entry => MatchesAdapter(entry.Value, pinned));
+            if (match.Value is null)
+            {
+                LogPinnedAdapterOnce($"missing:{pinned}", () => Log.Warning(
+                    "The network adapter chosen in settings, {Adapter}, isn't available. Listening on every adapter until it appears.",
+                    pinned));
+                return devicesByName;
+            }
+
+            foreach (var entry in devicesByName)
+            {
+                if (!ReferenceEquals(entry.Value, match.Value))
+                {
+                    DisposeUnownedCaptureDevice(entry.Value);
+                }
+            }
+
+            var displayName = GetDeviceDisplayName(match.Value);
+            LogPinnedAdapterOnce($"pinned:{match.Key}", () => Log.Information(
+                "Capture is limited to the network adapter chosen in settings: {Adapter}.",
+                displayName));
+            return new Dictionary<string, ILiveDevice>(StringComparer.Ordinal) { [match.Key] = match.Value };
+        }
+
+        // The rescan runs every few seconds, so a pinned-adapter message is only logged when it changes.
+        private void LogPinnedAdapterOnce(string? key, Action log)
+        {
+            lock (_failureLogLock)
+            {
+                if (_lastPinnedAdapterLog == key)
+                {
+                    return;
+                }
+
+                _lastPinnedAdapterLog = key;
+            }
+
+            log();
+        }
+
+        private static bool MatchesAdapter(ILiveDevice device, string adapter)
+        {
+            return string.Equals(device.Name, adapter, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(GetAdapterKey(device), adapter, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(device.Description, adapter, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// What settings store for a chosen adapter: the Windows friendly name such as "sing-box", because a VPN
+        /// can recreate its tunnel with a new device id each time it connects; elsewhere the device name such as tun0.
+        /// </summary>
+        private static string GetAdapterKey(ILiveDevice device)
+        {
+            var friendlyName = (device as LibPcapLiveDevice)?.Interface?.FriendlyName;
+            return string.IsNullOrWhiteSpace(friendlyName) ? device.Name : friendlyName;
+        }
+
+        private static string GetAdapterLabel(ILiveDevice device)
+        {
+            var key = GetAdapterKey(device);
+            var description = device.Description;
+            return string.IsNullOrWhiteSpace(description) || string.Equals(description, key, StringComparison.OrdinalIgnoreCase)
+                ? key
+                : $"{key} · {description}";
+        }
+
+        /// <summary>
+        /// Notes adapters the system has up that the capture driver doesn't list. Npcap only sees adapters it is bound
+        /// to, so a VPN tunnel it isn't bound to carries the game's traffic out of reach.
+        /// </summary>
+        private void UpdateAdaptersMissingFromCapture(IReadOnlyCollection<string> captureDeviceNames)
+        {
+            try
+            {
+                var missing = new List<string>();
+                foreach (var networkInterface in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (networkInterface.OperationalStatus != OperationalStatus.Up
+                        || networkInterface.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+                    {
+                        continue;
+                    }
+
+                    // Npcap names devices \Device\NPF_{GUID}, where the GUID is the interface id.
+                    var seen = OperatingSystem.IsWindows()
+                        ? captureDeviceNames.Any(name => name.Contains(networkInterface.Id, StringComparison.OrdinalIgnoreCase))
+                        : captureDeviceNames.Contains(networkInterface.Name);
+                    if (seen)
+                    {
+                        continue;
+                    }
+
+                    var label = string.IsNullOrWhiteSpace(networkInterface.Description)
+                        || networkInterface.Description == networkInterface.Name
+                            ? networkInterface.Name
+                            : $"{networkInterface.Name} ({networkInterface.Description})";
+                    missing.Add(label);
+
+                    var looksLikeTunnel = TrafficRouterDetector.MatchAdapter(label) is not null
+                        || networkInterface.NetworkInterfaceType is NetworkInterfaceType.Tunnel
+                            or NetworkInterfaceType.Ppp
+                            or NetworkInterfaceType.Unknown;
+                    bool firstTime;
+                    lock (_loggedMissingAdapters)
+                    {
+                        firstTime = _loggedMissingAdapters.Add(label);
+                    }
+
+                    if (looksLikeTunnel && firstTime)
+                    {
+                        Log.Warning(
+                            "VPN adapter {Adapter} is up, but the packet capture driver doesn't list it, so game traffic routed through it can't be read. Update Npcap to the latest version, then restart the client with the VPN connected.",
+                            label);
+                    }
+                }
+
+                _adaptersMissingFromCapture = missing;
+            }
+            catch (Exception ex)
+            {
+                Log.Debug(ex, "Unable to compare system network adapters with capture devices.");
             }
         }
 
@@ -886,7 +1103,7 @@ namespace AlbionDataAvalonia.Network.Services
             try
             {
                 var capturedPacket = e.GetPacket();
-                UdpPacket packet = Packet.ParsePacket(capturedPacket.LinkLayerType, capturedPacket.Data).Extract<UdpPacket>();
+                UdpPacket? packet = CapturedPacketParser.ExtractUdp(capturedPacket.LinkLayerType, capturedPacket.Data);
                 if (packet is null)
                 {
                     return;
@@ -1396,6 +1613,8 @@ namespace AlbionDataAvalonia.Network.Services
             {
                 SystemEvents.PowerModeChanged -= SystemEvents_PowerModeChanged;
             }
+
+            _settingsManager.UserSettings.PropertyChanged -= OnUserSettingsPropertyChanged;
 
             RequestStopAsync(markPowerSuspended: true, disposeService: true)
                 .GetAwaiter()

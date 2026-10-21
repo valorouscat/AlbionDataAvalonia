@@ -25,6 +25,7 @@ namespace AlbionDataAvalonia.ViewModels;
 
 public partial class SettingsViewModel : ViewModelBase
 {
+    public const int GeneralTabIndex = 0;
     public const int UploadsTabIndex = 1;
     public const int StreamerTabIndex = 3;
 
@@ -92,6 +93,7 @@ public partial class SettingsViewModel : ViewModelBase
     {
         UpdateStreamerPreview(value == StreamerTabIndex);
         if (value == DataTabIndex) _ = RefreshStorageAsync();
+        if (value == GeneralTabIndex) _ = RefreshCaptureAdaptersAsync();
     }
 
     public void UpdateStreamerPreview(bool visible)
@@ -125,7 +127,8 @@ public partial class SettingsViewModel : ViewModelBase
         DataCleanupService? dataCleanup = null,
         PacketDiagnostics? packetDiagnostics = null,
         IDialogService? dialogs = null,
-        IClipboardService? clipboard = null)
+        IClipboardService? clipboard = null,
+        NetworkListenerService? networkListener = null)
     {
         _settingsManager = settingsManager;
         _playerState = playerState;
@@ -149,6 +152,7 @@ public partial class SettingsViewModel : ViewModelBase
 
         UserSettings = _settingsManager.UserSettings;
         UserSettings.PropertyChanged += OnUserSettingsPropertyChanged;
+        InitializeNetwork(networkListener);
 
         UpdatePowSolveStatistics();
         lastPowSolveStatsRefresh = DateTimeOffset.UtcNow;

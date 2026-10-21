@@ -19,6 +19,7 @@ A free, open-source companion app for Albion Online on Windows, Linux and macOS.
 > - **Remembered nodes**: open-world nodes are kept per server and map for 7 days and shown faded with when they were last seen and how many units they had.
 > - **Filters**: a lowest tier and each kind of resource on or off, kept between restarts.
 > - **Resource mobs**: hide animals and resource critters as diamonds with their tier, ringed when enchanted.
+> - **Capture through a VPN**: the client also reads game traffic on VPN tunnel adapters (sing-box, WireGuard, Wintun and similar), and **Settings › General › Network adapter** can limit capture to one adapter, such as the VPN's tunnel.
 > - **Fork releases**: every push to `master` publishes a [release of the fork](https://github.com/valorouscat/AlbionDataAvalonia/releases/latest) (version 1.0.x), and the installed client updates itself from it instead of the official releases. Other branches build a test installer as an Actions artifact.
 >
 > The download links and instructions below point to the official client.
@@ -257,7 +258,7 @@ You are responsible for following Sandbox Interactive's rules, which can change.
 
 ### It isn't detecting the game. What can I do?
 
-Open **Not working? Troubleshooting** on the Main tab. Ping boosters and VPNs (ExitLag, WTFast, NoPing and similar) can route game traffic where the client can't see it, so pause them and change zones. When no traffic arrives, the Main tab names any it finds running. If you use ExitLag, set `Packets redirection method` to `Legacy - NDIS` under `TOOLS`:
+Open **Not working? Troubleshooting** on the Main tab. Ping boosters and VPNs (ExitLag, WTFast, NoPing and similar) can route game traffic where the client can't see it, so pause them and change zones. When no traffic arrives, the Main tab names any it finds running. If the game only works through a VPN that creates a tunnel adapter (such as sing-box in TUN mode), keep it on and choose that adapter under **Settings › General › Network adapter**. **Copy diagnostics** lists adapters that are up but that Npcap doesn't see; if the tunnel is among them, update Npcap and restart the client with the VPN connected. If you use ExitLag, set `Packets redirection method` to `Legacy - NDIS` under `TOOLS`:
 
 ![ExitLag settings](https://github.com/JPCodeCraft/AlbionDataAvalonia/assets/11092613/94a76ea6-6023-40df-8d6e-e816e612befe)
 
