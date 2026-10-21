@@ -67,6 +67,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         showResources = settings.MapShowResources;
         showRememberedResources = settings.MapShowRememberedResources;
         showResourceMobs = settings.MapShowResourceMobs;
+        legendCollapsed = settings.MapLegendCollapsed;
         var hidden = HiddenFamilies(settings.MapResourceHiddenFamilies);
         showWood = !hidden.Contains("Wood");
         showStone = !hidden.Contains("Stone");
@@ -197,6 +198,13 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         if (SelectedRunMap is { } option) UpdateHistoryDetails(option);
         Rebuild();
     }
+
+    [ObservableProperty] private bool legendCollapsed;
+
+    partial void OnLegendCollapsedChanged(bool value) => settings.MapLegendCollapsed = value;
+
+    [RelayCommand]
+    private void ToggleLegend() => LegendCollapsed = !LegendCollapsed;
 
     partial void OnShowPathChanged(bool value) => Rebuild();
     partial void OnShowKillsChanged(bool value) => Rebuild();

@@ -414,6 +414,19 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // Whether the map window's legend and filters are folded down to a single button.
+    private bool mapLegendCollapsed;
+    public bool MapLegendCollapsed
+    {
+        get => mapLegendCollapsed;
+        set
+        {
+            if (mapLegendCollapsed == value) return;
+            mapLegendCollapsed = value;
+            OnPropertyChanged(nameof(MapLegendCollapsed));
+        }
+    }
+
     // Whether the live map also shows the nodes remembered from earlier visits to the map, faded.
     private bool mapShowRememberedResources = true;
     public bool MapShowRememberedResources
