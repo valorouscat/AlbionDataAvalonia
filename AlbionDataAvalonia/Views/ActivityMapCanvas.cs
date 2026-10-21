@@ -395,10 +395,19 @@ public sealed class ActivityMapCanvas : Control
                 var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 9,
                     gathered ? color : UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
                 tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
-                // What a single node has left, under it, so a glance tells a full node from a picked one.
-                if (count == 1 && !gathered && best.Charges > 0)
+            }
+
+            // What the node, or all the nodes of a group, have left, under it, so a glance tells a full spot from a
+            // picked one. A "+" marks a group with nodes whose charges aren't known.
+            var standing = group.Nodes.Where(x => x.GatheredAtUtc is null).ToArray();
+            var charges = standing.Sum(x => Math.Max(x.Charges, 0));
+            if (charges > 0)
+            {
+                var unknown = count > 1 && standing.Any(x => x.Charges <= 0);
+                using (context.PushOpacity(standing.Any(x => x.Live && x.Charges > 0) ? 1 : RememberedOpacity))
                 {
-                    var left = ChartDrawing.Text(UiFormat.Whole(best.Charges), 8, UiPalette.Color("UiMapResourceChargesColor"), FontWeight.Bold);
+                    var left = ChartDrawing.Text(UiFormat.Whole(charges) + (unknown ? "+" : ""), 8,
+                        UiPalette.Color("UiMapResourceChargesColor"), FontWeight.Bold);
                     var origin = new Point(group.At.X - left.Width / 2, group.At.Y + radius + 1);
                     context.DrawRectangle(UiPalette.Brush(UiPalette.WithAlpha(UiPalette.Color("UiMapResourceTextColor"), 190)), null,
                         new Rect(origin.X - 2, origin.Y, left.Width + 4, left.Height), 3, 3);
@@ -467,6 +476,8 @@ public sealed class ActivityMapCanvas : Control
             KindCount(x.ToArray()))).ToArray();
         var lines = new List<string>();
         if (kinds.Length > GroupLinesShown) lines.Add($"and {UiFormat.Count(kinds.Length - GroupLinesShown, "more kind")}");
+        var charges = nodes.Where(x => x.GatheredAtUtc is null).Sum(x => Math.Max(x.Charges, 0));
+        if (charges > 0) lines.Add($"{UiFormat.Whole(charges)} left in all");
         lines.Add("Zoom in to see each node");
         return new(at, 11, UiFormat.Count(nodes.Count, "resource node"), lines, rows);
     }
@@ -475,7 +486,9 @@ public sealed class ActivityMapCanvas : Control
     {
         var remembered = nodes.Count(x => !x.Live && x.GatheredAtUtc is null);
         var gathered = nodes.Count(x => x.GatheredAtUtc is not null);
+        var charges = nodes.Where(x => x.GatheredAtUtc is null).Sum(x => Math.Max(x.Charges, 0));
         var parts = new List<string> { UiFormat.Count(nodes.Count, "node") };
+        if (charges > 0) parts.Add($"{UiFormat.Whole(charges)} left");
         if (remembered > 0) parts.Add($"{remembered} remembered");
         if (gathered > 0) parts.Add($"{gathered} gathered out");
         return string.Join(", ", parts);

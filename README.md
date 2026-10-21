@@ -15,7 +15,7 @@ A free, open-source companion app for Albion Online on Windows, Linux and macOS.
 
 > **About this fork.** This is [valorouscat/AlbionDataAvalonia](https://github.com/valorouscat/AlbionDataAvalonia), a fork of [JPCodeCraft/AlbionDataAvalonia](https://github.com/JPCodeCraft/AlbionDataAvalonia). On top of the official client it adds:
 >
-> - **Live resource nodes** on the Activity [map](#map): wood, ore, fiber, hide and stone with tier, enchantment and units left, behind the **Resources** toggle (off by default).
+> - **Live resource nodes** on the Activity [map](#map): wood, ore, fiber, hide and stone with tier, enchantment and units left, behind the **Resources** toggle (off by default); nodes close together merge into one marker with their count and the total units left.
 > - **Remembered nodes**: open-world nodes are kept per server and map for 7 days and shown faded with when they were last seen and how many units they had.
 > - **Filters**: a lowest tier and each kind of resource on or off, kept between restarts.
 > - **Resource mobs**: hide animals and resource critters as diamonds with their tier, ringed when enchanted.
