@@ -130,7 +130,8 @@ public sealed class MapDataService : IDisposable
         }
     }
 
-    /// <summary>The zone's minimap icons and resource spawn spots; empty when its feature file can't be had.</summary>
+    /// <summary>The zone's minimap icons, resource spawn spots and chest spots; empty when its feature file can't be had,
+    /// but for the Mists camp slots that come with the app.</summary>
     public Task<MapZoneFeatures> GetFeaturesAsync(MapZone zone) =>
         features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
 
@@ -310,14 +311,41 @@ public sealed class MapDataService : IDisposable
             var placed = (file?.Features ?? [])
                 .Where(x => x.X is { } featureX && x.Z is { } featureZ && double.IsFinite(featureX) && double.IsFinite(featureZ))
                 .ToArray();
-            return new(placed.Select(Icon).OfType<MapZoneIcon>().ToArray(), placed.Select(ResourceSpawn).OfType<MapResourceSpawn>().ToArray());
+            return new(placed.Select(Icon).OfType<MapZoneIcon>().ToArray(), placed.Select(ResourceSpawn).OfType<MapResourceSpawn>().ToArray(),
+                [.. placed.Select(ChestSpawn).OfType<MapChestSpawn>(), .. MistsCampSlots.For(zone.Id)]);
         }
         catch (Exception error) when (error is HttpRequestException or IOException or JsonException or TaskCanceledException)
         {
             Log.Warning(error, "Could not load map features for {ZoneId}", zone.Id);
             features.TryRemove(zone.Id, out _);
-            return MapZoneFeatures.Empty;
+            // The Mists camp slots come with the app, so they still show.
+            return new([], [], MistsCampSlots.For(zone.Id));
         }
+    }
+
+    // AlbionWorld lists the chests a layout places as "lootchestspawnpoint", named after the game's spawn point
+    // ("Spawn Point Lootchest Static Morgana Veteran"), and a Hellgate's objective chest as a named marker point. A chest
+    // with a minimap icon, such as a Roads chest, already shows as that icon.
+    private static MapChestSpawn? ChestSpawn(Feature feature)
+    {
+        var position = new MapPoint(feature.X!.Value, feature.Z!.Value);
+        if (feature.Type == "namedmarkerpoint" && feature.Label == "HellgateObjectiveChest") return new("Hellgate chest", 3, position);
+        if (feature.Type != "lootchestspawnpoint" || !string.IsNullOrWhiteSpace(feature.MarkerType)) return null;
+        const string prefix = "Spawn Point Lootchest";
+        var name = Humanize(feature.Label ?? "");
+        if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) name = name[prefix.Length..].Trim();
+        // A raw spawn point name is all capitals.
+        if (!name.Any(char.IsLower)) name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.ToLowerInvariant());
+        if (name.Length == 0) name = "Chest";
+        else if (!name.Contains("chest", StringComparison.OrdinalIgnoreCase)) name += " chest";
+        return new(name, ChestGrade(name), position);
+    }
+
+    private static int ChestGrade(string name)
+    {
+        var words = name.ToUpperInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Any(x => x is "BOSS" or "ENDBOSS" or "MINIBOSS" or "VETERAN" or "ELITE" or "LARGE" or "RAID" or "LEGENDARY" or "EPIC")) return 3;
+        return words.Any(x => x is "MEDIUM" or "GROUP" or "DUO" or "UNCOMMON" or "RARE" or "STANDARD") ? 2 : 1;
     }
 
     // AlbionWorld lists, by the game's resource type and tier, the spots an open-world zone picks its ordinary nodes

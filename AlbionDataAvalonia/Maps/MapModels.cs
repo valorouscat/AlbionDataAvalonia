@@ -22,10 +22,19 @@ public sealed record MapZoneIcon(string? MarkerType, string Label, MapPoint Posi
 /// </summary>
 public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false, bool Candidate = false);
 
-/// <summary>A zone's minimap icons and resource spawn spots, read from one AlbionWorld feature file.</summary>
-public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns)
+/// <summary>
+/// A spot where a loot chest can stand, from the game files: a chest the zone's layout places (open-world camp, faction
+/// and static chests, Corrupted Dungeon and Hellgate chests) or, when Radius is set, a Mists camp slot whose chest stands
+/// within Radius of it if the instance puts a camp there. Grade orders them: 1 small, 2 medium, 3 boss or large.
+/// Roads chests are left out, since the game gives them an icon of their own.
+/// </summary>
+public sealed record MapChestSpawn(string Label, int Grade, MapPoint Position, double Radius = 0);
+
+/// <summary>A zone's minimap icons, resource spawn spots and chest spots, read from one AlbionWorld feature file.</summary>
+public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns,
+    IReadOnlyList<MapChestSpawn> ChestSpawns)
 {
-    public static MapZoneFeatures Empty { get; } = new([], []);
+    public static MapZoneFeatures Empty { get; } = new([], [], []);
 }
 
 /// <summary>A zone from the AlbionWorld catalog the website also uses.</summary>

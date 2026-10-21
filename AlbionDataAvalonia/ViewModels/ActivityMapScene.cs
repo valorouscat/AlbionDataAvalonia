@@ -11,7 +11,8 @@ namespace AlbionDataAvalonia.ViewModels;
 public enum ActivityMapLayers
 {
     None = 0, Path = 1, Kills = 2, Loot = 4, Gathering = 8, Deaths = 16, Features = 32, Resources = 64, ResourceSpawns = 128,
-    All = Path | Kills | Loot | Gathering | Deaths | Features | Resources | ResourceSpawns
+    ChestSpawns = 256,
+    All = Path | Kills | Loot | Gathering | Deaths | Features | Resources | ResourceSpawns | ChestSpawns
 }
 
 /// <summary>A zone's danger level, which colors its exits.</summary>
@@ -28,7 +29,8 @@ public sealed record ActivityMapIcon(MapPoint Position, string Label, Bitmap? Im
 /// ImageQuarterTurns turns the minimap clockwise about its centre, as a Mists instance turns its layout.
 /// Resources are the live map's resource nodes, already filtered by tier and kind and sorted best first; ResourceMobs are
 /// the mobs that yield resources, filtered the same way and sorted best last. ResourceSpawns are the zone's possible
-/// resource spots from the game files, filtered the same way and sorted best last.
+/// resource spots from the game files, filtered the same way and sorted best last. ChestSpawns are the zone's possible
+/// loot chest spots from the game files, sorted best last.
 /// </summary>
 public sealed record ActivityMapScene(
     string ViewKey,
@@ -50,4 +52,5 @@ public sealed record ActivityMapScene(
     int ImageQuarterTurns = 0,
     IReadOnlyList<ActivityResourceNode>? Resources = null,
     IReadOnlyList<ActivityResourceMob>? ResourceMobs = null,
-    IReadOnlyList<MapResourceSpawn>? ResourceSpawns = null);
+    IReadOnlyList<MapResourceSpawn>? ResourceSpawns = null,
+    IReadOnlyList<MapChestSpawn>? ChestSpawns = null);

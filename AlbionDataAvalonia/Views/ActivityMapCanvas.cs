@@ -50,6 +50,8 @@ public sealed class ActivityMapCanvas : Control
     // Spawn spots are many and only possible, so they are smaller and fainter than the nodes the game has shown.
     private const double SpawnClusterRadius = 12;
     private const double SpawnOpacity = 0.6;
+    // Chest spots are few and worth finding, so they stay opaque and merge only when nearly on top of each other.
+    private const double ChestClusterRadius = 14;
     // The live position updates a few times a second. The marker, and the view while following, glide to
     // each new one over about as long as the last update took, so walking reads as movement, not hops.
     private static readonly TimeSpan MaxGlide = TimeSpan.FromMilliseconds(400);
@@ -276,6 +278,7 @@ public sealed class ActivityMapCanvas : Control
         }
 
         if (scene.Layers.HasFlag(ActivityMapLayers.ResourceSpawns)) DrawResourceSpawns(context, scene, scale);
+        if (scene.Layers.HasFlag(ActivityMapLayers.ChestSpawns)) DrawChestSpawns(context, scene, scale);
         if (scene.Layers.HasFlag(ActivityMapLayers.Resources))
         {
             DrawResources(context, scene, scale);
@@ -516,6 +519,60 @@ public sealed class ActivityMapCanvas : Control
 
             hits.Add(SpawnHit(group.At, group.Spawns));
         }
+    }
+
+    // A chest spot is a small gold chest, larger for a boss or large chest. A Mists camp slot also gets a dashed ring
+    // for where its chest can stand, once the ring is big enough on screen to read.
+    private void DrawChestSpawns(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        if (scene.ChestSpawns is not { Count: > 0 } chests) return;
+        var groups = new List<ChestGroup>();
+        // The scene lists the best last, so walking it backwards puts the best chest first in its group.
+        for (var index = chests.Count - 1; index >= 0; index--)
+        {
+            var chest = chests[index];
+            var at = ToScreen(ImagePoint(scene, chest.Position.X, chest.Position.Y), scale);
+            var ring = chest.Radius > 0 ? Distance(at, ToScreen(ImagePoint(scene, chest.Position.X + chest.Radius, chest.Position.Y), scale)) : 0;
+            if (!Visible(at, Math.Max(ChestClusterRadius, ring))) continue;
+            if (ring >= ChestClusterRadius)
+                context.DrawEllipse(null, new ImmutablePen(UiPalette.Brush("UiMapChestAreaColor"), 1.5,
+                    new ImmutableDashStyle([3, 3], 0)), at, ring, ring);
+            var group = groups.FirstOrDefault(x => Distance(x.At, at) <= ChestClusterRadius);
+            if (group is null) groups.Add(group = new ChestGroup(at));
+            group.Chests.Add(chest);
+        }
+
+        var fill = UiPalette.Brush("UiMapChestColor");
+        var lid = UiPalette.Pen(UiPalette.Color("UiMapChestLidColor"), 1.2);
+        foreach (var group in Enumerable.Reverse(groups))
+        {
+            var best = group.Chests[0];
+            var half = best.Grade switch { >= 3 => 7.5, 2 => 6, _ => 5 };
+            var box = new Rect(group.At.X - half, group.At.Y - half * 0.75, half * 2, half * 1.5);
+            context.DrawRectangle(fill, OutlinePen, box, 2, 2);
+            context.DrawLine(lid, new Point(box.Left + 1, box.Top + box.Height * 0.4), new Point(box.Right - 1, box.Top + box.Height * 0.4));
+            context.DrawRectangle(UiPalette.Brush("UiMapChestLidColor"), null,
+                new Rect(group.At.X - 1, box.Top + box.Height * 0.4 - 1, 2, 3));
+            if (group.Chests.Count > 1) ChartDrawing.DrawCountBadge(context, group.At, group.Chests.Count);
+            hits.Add(ChestHit(group.At, group.Chests));
+        }
+    }
+
+    private static Hit ChestHit(Point at, IReadOnlyList<MapChestSpawn> chests)
+    {
+        if (chests.Count == 1)
+        {
+            var chest = chests[0];
+            return new(at, 9, chest.Label, chest.Radius > 0
+                ? [$"A camp slot of this Mists layout. If the game puts a PvE camp here, its chest stands within {UiFormat.Whole(chest.Radius)} m",
+                    "Otherwise the slot holds resources, an exit or plain landscape"]
+                : ["A spot where this chest can spawn, from the game files", "Not what stands there now"], []);
+        }
+
+        var lines = chests.GroupBy(x => x.Label).OrderByDescending(x => x.Max(chest => chest.Grade)).ThenByDescending(x => x.Count())
+            .Take(GroupLinesShown).Select(x => x.Count() > 1 ? $"{x.Key} × {x.Count()}" : x.Key).ToList();
+        lines.Add("Possible spots from the game files; zoom in to see each");
+        return new(at, 10, UiFormat.Count(chests.Count, "chest spot"), lines, []);
     }
 
     private static string SpawnLabel(MapResourceSpawn spawn) => $"T{spawn.Tier} {spawn.Family}{(spawn.Mob ? " mob" : "")}";
@@ -1061,6 +1118,12 @@ public sealed class ActivityMapCanvas : Control
     {
         public Point At { get; } = at;
         public List<ActivityResourceNode> Nodes { get; } = new();
+    }
+
+    private sealed class ChestGroup(Point at)
+    {
+        public Point At { get; } = at;
+        public List<MapChestSpawn> Chests { get; } = new();
     }
 
     private sealed class SpawnGroup(Point at)

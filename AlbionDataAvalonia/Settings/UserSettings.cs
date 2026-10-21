@@ -499,6 +499,20 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // Whether the map shows where the zone can hold loot chests, from the game files.
+    private bool mapShowChestSpawns;
+    public bool MapShowChestSpawns
+    {
+        get => mapShowChestSpawns;
+        set
+        {
+            if (mapShowChestSpawns == value) return;
+            mapShowChestSpawns = value;
+            OnPropertyChanged(nameof(MapShowChestSpawns));
+            Log.Information("Map chest spawns set to {MapShowChestSpawns}", mapShowChestSpawns);
+        }
+    }
+
     private void SetStreamerOption(ref bool field, bool value, string propertyName)
     {
         if (field == value) return;

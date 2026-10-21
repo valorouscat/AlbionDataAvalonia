@@ -157,6 +157,12 @@
     <SolidColorBrush x:Key="UiResourceFiberBrush" Color="{StaticResource UiResourceFiberColor}" />
     <SolidColorBrush x:Key="UiResourceHideBrush" Color="{StaticResource UiResourceHideColor}" />
 
+    <!-- Loot chest spots on the map: a chest in gold, with a lid line, and the ring a Mists camp's chest stands in. -->
+    <Color x:Key="UiMapChestColor">#E3A93B</Color>
+    <Color x:Key="UiMapChestLidColor">#5A3B12</Color>
+    <Color x:Key="UiMapChestAreaColor">#B3E3A93B</Color>
+    <SolidColorBrush x:Key="UiMapChestBrush" Color="{StaticResource UiMapChestColor}" />
+
     <!-- Zone danger levels, for the exits drawn on the map. -->
     <Color x:Key="UiZoneBlueColor">#4A90E2</Color>
     <Color x:Key="UiZoneYellowColor">#F2C94C</Color>

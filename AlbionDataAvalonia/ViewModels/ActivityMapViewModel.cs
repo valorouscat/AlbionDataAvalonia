@@ -68,6 +68,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         showRememberedResources = settings.MapShowRememberedResources;
         showResourceMobs = settings.MapShowResourceMobs;
         showResourceSpawns = settings.MapShowResourceSpawns;
+        showChestSpawns = settings.MapShowChestSpawns;
         legendCollapsed = settings.MapLegendCollapsed;
         var hidden = HiddenFamilies(settings.MapResourceHiddenFamilies);
         showWood = !hidden.Contains("Wood");
@@ -116,6 +117,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowResourceFilters))]
     private bool showResourceSpawns;
+    [ObservableProperty] private bool showChestSpawns;
     [ObservableProperty] private Option<int> selectedResourceTier;
     [ObservableProperty] private bool showRememberedResources;
     [ObservableProperty] private bool showResourceMobs;
@@ -166,7 +168,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private ActivityMapLayers Layers =>
         (ShowPath ? ActivityMapLayers.Path : 0) | (ShowKills ? ActivityMapLayers.Kills : 0) | (ShowLoot ? ActivityMapLayers.Loot : 0)
         | (ShowGathering ? ActivityMapLayers.Gathering : 0) | (ShowDeaths ? ActivityMapLayers.Deaths : 0) | (ShowFeatures ? ActivityMapLayers.Features : 0)
-        | (ShowResources ? ActivityMapLayers.Resources : 0) | (ShowResourceSpawns ? ActivityMapLayers.ResourceSpawns : 0);
+        | (ShowResources ? ActivityMapLayers.Resources : 0) | (ShowResourceSpawns ? ActivityMapLayers.ResourceSpawns : 0)
+        | (ShowChestSpawns ? ActivityMapLayers.ChestSpawns : 0);
 
     private double FadeSeconds => FadeOptionValues[Math.Clamp(SelectedFadeIndex, 0, FadeOptionValues.Length - 1)] * 60d;
 
@@ -237,6 +240,12 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     partial void OnShowResourceSpawnsChanged(bool value)
     {
         settings.MapShowResourceSpawns = value;
+        Rebuild();
+    }
+
+    partial void OnShowChestSpawnsChanged(bool value)
+    {
+        settings.MapShowChestSpawns = value;
         Rebuild();
     }
 
@@ -397,7 +406,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
-            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)));
+            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownChestSpawns(Turned(zone?.ChestSpawns ?? [], turns)));
     }
 
     // Grows with the path so the view stays steady while walking a zone without a minimap.
@@ -544,7 +553,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var turns = LayoutTurns(zone, option.Layout, option.LayoutTurns);
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
-            Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)));
+            Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)),
+            ChestSpawns: ShownChestSpawns(Turned(zone?.ChestSpawns ?? [], turns)));
     }
 
     // Only a minimap found by its layout follows the instance's turn.
@@ -561,6 +571,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private static IReadOnlyList<MapResourceSpawn> Turned(IReadOnlyList<MapResourceSpawn> spawns, int turns) =>
         turns % 4 == 0 ? spawns : spawns.Select(spawn => spawn with { Position = Turn(spawn.Position, turns) }).ToArray();
 
+    private static IReadOnlyList<MapChestSpawn> Turned(IReadOnlyList<MapChestSpawn> chests, int turns) =>
+        turns % 4 == 0 ? chests : chests.Select(chest => chest with { Position = Turn(chest.Position, turns) }).ToArray();
+
     private static MapPoint Turn(MapPoint point, int turns)
     {
         for (var turn = 0; turn < turns % 4; turn++) point = new MapPoint(point.Y, -point.X);
@@ -572,7 +585,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         try
         {
             var zone = await maps.FindZoneAsync(rawMapId, layout);
-            if (zone is null) return new ZoneView(rawMapId, null, null, null, [], [], [], fallbackName, "", null, false);
+            if (zone is null) return new ZoneView(rawMapId, null, null, null, [], [], [], [], fallbackName, "", null, false);
             var imageTask = maps.GetImageAsync(zone);
             var featuresTask = maps.GetFeaturesAsync(zone);
             var frameTask = maps.GetFrameImageAsync();
@@ -605,19 +618,19 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
                 Log.Warning(error, "Could not load the minimap for {RawMapId}", rawMapId);
                 failed = true;
             }
-            return new ZoneView(rawMapId, zone, image, await frameTask, exits, shownIcons, features.ResourceSpawns, zone.DisplayName,
+            return new ZoneView(rawMapId, zone, image, await frameTask, exits, shownIcons, features.ResourceSpawns, features.ChestSpawns, zone.DisplayName,
                 ZoneDescription(zone), zone.Geometry, failed);
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.IO.IOException or JsonException)
         {
             Log.Warning(error, "Could not load map data for {RawMapId}", rawMapId);
-            return new ZoneView(rawMapId, null, null, null, [], [], [], fallbackName, "", null, true);
+            return new ZoneView(rawMapId, null, null, null, [], [], [], [], fallbackName, "", null, true);
         }
         // The callers start this without waiting, so any other failure would vanish and leave the map empty.
         catch (Exception error) when (error is not OperationCanceledException)
         {
             Log.Error(error, "Could not build the map for {RawMapId}", rawMapId);
-            return new ZoneView(rawMapId, null, null, null, [], [], [], fallbackName, "", null, true);
+            return new ZoneView(rawMapId, null, null, null, [], [], [], [], fallbackName, "", null, true);
         }
     }
 
@@ -640,6 +653,10 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         !ShowResourceSpawns || spawns.Count == 0 ? [] : spawns
             .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family))
             .OrderBy(x => x.Tier).ThenBy(x => x.Mob).ToArray();
+
+    // Chest spots are few, so they follow only their own switch; the best are drawn last so they end up on top.
+    private IReadOnlyList<MapChestSpawn> ShownChestSpawns(IReadOnlyList<MapChestSpawn> chests) =>
+        !ShowChestSpawns || chests.Count == 0 ? [] : chests.OrderBy(x => x.Grade).ToArray();
 
     // The path is always the character's own; events follow the Personal or Party choice.
     private IReadOnlyList<ActivityMapMarker> Shown(IReadOnlyList<ActivityMapMarker> markers) =>
@@ -743,5 +760,5 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     }
 
     private sealed record ZoneView(string RawMapId, MapZone? Zone, Bitmap? Image, Bitmap? Frame, IReadOnlyList<ActivityMapExit> Exits,
-        IReadOnlyList<ActivityMapIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed);
+        IReadOnlyList<ActivityMapIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns, IReadOnlyList<MapChestSpawn> ChestSpawns, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed);
 }
