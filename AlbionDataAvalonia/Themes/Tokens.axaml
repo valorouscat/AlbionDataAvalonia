@@ -130,6 +130,9 @@
     <Color x:Key="UiMapBackgroundColor">#1C1E1E</Color>
     <Color x:Key="UiMapGridColor">#22FFFFFF</Color>
     <Color x:Key="UiMapZoneColor">#14FFFFFF</Color>
+    <!-- The rooms of a zone drawn without a minimap, such as a Mists dungeon. -->
+    <Color x:Key="UiMapRoomColor">#2EC9B98F</Color>
+    <Color x:Key="UiMapRoomEdgeColor">#80C9B98F</Color>
     <Color x:Key="UiMapMarkerOutlineColor">#CC111111</Color>
     <Color x:Key="UiMapMarkerEdgeColor">#FFFFFF</Color>
     <Color x:Key="UiMapDeathFillColor">#E0212121</Color>
@@ -156,6 +159,24 @@
     <SolidColorBrush x:Key="UiResourceOreBrush" Color="{StaticResource UiResourceOreColor}" />
     <SolidColorBrush x:Key="UiResourceFiberBrush" Color="{StaticResource UiResourceFiberColor}" />
     <SolidColorBrush x:Key="UiResourceHideBrush" Color="{StaticResource UiResourceHideColor}" />
+
+    <!-- Loot chest spots on the map: a chest in gold, with a lid line, and the ring a Mists camp's chest stands in. -->
+    <Color x:Key="UiMapChestColor">#E3A93B</Color>
+    <Color x:Key="UiMapChestLidColor">#5A3B12</Color>
+    <Color x:Key="UiMapChestAreaColor">#B3E3A93B</Color>
+    <SolidColorBrush x:Key="UiMapChestBrush" Color="{StaticResource UiMapChestColor}" />
+    <!-- The other points of interest: a boss spot, a shrine, a mob camp spot and a Mists wisp spawn. -->
+    <Color x:Key="UiMapPoiBossColor">#E0524A</Color>
+    <Color x:Key="UiMapPoiShrineColor">#A77BE8</Color>
+    <Color x:Key="UiMapPoiCampColor">#E8893B</Color>
+    <Color x:Key="UiMapPoiWispColor">#8FD3F4</Color>
+    <SolidColorBrush x:Key="UiMapPoiBossBrush" Color="{StaticResource UiMapPoiBossColor}" />
+    <SolidColorBrush x:Key="UiMapPoiShrineBrush" Color="{StaticResource UiMapPoiShrineColor}" />
+    <!-- The live map's warning over the character when a hostile player comes into view. -->
+    <Color x:Key="UiMapHostileColor">#E5383B</Color>
+    <Color x:Key="UiMapHostileTextColor">#FFFFFF</Color>
+    <SolidColorBrush x:Key="UiMapHostileBrush" Color="{StaticResource UiMapHostileColor}" />
+    <SolidColorBrush x:Key="UiMapHostileTextBrush" Color="{StaticResource UiMapHostileTextColor}" />
 
     <!-- Zone danger levels, for the exits drawn on the map. -->
     <Color x:Key="UiZoneBlueColor">#4A90E2</Color>

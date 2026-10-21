@@ -5,7 +5,8 @@ namespace AlbionDataAvalonia.Maps;
 
 public readonly record struct MapPoint(double X, double Y);
 
-/// <summary>A connection to another zone, at its position in this zone's local coordinates.</summary>
+/// <summary>A connection to another zone, at its position in this zone's local coordinates. A Mists dungeon's exits
+/// back to the Mists have no TargetId.</summary>
 public sealed record MapZoneExit(string TargetId, MapPoint Position);
 
 /// <summary>
@@ -22,15 +23,38 @@ public sealed record MapZoneIcon(string? MarkerType, string Label, MapPoint Posi
 /// </summary>
 public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false, bool Candidate = false);
 
-/// <summary>A zone's minimap icons and resource spawn spots, read from one AlbionWorld feature file.</summary>
-public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns)
+/// <summary>The kinds of point of interest the map shows in one layer, each drawn its own way.</summary>
+public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp }
+
+/// <summary>
+/// A point of interest from the game files, a spot where something can stand rather than what stands there now:
+/// <list type="bullet">
+/// <item>Chest: a loot chest the zone's layout places (open-world camp, faction and static chests, Corrupted Dungeon and
+/// Hellgate chests, a Mists dungeon's boss chests) or, when Radius is set, a Mists camp slot whose chest stands within
+/// Radius of it if the instance puts a camp there. Roads chests are left out, since the game gives them an icon.</item>
+/// <item>Boss: where the layout spawns a boss or miniboss.</item>
+/// <item>Shrine: a Corrupted Dungeon's shrine and other shrines.</item>
+/// <item>Camp: one of the spots the game picks a zone's mob camps from.</item>
+/// <item>Wisp: where a Mists wisp can appear.</item>
+/// </list>
+/// Grade orders the spots of a kind: 1 small, 2 medium, 3 boss, large or high-tier.
+/// </summary>
+public sealed record MapPoi(MapPoiKind Kind, string Label, int Grade, MapPoint Position, double Radius = 0);
+
+/// <summary>A zone's minimap icons, resource spawn spots and points of interest, read from one AlbionWorld feature file.</summary>
+public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns,
+    IReadOnlyList<MapPoi> Pois)
 {
-    public static MapZoneFeatures Empty { get; } = new([], []);
+    public static MapZoneFeatures Empty { get; } = new([], [], []);
 }
 
-/// <summary>A zone from the AlbionWorld catalog the website also uses.</summary>
+/// <summary>A rectangle in a zone's local coordinates, such as one of a dungeon's rooms.</summary>
+public readonly record struct MapRect(MapPoint Min, MapPoint Max);
+
+/// <summary>A zone from the AlbionWorld catalog the website also uses, or a Mists dungeon from the game files, which has
+/// no minimap (ImageFile is empty) and is drawn as its Rooms on a grid.</summary>
 public sealed record MapZone(string Id, string DisplayName, string ImageFile, string MapCategory, string PvpCategory, int? Tier,
-    MapPoint BoundsMin, MapPoint BoundsMax, IReadOnlyList<MapZoneExit> Exits)
+    MapPoint BoundsMin, MapPoint BoundsMax, IReadOnlyList<MapZoneExit> Exits, IReadOnlyList<MapRect>? Rooms = null)
 {
     public MapImageGeometry? Geometry { get; } = MapImageGeometry.From(BoundsMin, BoundsMax);
 }

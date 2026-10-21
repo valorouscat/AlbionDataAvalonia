@@ -69,14 +69,16 @@ public sealed class MapDataService : IDisposable
     private static string LastVersionFile => Path.Combine(CacheRoot, "version.txt");
 
     /// <summary>The catalog zone for a captured map id, trying the full id first and then its '@' parts.
-    /// A Mists instance has no zone of its own, so its fixed layout is tried last.</summary>
+    /// A Mists instance has no zone of its own, so its fixed layout is tried last; a Mists dungeon's layout has no catalog
+    /// zone either, so the client's own map of it stands in.</summary>
     public async Task<MapZone?> FindZoneAsync(string rawMapId, string? layout = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(rawMapId)) return null;
         var zones = await GetCatalogAsync(cancellationToken).ConfigureAwait(false);
         foreach (var candidate in Candidates(rawMapId))
             if (zones.TryGetValue(candidate, out var zone)) return zone;
-        return !string.IsNullOrWhiteSpace(layout) && zones.TryGetValue(layout, out var layoutZone) ? layoutZone : null;
+        if (string.IsNullOrWhiteSpace(layout)) return null;
+        return zones.TryGetValue(layout, out var layoutZone) ? layoutZone : MistsMapData.DungeonZone(layout);
     }
 
     public async Task<string?> ZoneNameAsync(string id, CancellationToken cancellationToken = default) =>
@@ -88,6 +90,7 @@ public sealed class MapDataService : IDisposable
     /// <summary>The zone's minimap, or null when the CDN has none. A failed download throws.</summary>
     public Task<Bitmap?> GetImageAsync(MapZone zone)
     {
+        if (zone.ImageFile.Length == 0) return Task.FromResult<Bitmap?>(null);
         lock (sync)
         {
             var cached = images.FirstOrDefault(x => x.File == zone.ImageFile);
@@ -130,9 +133,12 @@ public sealed class MapDataService : IDisposable
         }
     }
 
-    /// <summary>The zone's minimap icons and resource spawn spots; empty when its feature file can't be had.</summary>
+    /// <summary>The zone's minimap icons, resource spawn spots and points of interest; empty when its feature file can't be had,
+    /// but for the Mists chest spots that come with the app.</summary>
     public Task<MapZoneFeatures> GetFeaturesAsync(MapZone zone) =>
-        features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
+        // A zone the client draws itself has no AlbionWorld feature file.
+        zone.ImageFile.Length == 0 ? Task.FromResult(new MapZoneFeatures([], [], MistsMapData.Chests(zone.Id)))
+            : features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
 
     public Task<Bitmap?> GetIconImageAsync(string markerType) =>
         iconImages.GetOrAdd(markerType, LoadIconImageAsync);
@@ -310,14 +316,70 @@ public sealed class MapDataService : IDisposable
             var placed = (file?.Features ?? [])
                 .Where(x => x.X is { } featureX && x.Z is { } featureZ && double.IsFinite(featureX) && double.IsFinite(featureZ))
                 .ToArray();
-            return new(placed.Select(Icon).OfType<MapZoneIcon>().ToArray(), placed.Select(ResourceSpawn).OfType<MapResourceSpawn>().ToArray());
+            return new(placed.Select(Icon).OfType<MapZoneIcon>().ToArray(), placed.Select(ResourceSpawn).OfType<MapResourceSpawn>().ToArray(),
+                [.. placed.Select(Poi).OfType<MapPoi>(), .. MistsMapData.Chests(zone.Id)]);
         }
         catch (Exception error) when (error is HttpRequestException or IOException or JsonException or TaskCanceledException)
         {
             Log.Warning(error, "Could not load map features for {ZoneId}", zone.Id);
             features.TryRemove(zone.Id, out _);
-            return MapZoneFeatures.Empty;
+            // The Mists chest spots come with the app, so they still show.
+            return new([], [], MistsMapData.Chests(zone.Id));
         }
+    }
+
+    // AlbionWorld lists what a layout places by the game's spawn point names ("Spawn Point Lootchest Static Morgana
+    // Veteran", "Spawn Point Random Demon Cd Endboss"): loot chests, mobs (of which bosses are shown), shrines, the spots
+    // the game picks mob camps from and the Mists wisp spawns. A Hellgate's objective chest is a named marker point. A
+    // chest with a minimap icon, such as a Roads chest, already shows as that icon.
+    private static MapPoi? Poi(Feature feature)
+    {
+        var position = new MapPoint(feature.X!.Value, feature.Z!.Value);
+        switch (feature.Type)
+        {
+            case "lootchestspawnpoint" when string.IsNullOrWhiteSpace(feature.MarkerType):
+                var chest = SpawnName(feature.Label, "Spawn Point Lootchest");
+                if (chest.Length == 0) chest = "Chest";
+                else if (!chest.Contains("chest", StringComparison.OrdinalIgnoreCase)) chest += " chest";
+                return new(MapPoiKind.Chest, chest, ChestGrade(chest), position);
+            case "namedmarkerpoint" when feature.Label == "HellgateObjectiveChest":
+                return new(MapPoiKind.Chest, "Hellgate chest", 3, position);
+            case "mobspawnpoint":
+                var mob = SpawnName(feature.Label, "Spawn Point Random");
+                var words = Words(mob);
+                if (!words.Any(x => x is "BOSS" or "ENDBOSS" or "MINIBOSS")) return null;
+                return new(MapPoiKind.Boss, mob, words.Contains("MINIBOSS") ? 2 : 3, position);
+            case "mobcamp_candidate":
+                var grade = feature.Band?.ToLowerInvariant() switch { "high" => 3, "medium" => 2, _ => 1 };
+                var band = string.IsNullOrWhiteSpace(feature.Band) ? "" : $"{char.ToUpperInvariant(feature.Band[0])}{feature.Band[1..].ToLowerInvariant()} ";
+                return new(MapPoiKind.Camp, $"{band}mob camp spot{(feature.Tier is >= 1 and <= 8 ? $", T{feature.Tier}" : "")}".Trim(), grade, position);
+            case "mistswispspawn":
+                return new(MapPoiKind.Wisp, "Mists wisp spawn", 1, position);
+            case { } type when type.Contains("shrine", StringComparison.OrdinalIgnoreCase):
+                var shrine = Humanize(string.IsNullOrWhiteSpace(feature.Label) ? type : feature.Label);
+                return new(MapPoiKind.Shrine, shrine.Contains("shrine", StringComparison.OrdinalIgnoreCase) ? shrine : $"{shrine} shrine", 2, position);
+            default:
+                return null;
+        }
+    }
+
+    // "Spawn Point Lootchest Static Morgana Veteran" reads as "Static Morgana Veteran"; a raw name is all capitals.
+    private static string SpawnName(string? label, string prefix)
+    {
+        var name = Humanize(label ?? "");
+        if (name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) name = name[prefix.Length..].Trim();
+        if (!name.Any(char.IsLower)) name = CultureInfo.InvariantCulture.TextInfo.ToTitleCase(name.ToLowerInvariant());
+        // A mob spawn point that takes any kind of mob ends in "Any".
+        return name.EndsWith(" Any", StringComparison.Ordinal) ? name[..^4] : name;
+    }
+
+    private static string[] Words(string name) => name.ToUpperInvariant().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+    private static int ChestGrade(string name)
+    {
+        var words = Words(name);
+        if (words.Any(x => x is "BOSS" or "ENDBOSS" or "MINIBOSS" or "VETERAN" or "ELITE" or "LARGE" or "RAID" or "LEGENDARY" or "EPIC")) return 3;
+        return words.Any(x => x is "MEDIUM" or "GROUP" or "DUO" or "UNCOMMON" or "RARE" or "STANDARD") ? 2 : 1;
     }
 
     // AlbionWorld lists, by the game's resource type and tier, the spots an open-world zone picks its ordinary nodes
@@ -514,6 +576,7 @@ public sealed class MapDataService : IDisposable
         public string? Label { get; set; }
         public string? Mob { get; set; }
         public string? ResourceType { get; set; }
+        public string? Band { get; set; }
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
         public int? Tier { get; set; }
         public double? X { get; set; }

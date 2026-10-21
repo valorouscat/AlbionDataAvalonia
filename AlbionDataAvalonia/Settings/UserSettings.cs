@@ -499,6 +499,48 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // Whether the map shows the zone's points of interest (chests, bosses, shrines, camps, wisps), from the game files.
+    private bool mapShowPois;
+    public bool MapShowPois
+    {
+        get => mapShowPois;
+        set
+        {
+            if (mapShowPois == value) return;
+            mapShowPois = value;
+            OnPropertyChanged(nameof(MapShowPois));
+            Log.Information("Map points of interest set to {MapShowPois}", mapShowPois);
+        }
+    }
+
+    // Whether the live map shows the roaming bosses near the character, read from packets.
+    private bool mapShowRoamingBosses;
+    public bool MapShowRoamingBosses
+    {
+        get => mapShowRoamingBosses;
+        set
+        {
+            if (mapShowRoamingBosses == value) return;
+            mapShowRoamingBosses = value;
+            OnPropertyChanged(nameof(MapShowRoamingBosses));
+            Log.Information("Map roaming bosses set to {MapShowRoamingBosses}", mapShowRoamingBosses);
+        }
+    }
+
+    // Whether the live map flashes a warning over the character when a hostile player comes into view.
+    private bool mapShowHostileAlert;
+    public bool MapShowHostileAlert
+    {
+        get => mapShowHostileAlert;
+        set
+        {
+            if (mapShowHostileAlert == value) return;
+            mapShowHostileAlert = value;
+            OnPropertyChanged(nameof(MapShowHostileAlert));
+            Log.Information("Map hostile alert set to {MapShowHostileAlert}", mapShowHostileAlert);
+        }
+    }
+
     private void SetStreamerOption(ref bool field, bool value, string propertyName)
     {
         if (field == value) return;

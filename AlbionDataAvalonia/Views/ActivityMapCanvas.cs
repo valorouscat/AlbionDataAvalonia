@@ -50,6 +50,8 @@ public sealed class ActivityMapCanvas : Control
     // Spawn spots are many and only possible, so they are smaller and fainter than the nodes the game has shown.
     private const double SpawnClusterRadius = 12;
     private const double SpawnOpacity = 0.6;
+    // Points of interest are few and worth finding, so they stay opaque and merge only when nearly on top of each other.
+    private const double PoiClusterRadius = 14;
     // The live position updates a few times a second. The marker, and the view while following, glide to
     // each new one over about as long as the last update took, so walking reads as movement, not hops.
     private static readonly TimeSpan MaxGlide = TimeSpan.FromMilliseconds(400);
@@ -276,15 +278,18 @@ public sealed class ActivityMapCanvas : Control
         }
 
         if (scene.Layers.HasFlag(ActivityMapLayers.ResourceSpawns)) DrawResourceSpawns(context, scene, scale);
+        if (scene.Layers.HasFlag(ActivityMapLayers.Pois)) DrawPois(context, scene, scale);
         if (scene.Layers.HasFlag(ActivityMapLayers.Resources))
         {
             DrawResources(context, scene, scale);
             DrawResourceMobs(context, scene, scale);
         }
 
+        if (scene.Layers.HasFlag(ActivityMapLayers.RoamingBosses)) DrawRoamingBosses(context, scene, scale);
         if (scene.Layers.HasFlag(ActivityMapLayers.Path)) DrawPath(context, scene, scale);
         DrawMarkers(context, scene, scale);
         DrawPosition(context, scene, scale, shown);
+        if (scene.Layers.HasFlag(ActivityMapLayers.HostileAlert)) DrawHostileAlert(context, scene, scale, shown);
         // Icons are asked for only for the tooltip on view; one that arrives later redraws it.
         if (hovered is { } hover && pointer is { } at)
             ChartDrawing.DrawTooltip(context, bounds, at, hover.Title,
@@ -325,6 +330,29 @@ public sealed class ActivityMapCanvas : Control
             context.DrawLine(pen, ToScreen(ImagePoint(scene, x, geometry.Min.Y), scale), ToScreen(ImagePoint(scene, x, geometry.Max.Y), scale));
         for (var y = Math.Ceiling(geometry.Min.Y / step) * step; y <= geometry.Max.Y; y += step)
             context.DrawLine(pen, ToScreen(ImagePoint(scene, geometry.Min.X, y), scale), ToScreen(ImagePoint(scene, geometry.Max.X, y), scale));
+        DrawRooms(context, scene, scale);
+    }
+
+    // A zone the client draws itself, such as a Mists dungeon, shows its rooms over the grid in place of a minimap.
+    private void DrawRooms(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        if (scene.Rooms is not { Count: > 0 } rooms) return;
+        var fill = UiPalette.Brush("UiMapRoomColor");
+        var edge = UiPalette.Pen(UiPalette.Color("UiMapRoomEdgeColor"), 1, join: PenLineJoin.Round);
+        foreach (var room in rooms)
+        {
+            var shape = new StreamGeometry();
+            using (var path = shape.Open())
+            {
+                path.BeginFigure(ToScreen(ImagePoint(scene, room.Min.X, room.Min.Y), scale), true);
+                path.LineTo(ToScreen(ImagePoint(scene, room.Max.X, room.Min.Y), scale));
+                path.LineTo(ToScreen(ImagePoint(scene, room.Max.X, room.Max.Y), scale));
+                path.LineTo(ToScreen(ImagePoint(scene, room.Min.X, room.Max.Y), scale));
+                path.EndFigure(true);
+            }
+
+            context.DrawGeometry(fill, edge, shape);
+        }
     }
 
     private void DrawIcons(DrawingContext context, ActivityMapScene scene, double scale)
@@ -517,6 +545,159 @@ public sealed class ActivityMapCanvas : Control
             hits.Add(SpawnHit(group.At, group.Spawns));
         }
     }
+
+    // Each kind of point of interest has its own mark, larger for a better grade: a gold chest, a red diamond for a boss,
+    // a violet triangle for a shrine, a hollow orange square for a mob camp spot and a small blue dot for a Mists wisp.
+    // Spots of one kind close together on screen merge, with a count. A Mists camp slot also gets a dashed ring for where
+    // its chest can stand, once the ring is big enough on screen to read.
+    private void DrawPois(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        if (scene.Pois is not { Count: > 0 } pois) return;
+        var groups = new List<PoiGroup>();
+        // The scene lists the most important last, so walking it backwards puts the best spot first in its group.
+        for (var index = pois.Count - 1; index >= 0; index--)
+        {
+            var poi = pois[index];
+            var at = ToScreen(ImagePoint(scene, poi.Position.X, poi.Position.Y), scale);
+            var ring = poi.Radius > 0 ? Distance(at, ToScreen(ImagePoint(scene, poi.Position.X + poi.Radius, poi.Position.Y), scale)) : 0;
+            if (!Visible(at, Math.Max(PoiClusterRadius, ring))) continue;
+            if (ring >= PoiClusterRadius)
+                context.DrawEllipse(null, new ImmutablePen(UiPalette.Brush("UiMapChestAreaColor"), 1.5,
+                    new ImmutableDashStyle([3, 3], 0)), at, ring, ring);
+            var group = groups.FirstOrDefault(x => x.Kind == poi.Kind && Distance(x.At, at) <= PoiClusterRadius);
+            if (group is null) groups.Add(group = new PoiGroup(poi.Kind, at));
+            group.Pois.Add(poi);
+        }
+
+        foreach (var group in Enumerable.Reverse(groups))
+        {
+            DrawPoiMark(context, group.At, group.Pois[0]);
+            if (group.Pois.Count > 1) ChartDrawing.DrawCountBadge(context, group.At, group.Pois.Count);
+            hits.Add(PoiHit(group.At, group.Pois));
+        }
+    }
+
+    private static void DrawPoiMark(DrawingContext context, Point at, MapPoi poi)
+    {
+        var size = poi.Grade switch { >= 3 => 1.25, 2 => 1.05, _ => 0.9 };
+        switch (poi.Kind)
+        {
+            case MapPoiKind.Chest:
+            {
+                var half = 6 * size;
+                var box = new Rect(at.X - half, at.Y - half * 0.75, half * 2, half * 1.5);
+                var lidY = box.Top + box.Height * 0.4;
+                context.DrawRectangle(UiPalette.Brush("UiMapChestColor"), OutlinePen, box, 2, 2);
+                context.DrawLine(UiPalette.Pen(UiPalette.Color("UiMapChestLidColor"), 1.2), new Point(box.Left + 1, lidY), new Point(box.Right - 1, lidY));
+                context.DrawRectangle(UiPalette.Brush("UiMapChestLidColor"), null, new Rect(at.X - 1, lidY - 1, 2, 3));
+                break;
+            }
+            case MapPoiKind.Boss:
+            {
+                var half = 7 * size;
+                context.DrawGeometry(UiPalette.Brush("UiMapPoiBossColor"), WhitePen, Polygon(
+                    new Point(at.X, at.Y - half), new Point(at.X + half, at.Y), new Point(at.X, at.Y + half), new Point(at.X - half, at.Y)));
+                context.DrawEllipse(UiPalette.Brush("UiMapMarkerEdgeColor"), null, at, 1.6 * size, 1.6 * size);
+                break;
+            }
+            case MapPoiKind.Shrine:
+            {
+                var half = 6.5 * size;
+                context.DrawGeometry(UiPalette.Brush("UiMapPoiShrineColor"), OutlinePen, Polygon(
+                    new Point(at.X, at.Y - half), new Point(at.X + half, at.Y + half * 0.8), new Point(at.X - half, at.Y + half * 0.8)));
+                break;
+            }
+            case MapPoiKind.Camp:
+            {
+                var half = 5 * size;
+                context.DrawRectangle(null, UiPalette.Pen(UiPalette.Color("UiMapPoiCampColor"), 2), new Rect(at.X - half, at.Y - half, half * 2, half * 2), 1.5, 1.5);
+                break;
+            }
+            default:
+                context.DrawEllipse(UiPalette.Brush("UiMapPoiWispColor"), OutlinePen, at, 3.5, 3.5);
+                break;
+        }
+    }
+
+    // A roaming boss is its portrait in a red ring, smaller for a miniboss, with its tier beside it. The scene lists the
+    // best last, so it ends up on top.
+    private void DrawRoamingBosses(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        if (scene.RoamingBosses is not { Count: > 0 } bosses) return;
+        var ring = UiPalette.Pen(UiPalette.Color("UiMapPoiBossColor"), 2.5);
+        foreach (var boss in bosses)
+        {
+            var at = ToScreen(ImagePoint(scene, boss.X, boss.Y), scale);
+            var radius = boss.Kind == ActivityLiveActorKind.Boss ? 12 : 9.5;
+            if (!Visible(at, radius + 4)) continue;
+            var rect = new Rect(at.X - radius, at.Y - radius, radius * 2, radius * 2);
+            context.DrawEllipse(UiPalette.Brush("UiMapDeathFillColor"), null, at, radius, radius);
+            if (LazyMobImage.ForDrawing(boss.MobUniqueName, InvalidateVisual) is { } portrait)
+                using (context.PushGeometryClip(new EllipseGeometry(rect)))
+                    context.DrawImage(portrait, new Rect(portrait.Size), rect);
+            context.DrawEllipse(null, ring, at, radius, radius);
+            if (boss.Tier > 0)
+            {
+                var tier = ChartDrawing.Text($"T{boss.Tier}", 9, UiPalette.Color("UiTextColor"), FontWeight.Bold);
+                var badge = new Rect(at.X + radius - 4, at.Y + radius - 9, tier.Width + 6, tier.Height + 1);
+                context.DrawRectangle(UiPalette.Brush("UiMapCountColor"), UiPalette.Pen(UiPalette.Color("UiMapCountEdgeColor")), badge, 4, 4);
+                tier.Draw(context, new Point(badge.X + 3, badge.Y + 0.5));
+            }
+
+            hits.Add(new Hit(at, radius + 2, boss.Name,
+                [$"{(boss.Kind == ActivityLiveActorKind.Boss ? "Roaming boss" : "Roaming miniboss")}, seen {UiFormat.Ago(boss.SeenAtUtc, scene.NowUtc)}",
+                    "It moves; the map follows it while it stays in view"],
+                [new ItemRow(boss.MobUniqueName, 1, boss.Name, "", Mob: true)]));
+        }
+    }
+
+    private static StreamGeometry Polygon(params Point[] corners)
+    {
+        var shape = new StreamGeometry();
+        using (var draw = shape.Open())
+        {
+            draw.BeginFigure(corners[0], true);
+            foreach (var corner in corners.Skip(1)) draw.LineTo(corner);
+            draw.EndFigure(true);
+        }
+
+        return shape;
+    }
+
+    private static Hit PoiHit(Point at, IReadOnlyList<MapPoi> pois)
+    {
+        if (pois.Count == 1)
+        {
+            var poi = pois[0];
+            IReadOnlyList<string> lines = poi.Radius > 0
+                ? [$"A camp slot of this Mists layout. If the game puts a PvE camp here, its chest stands within {UiFormat.Whole(poi.Radius)} m",
+                    "Otherwise the slot holds resources, an exit or plain landscape"]
+                : poi.Kind switch
+                {
+                    MapPoiKind.Chest => ["A spot where this chest can spawn, from the game files", "Not what stands there now"],
+                    MapPoiKind.Boss => ["A spot where the zone spawns this boss, from the game files", "Not what stands there now"],
+                    MapPoiKind.Camp => ["One of the spots the game picks this zone's mob camps from, from the game files"],
+                    MapPoiKind.Wisp => ["A spot where a Mists wisp can appear, from the game files"],
+                    _ => ["From the game files"]
+                };
+            return new(at, 9, poi.Label, lines, []);
+        }
+
+        var kinds = pois.GroupBy(x => x.Label).OrderByDescending(x => x.Max(poi => poi.Grade)).ThenByDescending(x => x.Count()).ToArray();
+        var shown = kinds.Take(GroupLinesShown).Select(x => x.Count() > 1 ? $"{x.Key} × {x.Count()}" : x.Key).ToList();
+        if (kinds.Length > GroupLinesShown) shown.Add($"and {UiFormat.Count(kinds.Length - GroupLinesShown, "more kind")}");
+        shown.Add("Possible spots from the game files; zoom in to see each");
+        return new(at, 10, UiFormat.Count(pois.Count, PoiNoun(pois[0].Kind)), shown, []);
+    }
+
+    private static string PoiNoun(MapPoiKind kind) => kind switch
+    {
+        MapPoiKind.Chest => "chest spot",
+        MapPoiKind.Boss => "boss spot",
+        MapPoiKind.Shrine => "shrine",
+        MapPoiKind.Camp => "mob camp spot",
+        _ => "wisp spawn"
+    };
 
     private static string SpawnLabel(MapResourceSpawn spawn) => $"T{spawn.Tier} {spawn.Family}{(spawn.Mob ? " mob" : "")}";
 
@@ -921,6 +1102,34 @@ public sealed class ActivityMapCanvas : Control
             context.DrawGeometry(UiPalette.Brush(you), WhitePen, arrow ??= CreateArrow());
     }
 
+    // A hostile player who just came into view is an exclamation mark in a red badge over the character, with a count
+    // when several came at once: the game gives no position for them, only that they are near.
+    private void DrawHostileAlert(DrawingContext context, ActivityMapScene scene, double scale, (ActivityPathPoint Point, double? Heading)? glide)
+    {
+        if (!scene.IsLive || scene.Hostiles is not { Count: > 0 } hostiles || (glide?.Point ?? scene.Position) is not { } point) return;
+        var you = ToScreen(ImagePoint(scene, point.X, point.Y), scale);
+        var at = new Point(you.X, you.Y - 30);
+        var color = UiPalette.Color("UiMapHostileColor");
+        context.DrawLine(UiPalette.Pen(color, 2), new Point(you.X, you.Y - 17), new Point(at.X, at.Y + 10));
+        context.DrawEllipse(UiPalette.Brush(color), WhitePen, at, 10, 10);
+        var mark = ChartDrawing.Text("!", 14, UiPalette.Color("UiMapHostileTextColor"), FontWeight.Bold);
+        mark.Draw(context, new Point(at.X - mark.Width / 2, at.Y - mark.Height / 2));
+        if (hostiles.Count > 1) ChartDrawing.DrawCountBadge(context, at, hostiles.Count);
+
+        var lines = hostiles.OrderByDescending(x => x.SeenAtUtc).Take(GroupLinesShown).Select(Hostile).ToList();
+        if (hostiles.Count > GroupLinesShown) lines.Add($"and {UiFormat.Count(hostiles.Count - GroupLinesShown, "more")}");
+        lines.Add("Outside your party, guild and alliance. The game doesn't say where they are.");
+        hits.Add(new Hit(at, 11, hostiles.Count == 1 ? "Hostile player nearby" : $"{UiFormat.Count(hostiles.Count, "hostile player")} nearby", lines, []));
+    }
+
+    private static string Hostile(ActivityHostileSighting player)
+    {
+        var name = string.IsNullOrWhiteSpace(player.Name) ? "Unknown player" : player.Name;
+        var guild = string.IsNullOrWhiteSpace(player.Alliance) ? player.Guild
+            : string.IsNullOrWhiteSpace(player.Guild) ? $"[{player.Alliance}]" : $"[{player.Alliance}] {player.Guild}";
+        return string.IsNullOrWhiteSpace(guild) ? name : $"{name} · {guild}";
+    }
+
     // Points along +X; drawing turns it to the heading.
     private static StreamGeometry CreateArrow()
     {
@@ -1061,6 +1270,13 @@ public sealed class ActivityMapCanvas : Control
     {
         public Point At { get; } = at;
         public List<ActivityResourceNode> Nodes { get; } = new();
+    }
+
+    private sealed class PoiGroup(MapPoiKind kind, Point at)
+    {
+        public MapPoiKind Kind { get; } = kind;
+        public Point At { get; } = at;
+        public List<MapPoi> Pois { get; } = new();
     }
 
     private sealed class SpawnGroup(Point at)

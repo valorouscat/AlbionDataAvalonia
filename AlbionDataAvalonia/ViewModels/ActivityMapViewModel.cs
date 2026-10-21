@@ -68,6 +68,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         showRememberedResources = settings.MapShowRememberedResources;
         showResourceMobs = settings.MapShowResourceMobs;
         showResourceSpawns = settings.MapShowResourceSpawns;
+        showPois = settings.MapShowPois;
+        showRoamingBosses = settings.MapShowRoamingBosses;
+        showHostileAlert = settings.MapShowHostileAlert;
         legendCollapsed = settings.MapLegendCollapsed;
         var hidden = HiddenFamilies(settings.MapResourceHiddenFamilies);
         showWood = !hidden.Contains("Wood");
@@ -116,6 +119,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowResourceFilters))]
     private bool showResourceSpawns;
+    [ObservableProperty] private bool showPois;
+    [ObservableProperty] private bool showRoamingBosses;
+    [ObservableProperty] private bool showHostileAlert;
     [ObservableProperty] private Option<int> selectedResourceTier;
     [ObservableProperty] private bool showRememberedResources;
     [ObservableProperty] private bool showResourceMobs;
@@ -166,7 +172,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private ActivityMapLayers Layers =>
         (ShowPath ? ActivityMapLayers.Path : 0) | (ShowKills ? ActivityMapLayers.Kills : 0) | (ShowLoot ? ActivityMapLayers.Loot : 0)
         | (ShowGathering ? ActivityMapLayers.Gathering : 0) | (ShowDeaths ? ActivityMapLayers.Deaths : 0) | (ShowFeatures ? ActivityMapLayers.Features : 0)
-        | (ShowResources ? ActivityMapLayers.Resources : 0) | (ShowResourceSpawns ? ActivityMapLayers.ResourceSpawns : 0);
+        | (ShowResources ? ActivityMapLayers.Resources : 0) | (ShowResourceSpawns ? ActivityMapLayers.ResourceSpawns : 0)
+        | (ShowPois ? ActivityMapLayers.Pois : 0) | (ShowRoamingBosses ? ActivityMapLayers.RoamingBosses : 0)
+        | (ShowHostileAlert ? ActivityMapLayers.HostileAlert : 0);
 
     private double FadeSeconds => FadeOptionValues[Math.Clamp(SelectedFadeIndex, 0, FadeOptionValues.Length - 1)] * 60d;
 
@@ -237,6 +245,24 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     partial void OnShowResourceSpawnsChanged(bool value)
     {
         settings.MapShowResourceSpawns = value;
+        Rebuild();
+    }
+
+    partial void OnShowPoisChanged(bool value)
+    {
+        settings.MapShowPois = value;
+        Rebuild();
+    }
+
+    partial void OnShowRoamingBossesChanged(bool value)
+    {
+        settings.MapShowRoamingBosses = value;
+        Rebuild();
+    }
+
+    partial void OnShowHostileAlertChanged(bool value)
+    {
+        settings.MapShowHostileAlert = value;
         Rebuild();
     }
 
@@ -354,6 +380,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
             RebuildLive();
         }
+        // A hostile player's warning goes once its few seconds are up.
+        else if (Scene?.Hostiles is { Count: > 0 } hostiles && hostiles.Any(x => DateTime.UtcNow - x.SeenAtUtc >= ActivityTrackerService.HostileAlertLength))
+            RebuildLive();
         // Fading moves on even when nothing new happens.
         else if (FadeSeconds > 0 && DateTime.UtcNow - liveRenderedAt >= FadeRefresh) RebuildLive();
     }
@@ -385,6 +414,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             : zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
             : zone is { Zone: null } && live.Layout is null && AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.Mists
                 ? "Finding this Mists layout. The map shows once a wisp or exit comes into view."
+            : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing your path only."
             : "";
         if (geometry is null)
@@ -397,7 +427,17 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
-            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)));
+            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownPois(Turned(zone?.Pois ?? [], turns)),
+            zone?.Zone?.Rooms, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
+            ShownHostiles(live.Hostiles, zone?.Zone));
+    }
+
+    // No one can attack the character in a blue zone, so a player there is no threat.
+    private IReadOnlyList<ActivityHostileSighting> ShownHostiles(IReadOnlyList<ActivityHostileSighting>? hostiles, MapZone? zone)
+    {
+        if (!ShowHostileAlert || hostiles is not { Count: > 0 } || zone?.PvpCategory == "blue") return [];
+        var now = DateTime.UtcNow;
+        return hostiles.Where(x => now - x.SeenAtUtc < ActivityTrackerService.HostileAlertLength).ToArray();
     }
 
     // Grows with the path so the view stays steady while walking a zone without a minimap.
@@ -533,6 +573,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var geometry = zone?.Geometry ?? (points.Length == 0 ? null
             : FallbackGeometry((points.Min(x => x.X), points.Min(x => x.Y), points.Max(x => x.X), points.Max(x => x.Y))));
         Note = zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
+            : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing your path only."
             : "";
         if (geometry is null)
@@ -544,7 +585,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var turns = LayoutTurns(zone, option.Layout, option.LayoutTurns);
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
-            Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)));
+            Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)),
+            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: zone?.Zone?.Rooms);
     }
 
     // Only a minimap found by its layout follows the instance's turn.
@@ -561,6 +603,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private static IReadOnlyList<MapResourceSpawn> Turned(IReadOnlyList<MapResourceSpawn> spawns, int turns) =>
         turns % 4 == 0 ? spawns : spawns.Select(spawn => spawn with { Position = Turn(spawn.Position, turns) }).ToArray();
 
+    private static IReadOnlyList<MapPoi> Turned(IReadOnlyList<MapPoi> chests, int turns) =>
+        turns % 4 == 0 ? chests : chests.Select(chest => chest with { Position = Turn(chest.Position, turns) }).ToArray();
+
     private static MapPoint Turn(MapPoint point, int turns)
     {
         for (var turn = 0; turn < turns % 4; turn++) point = new MapPoint(point.Y, -point.X);
@@ -572,7 +617,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         try
         {
             var zone = await maps.FindZoneAsync(rawMapId, layout);
-            if (zone is null) return new ZoneView(rawMapId, null, null, null, [], [], [], fallbackName, "", null, false);
+            if (zone is null) return new ZoneView(rawMapId, null, null, null, [], [], [], [], fallbackName, "", null, false);
             var imageTask = maps.GetImageAsync(zone);
             var featuresTask = maps.GetFeaturesAsync(zone);
             var frameTask = maps.GetFrameImageAsync();
@@ -580,7 +625,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             foreach (var exit in zone.Exits)
             {
                 var target = await maps.ZoneAsync(exit.TargetId);
-                exits.Add(new ActivityMapExit(exit.Position, $"To {target?.DisplayName ?? exit.TargetId}", Zone(target?.PvpCategory)));
+                // A Mists dungeon's exits lead back to the Mists, which has no zone of its own.
+                var label = exit.TargetId.Length == 0 ? "Exit to the Mists" : $"To {target?.DisplayName ?? exit.TargetId}";
+                exits.Add(new ActivityMapExit(exit.Position, label, Zone(target?.PvpCategory)));
             }
 
             var features = await featuresTask;
@@ -605,19 +652,19 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
                 Log.Warning(error, "Could not load the minimap for {RawMapId}", rawMapId);
                 failed = true;
             }
-            return new ZoneView(rawMapId, zone, image, await frameTask, exits, shownIcons, features.ResourceSpawns, zone.DisplayName,
+            return new ZoneView(rawMapId, zone, image, await frameTask, exits, shownIcons, features.ResourceSpawns, features.Pois, zone.DisplayName,
                 ZoneDescription(zone), zone.Geometry, failed);
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.IO.IOException or JsonException)
         {
             Log.Warning(error, "Could not load map data for {RawMapId}", rawMapId);
-            return new ZoneView(rawMapId, null, null, null, [], [], [], fallbackName, "", null, true);
+            return new ZoneView(rawMapId, null, null, null, [], [], [], [], fallbackName, "", null, true);
         }
         // The callers start this without waiting, so any other failure would vanish and leave the map empty.
         catch (Exception error) when (error is not OperationCanceledException)
         {
             Log.Error(error, "Could not build the map for {RawMapId}", rawMapId);
-            return new ZoneView(rawMapId, null, null, null, [], [], [], fallbackName, "", null, true);
+            return new ZoneView(rawMapId, null, null, null, [], [], [], [], fallbackName, "", null, true);
         }
     }
 
@@ -640,6 +687,20 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         !ShowResourceSpawns || spawns.Count == 0 ? [] : spawns
             .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family))
             .OrderBy(x => x.Tier).ThenBy(x => x.Mob).ToArray();
+
+    // Points of interest follow only their own switch. Wisps and camp spots, the most numerous, are drawn first and
+    // bosses and chests last, the best of each kind on top.
+    private IReadOnlyList<MapPoi> ShownPois(IReadOnlyList<MapPoi> pois) =>
+        !ShowPois || pois.Count == 0 ? [] : pois.OrderBy(x => PoiOrder(x.Kind)).ThenBy(x => x.Grade).ToArray();
+
+    private static int PoiOrder(MapPoiKind kind) => kind switch
+    {
+        MapPoiKind.Wisp => 0,
+        MapPoiKind.Camp => 1,
+        MapPoiKind.Shrine => 2,
+        MapPoiKind.Chest => 3,
+        _ => 4
+    };
 
     // The path is always the character's own; events follow the Personal or Party choice.
     private IReadOnlyList<ActivityMapMarker> Shown(IReadOnlyList<ActivityMapMarker> markers) =>
@@ -673,6 +734,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             "roads" => "Roads of Avalon",
             "dungeon" => "Dungeon",
             "corrupted" => "Corrupted dungeon",
+            "mistsdungeon" => "Mists dungeon",
             "hellden" => "Hellgate",
             "hideout" => "Hideout area",
             "expedition" => "Expedition",
@@ -743,5 +805,5 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     }
 
     private sealed record ZoneView(string RawMapId, MapZone? Zone, Bitmap? Image, Bitmap? Frame, IReadOnlyList<ActivityMapExit> Exits,
-        IReadOnlyList<ActivityMapIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed);
+        IReadOnlyList<ActivityMapIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns, IReadOnlyList<MapPoi> Pois, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed);
 }
