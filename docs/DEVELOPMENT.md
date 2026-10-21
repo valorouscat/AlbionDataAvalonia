@@ -84,3 +84,14 @@ extracts and fish sauce), including loadout offers, and confirm no market orders
 reach AODP. Verify history/gold/bandit uploads remain public. Check tooltips and the
 Sharing field on a narrow window, and add/remove friends by all three identifiers.
 These UI/capture checks require a signed-in client and live game traffic.
+
+### Resource mobs
+
+The live map's resource mobs are named by `AlbionDataAvalonia/Activity/ActivityResourceMobCatalog.g.cs`, generated from the game's `mobs.json` (the Harvestable loot of each mob). Regenerate it after a patch adds mobs:
+
+```sh
+curl -sSLo /tmp/mobs.json https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/mobs.json
+python3 scripts/generate-resource-mobs.py /tmp/mobs.json
+```
+
+The first resource mob of each map logs its NewMob parameters at Information level, for checking the packet layout read in `ActivityResourceMobs`.

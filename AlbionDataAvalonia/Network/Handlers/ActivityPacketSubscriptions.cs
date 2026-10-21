@@ -75,11 +75,18 @@ internal static class ActivityPacketSubscriptions
         ResourceNodes(builder, EventCodes.NewHarvestableObject, activity);
         ResourceNodes(builder, EventCodes.NewSimpleHarvestableObjectList, activity);
         ResourceNodes(builder, EventCodes.HarvestableChangeState, activity);
+        // Resource mobs for the live map: NewMob read again for its position, and the moves and enchantment changes of mobs.
+        ResourceMobs(builder, EventCodes.NewMob, activity);
+        ResourceMobs(builder, EventCodes.MobChangeState, activity);
+        ResourceMobs(builder, EventCodes.Move, activity);
         builder.AddHandler(new AcquisitionIntentHandler(activity));
     }
 
     private static void ResourceNodes(ReceiverBuilder builder, EventCodes code, ActivityTrackerService activity)
         => builder.SubscribeEvent<DebugEventProbeEvent>((int)code, packet => { activity.ObserveResourceNodes(packet, code); return Task.CompletedTask; });
+
+    private static void ResourceMobs(ReceiverBuilder builder, EventCodes code, ActivityTrackerService activity)
+        => builder.SubscribeEvent<DebugEventProbeEvent>((int)code, packet => { activity.ObserveResourceMobs(packet, code); return Task.CompletedTask; });
 
     private static void Event<T>(ReceiverBuilder builder, EventCodes code, ActivityTrackerService activity) where T : BaseEvent
         => builder.SubscribeEvent<T>((int)code, packet => { activity.Observe(packet); return Task.CompletedTask; });

@@ -75,6 +75,7 @@
             </StackPanel>
 
             <Border Classes="UiOverlay" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12" Padding="6,4">
+                <StackPanel Spacing="4">
                 <WrapPanel MaxWidth="560">
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowPath}" ToolTip.Tip="Show or hide your path">
                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -131,20 +132,61 @@
                             <TextBlock Text="Resources" Margin="4,0,0,0" />
                         </StackPanel>
                     </ToggleButton>
+                </WrapPanel>
+                <!-- The resource choices get their own row, shown while resources are on. -->
+                <WrapPanel MaxWidth="560" IsVisible="{Binding ShowResourceTier}">
                     <ComboBox ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceTier}" VerticalAlignment="Center"
-                              IsVisible="{Binding ShowResourceTier}" AutomationProperties.Name="Lowest resource tier shown"
-                              ToolTip.Tip="Show only resource nodes of this tier and higher" Margin="4,0,0,0" />
-                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowRememberedResources}" IsVisible="{Binding ShowResourceTier}"
+                              AutomationProperties.Name="Lowest resource tier shown"
+                              ToolTip.Tip="Show only resource nodes and mobs of this tier and higher" Margin="0,0,4,0" />
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowWood}" ToolTip.Tip="Show or hide trees and wood critters">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="9" Height="9" Fill="{DynamicResource UiResourceWoodBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Wood" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowOre}" ToolTip.Tip="Show or hide ore veins and ore critters">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="9" Height="9" Fill="{DynamicResource UiResourceOreBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Ore" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowFiber}" ToolTip.Tip="Show or hide fiber plants and fiber critters">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="9" Height="9" Fill="{DynamicResource UiResourceFiberBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Fiber" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowHide}" ToolTip.Tip="Show or hide hide animals and skinnable remains">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="9" Height="9" Fill="{DynamicResource UiResourceHideBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Hide" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowStone}" ToolTip.Tip="Show or hide rocks and stone critters">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="9" Height="9" Fill="{DynamicResource UiResourceStoneBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Stone" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResourceMobs}"
+                                  ToolTip.Tip="Also show the mobs near you that yield resources, such as hide animals and ore, wood, fiber and stone critters, as diamonds in their resource's color with the tier inside. They follow the mobs as they move.">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Path Data="M5,0 L10,5 L5,10 L0,5 Z" Fill="{DynamicResource UiResourceHideBrush}" Stroke="{DynamicResource UiMarkerOutlineBrush}" StrokeThickness="1" VerticalAlignment="Center" />
+                            <TextBlock Text="Mobs" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowRememberedResources}"
                                   ToolTip.Tip="Also show, faded, the nodes seen on earlier visits to this map and not in view now, with when they were last seen and the units they had. A hollow ring is a node gathered out. The game only shows nodes near you, so these are what was there then, not now.">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="9" Height="9" Fill="{DynamicResource UiResourceOreBrush}" Opacity="0.55" VerticalAlignment="Center" />
                             <TextBlock Text="Remembered" />
                         </StackPanel>
                     </ToggleButton>
-                    <Button Content="Forget" Command="{Binding ForgetRememberedResourcesCommand}" IsVisible="{Binding ShowResourceTier}"
+                    <Button Content="Forget" Command="{Binding ForgetRememberedResourcesCommand}"
                             VerticalAlignment="Center" FontSize="{DynamicResource UiFontSizeSmall}" Margin="4,0,0,0"
                             ToolTip.Tip="Forget the resource nodes remembered on this map" />
                 </WrapPanel>
+                </StackPanel>
             </Border>
 
             <StackPanel HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="12" Spacing="6">

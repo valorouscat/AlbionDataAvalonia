@@ -443,6 +443,35 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // The kinds of resource the live map leaves out, comma separated (Wood, Stone, Fiber, Hide, Ore); empty shows every kind.
+    private string mapResourceHiddenFamilies = "";
+    public string MapResourceHiddenFamilies
+    {
+        get => mapResourceHiddenFamilies;
+        set
+        {
+            var normalized = value ?? "";
+            if (mapResourceHiddenFamilies == normalized) return;
+            mapResourceHiddenFamilies = normalized;
+            OnPropertyChanged(nameof(MapResourceHiddenFamilies));
+            Log.Information("Map hidden resource kinds set to {MapResourceHiddenFamilies}", mapResourceHiddenFamilies);
+        }
+    }
+
+    // Whether the live map also shows the mobs that yield resources, such as hide animals and ore critters.
+    private bool mapShowResourceMobs = true;
+    public bool MapShowResourceMobs
+    {
+        get => mapShowResourceMobs;
+        set
+        {
+            if (mapShowResourceMobs == value) return;
+            mapShowResourceMobs = value;
+            OnPropertyChanged(nameof(MapShowResourceMobs));
+            Log.Information("Map resource mobs set to {MapShowResourceMobs}", mapShowResourceMobs);
+        }
+    }
+
     private void SetStreamerOption(ref bool field, bool value, string propertyName)
     {
         if (field == value) return;

@@ -271,7 +271,11 @@ public sealed class ActivityMapCanvas : Control
             DrawExits(context, scene, scale);
         }
 
-        if (scene.Layers.HasFlag(ActivityMapLayers.Resources)) DrawResources(context, scene, scale);
+        if (scene.Layers.HasFlag(ActivityMapLayers.Resources))
+        {
+            DrawResources(context, scene, scale);
+            DrawResourceMobs(context, scene, scale);
+        }
 
         if (scene.Layers.HasFlag(ActivityMapLayers.Path)) DrawPath(context, scene, scale);
         DrawMarkers(context, scene, scale);
@@ -407,8 +411,40 @@ public sealed class ActivityMapCanvas : Control
         }
     }
 
-    private static string ResourceLabel(ActivityResourceNode node) =>
-        $"T{node.Tier}{(node.Enchantment > 0 ? $".{node.Enchantment}" : "")} {node.Family}";
+    // A resource mob is a diamond in its resource's color, so it reads apart from the round nodes; mobs move and are
+    // few, so each is drawn on its own.
+    private void DrawResourceMobs(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        if (scene.ResourceMobs is not { Count: > 0 } mobs) return;
+        const double radius = 8.5;
+        foreach (var mob in mobs)
+        {
+            var at = ToScreen(ImagePoint(scene, mob.X, mob.Y), scale);
+            if (!Visible(at, radius)) continue;
+            var edge = mob.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(mob.Enchantment), 2.4) : OutlinePen;
+            var shape = new StreamGeometry();
+            using (var draw = shape.Open())
+            {
+                draw.BeginFigure(new Point(at.X, at.Y - radius), true);
+                draw.LineTo(new Point(at.X + radius, at.Y));
+                draw.LineTo(new Point(at.X, at.Y + radius));
+                draw.LineTo(new Point(at.X - radius, at.Y));
+                draw.EndFigure(true);
+            }
+
+            context.DrawGeometry(UiPalette.Brush(ActivityPalette.Resource(mob.Family)), edge, shape);
+            var tier = ChartDrawing.Text(mob.Tier.ToString(CultureInfo.CurrentCulture), 9, UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
+            tier.Draw(context, new Point(at.X - tier.Width / 2, at.Y - tier.Height / 2));
+            hits.Add(new Hit(at, 9, $"{ResourceLabel(mob.Family, mob.Tier, mob.Enchantment)} mob",
+                [$"Seen {UiFormat.Ago(mob.SeenAtUtc, scene.NowUtc)}", "Kill it, then gather from it"],
+                [new ItemRow(mob.MobUniqueName, 1, mob.MobName, "", Mob: true), new ItemRow(mob.ItemUniqueName, 1, ResourceLabel(mob.Family, mob.Tier, mob.Enchantment), "")]));
+        }
+    }
+
+    private static string ResourceLabel(string family, int tier, int enchantment) =>
+        $"T{tier}{(enchantment > 0 ? $".{enchantment}" : "")} {family}";
+
+    private static string ResourceLabel(ActivityResourceNode node) => ResourceLabel(node.Family, node.Tier, node.Enchantment);
 
     private static Hit ResourceHit(Point at, ActivityResourceNode node, ActivityMapScene scene)
     {
