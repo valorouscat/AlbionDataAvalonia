@@ -106,6 +106,14 @@ public static class NpCapInstallationChecker
         }
     }
 
+    /// <summary>Whether Windows loads the old WinPcap instead of Npcap. WinPcap is an NDIS 5 driver from 2013 and
+    /// can't see VPN tunnels such as Wintun, sing-tun or WireGuard, so game traffic routed through them never arrives.</summary>
+    public static bool IsLegacyWinPcap()
+    {
+        return OperatingSystem.IsWindows()
+            && DescribeCaptureLibrary().StartsWith("WinPcap", StringComparison.OrdinalIgnoreCase);
+    }
+
     /// <summary>Whether Npcap was installed with "Restrict Npcap driver's access to Administrators only", which keeps
     /// a client that isn't run as administrator from opening any adapter. Null when it can't be read.</summary>
     public static bool? IsNpcapAdminOnly()

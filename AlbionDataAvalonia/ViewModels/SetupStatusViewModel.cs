@@ -109,6 +109,7 @@ public sealed partial class SetupStatusViewModel : ViewModelBase
 
     private DispatcherTimer? setupTimer;
     private bool? captureDriverReady;
+    private bool legacyWinPcap;
     private bool isCheckingDriver;
     private DateTime lastDriverCheckUtc;
     private DateTime? listeningSinceUtc;
@@ -210,6 +211,7 @@ public sealed partial class SetupStatusViewModel : ViewModelBase
         try
         {
             captureDriverReady = await Task.Run(NpCapInstallationChecker.IsNpCapInstalled);
+            legacyWinPcap = captureDriverReady == true && await Task.Run(NpCapInstallationChecker.IsLegacyWinPcap);
         }
         catch (Exception error)
         {
@@ -321,6 +323,13 @@ public sealed partial class SetupStatusViewModel : ViewModelBase
                     "The client reads game traffic through Npcap, a free network capture driver. Install it with the default options, then check again.",
                     windowsDriverActions);
             }
+        }
+        else if (legacyWinPcap)
+        {
+            driverStep.Set(SetupStepState.Warning, "Outdated WinPcap",
+                "WinPcap is installed instead of Npcap. It can’t see VPN tunnels and newer virtual adapters, so traffic routed through them never arrives. " +
+                "Uninstall WinPcap, install Npcap with “WinPcap API-compatible Mode” on, then restart the PC.",
+                windowsDriverActions);
         }
         else
         {
