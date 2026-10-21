@@ -121,7 +121,7 @@
                         </StackPanel>
                     </ToggleButton>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResources}" IsVisible="{Binding IsLive}"
-                                  ToolTip.Tip="Resource nodes the game has shown near you on this map, with their tier. A colored ring marks an enchanted node. Nodes stay until gathered out or you leave the map.">
+                                  ToolTip.Tip="Resource nodes the game has shown near you on this map, with their tier and the units left under each. A colored ring marks an enchanted node. Open-world nodes are remembered between visits.">
                         <StackPanel Orientation="Horizontal" Spacing="2">
                             <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceWoodBrush}" VerticalAlignment="Center" />
                             <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceOreBrush}" VerticalAlignment="Center" />
@@ -134,6 +134,16 @@
                     <ComboBox ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceTier}" VerticalAlignment="Center"
                               IsVisible="{Binding ShowResourceTier}" AutomationProperties.Name="Lowest resource tier shown"
                               ToolTip.Tip="Show only resource nodes of this tier and higher" Margin="4,0,0,0" />
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowRememberedResources}" IsVisible="{Binding ShowResourceTier}"
+                                  ToolTip.Tip="Also show, faded, the nodes seen on earlier visits to this map and not in view now, with when they were last seen and the units they had. A hollow ring is a node gathered out. The game only shows nodes near you, so these are what was there then, not now.">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="9" Height="9" Fill="{DynamicResource UiResourceOreBrush}" Opacity="0.55" VerticalAlignment="Center" />
+                            <TextBlock Text="Remembered" />
+                        </StackPanel>
+                    </ToggleButton>
+                    <Button Content="Forget" Command="{Binding ForgetRememberedResourcesCommand}" IsVisible="{Binding ShowResourceTier}"
+                            VerticalAlignment="Center" FontSize="{DynamicResource UiFontSizeSmall}" Margin="4,0,0,0"
+                            ToolTip.Tip="Forget the resource nodes remembered on this map" />
                 </WrapPanel>
             </Border>
 

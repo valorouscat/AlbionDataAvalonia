@@ -188,7 +188,7 @@ Click **Open map** on the Activity page to open the map in its own window.
 
 - **Live** follows you through the zone and draws your path, kills, loot, gathering, deaths, zone exits and map icons. Choose whether they fade after 1, 5 or 15 minutes, or never.
 - **History** replays any past run. Pick it from the list and press play, or drag along the timeline.
-- **Resources** (Live only, off until you turn it on) marks the gathering nodes the game has shown near you: wood, ore, fiber, hide and stone, with the tier written on each and a colored ring for enchanted nodes. Nodes stay on the map after you walk past them until they're gathered out or you change zone. Pick a lowest tier to hide the rest.
+- **Resources** (Live only, off until you turn it on) marks the gathering nodes the game has shown near you: wood, ore, fiber, hide and stone, with the tier written on each and a colored ring for enchanted nodes. Nodes stay on the map after you walk past them until they're gathered out or you change zone, and the units each has left show under it. Pick a lowest tier to hide the rest. Open-world nodes are also remembered between visits and restarts (for a week, per server): with **Remembered** on, nodes seen on earlier visits and not in view now show faded with when they were last seen and how many units they had, and a hollow ring marks one gathered out. The game only tells the client about nodes near you, so a remembered node is what was there when you last saw it, not now. **Forget** clears the current map's memory.
 
 ### Streamer window
 

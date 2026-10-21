@@ -65,6 +65,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         selectedFadeIndex = Math.Max(0, Array.FindIndex(FadeOptionValues, x => x == settings.MapFadeMinutes));
         if (FadeOptionValues[selectedFadeIndex] != settings.MapFadeMinutes) selectedFadeIndex = 1;
         showResources = settings.MapShowResources;
+        showRememberedResources = settings.MapShowRememberedResources;
         selectedResourceTier = UiOptions.Find(ResourceTierOptions, settings.MapResourceMinTier);
         liveTimer.Tick += (_, _) => RefreshLive();
         replayTimer.Tick += (_, _) => AdvanceReplay();
@@ -104,6 +105,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [NotifyPropertyChangedFor(nameof(ShowResourceTier))]
     private bool showResources;
     [ObservableProperty] private Option<int> selectedResourceTier;
+    [ObservableProperty] private bool showRememberedResources;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasRuns))]
@@ -194,6 +196,15 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         settings.MapShowResources = value;
         Rebuild();
     }
+
+    partial void OnShowRememberedResourcesChanged(bool value)
+    {
+        settings.MapShowRememberedResources = value;
+        Rebuild();
+    }
+
+    [RelayCommand]
+    private void ForgetRememberedResources() => tracker.ForgetRememberedResources();
 
     partial void OnSelectedResourceTierChanged(Option<int> value)
     {
@@ -536,10 +547,13 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         }
     }
 
-    // Only nodes at or above the chosen tier, the best first, so a group of nodes on screen shows its best one.
+    // Only nodes at or above the chosen tier, the best first, so a group of nodes on screen shows its best one; a node
+    // gathered out comes after the rest, and one in view before a remembered one of the same kind.
     private IReadOnlyList<ActivityResourceNode> ShownResources(IReadOnlyList<ActivityResourceNode>? nodes) =>
-        !ShowResources || nodes is not { Count: > 0 } ? [] : nodes.Where(x => x.Tier >= SelectedResourceTier.Value)
-            .OrderByDescending(x => x.Tier).ThenByDescending(x => x.Enchantment).ThenByDescending(x => x.Charges).ToArray();
+        !ShowResources || nodes is not { Count: > 0 } ? [] : nodes
+            .Where(x => x.Tier >= SelectedResourceTier.Value && (x.Live || ShowRememberedResources))
+            .OrderBy(x => x.GatheredAtUtc is not null).ThenByDescending(x => x.Tier).ThenByDescending(x => x.Enchantment)
+            .ThenByDescending(x => x.Live).ThenByDescending(x => x.Charges).ToArray();
 
     // The path is always the character's own; events follow the Personal or Party choice.
     private IReadOnlyList<ActivityMapMarker> Shown(IReadOnlyList<ActivityMapMarker> markers) =>

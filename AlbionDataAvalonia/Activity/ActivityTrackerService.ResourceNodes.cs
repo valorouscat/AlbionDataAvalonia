@@ -1,20 +1,27 @@
 using AlbionDataAvalonia.Activity.Models;
+using AlbionDataAvalonia.Locations;
 using AlbionDataAvalonia.Network.Events;
 using AlbionDataAvalonia.Shared;
 using Serilog;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 
 namespace AlbionDataAvalonia.Activity;
 
 // The game tells the client about the resource nodes around the character. The live map keeps the ones seen on the
 // current map, so a node passed a while ago still shows, until it is gathered out or the character leaves the map.
-// Nothing here is stored.
+// While the map's resources are turned on, open-world nodes are also remembered by map and position between visits,
+// so the live map shows what stood where last time; a remembered node is what was there when last seen.
 public sealed partial class ActivityTrackerService
 {
     private const int MaxResourceNodes = 4000;
+    // A remembered node this close to a live one is that node.
+    private const double RememberedSameSpot = 1.5;
     private readonly Dictionary<long, ActivityResourceNode> resourceNodes = new();
+    private readonly ActivityResourceNodeMemory resourceMemory = new(Path.Combine(AppData.DataDirectoryPath, "resource-nodes.json"));
     private long resourceNodesEpoch = -1;
     // One note per map when a harvest shows a node's packet was read wrongly.
     private long resourceMismatchEpoch = -1;
@@ -70,15 +77,26 @@ public sealed partial class ActivityTrackerService
             Enchantment = enchantment,
             ItemUniqueName = ActivityResourceNodePackets.ItemUniqueName(family, tier, enchantment)
         };
+        Remember(resourceNodes[id], gatheredOut: false);
         liveMapVersion++;
+    }
+
+    /// <summary>Forgets the resource nodes remembered on the current map, for when they no longer match the game.</summary>
+    public void ForgetRememberedResources()
+    {
+        lock (sync)
+        {
+            if (RememberKey() is { } key && resourceMemory.Forget(key)) liveMapVersion++;
+        }
     }
 
     private bool PlaceResourceNode(ResourceNodeSighting node, DateTime at)
     {
         if (resourceNodes.Count >= MaxResourceNodes && !resourceNodes.ContainsKey(node.Id))
             resourceNodes.Remove(resourceNodes.Values.MinBy(x => x.SeenAtUtc)!.Id);
-        resourceNodes[node.Id] = new ActivityResourceNode(node.Id, node.Family, node.Tier, node.Enchantment, node.X, node.Y, node.Charges, at,
-            ActivityResourceNodePackets.ItemUniqueName(node.Family, node.Tier, node.Enchantment));
+        var placed = resourceNodes[node.Id] = new ActivityResourceNode(node.Id, node.Family, node.Tier, node.Enchantment, node.X, node.Y,
+            node.Charges, at, ActivityResourceNodePackets.ItemUniqueName(node.Family, node.Tier, node.Enchantment));
+        Remember(placed, gatheredOut: false);
         return true;
     }
 
@@ -86,15 +104,21 @@ public sealed partial class ActivityTrackerService
     private bool ChangeResourceNode(ResourceNodeChange change, DateTime at)
     {
         if (!resourceNodes.TryGetValue(change.Id, out var node)) return false;
-        if (change.Charges <= 0) return resourceNodes.Remove(change.Id);
+        if (change.Charges <= 0)
+        {
+            Remember(node with { Charges = 0, SeenAtUtc = at }, gatheredOut: true);
+            return resourceNodes.Remove(change.Id);
+        }
+
         var enchantment = change.Enchantment ?? node.Enchantment;
-        resourceNodes[change.Id] = node with
+        var changed = resourceNodes[change.Id] = node with
         {
             Charges = change.Charges,
             Enchantment = enchantment,
             SeenAtUtc = at,
             ItemUniqueName = ActivityResourceNodePackets.ItemUniqueName(node.Family, node.Tier, enchantment)
         };
+        Remember(changed, gatheredOut: false);
         return true;
     }
 
@@ -106,9 +130,49 @@ public sealed partial class ActivityTrackerService
         resourceNodes.Clear();
     }
 
+    // The live nodes, then the remembered ones not standing where a live one does.
     private ActivityResourceNode[] CurrentResourceNodes()
     {
         SyncResourceNodes();
-        return resourceNodes.Values.ToArray();
+        if (RememberKey() is not { } key) return resourceNodes.Values.ToArray();
+        var live = new Dictionary<(int, int), List<ActivityResourceNode>>();
+        foreach (var node in resourceNodes.Values)
+        {
+            var cell = RememberedCell(node.X, node.Y);
+            if (!live.TryGetValue(cell, out var list)) live[cell] = list = new List<ActivityResourceNode>();
+            list.Add(node);
+        }
+
+        var shown = resourceNodes.Values.ToList();
+        foreach (var node in resourceMemory.Remembered(key))
+        {
+            var (cellX, cellY) = RememberedCell(node.X, node.Y);
+            var taken = false;
+            for (var dx = -1; dx <= 1 && !taken; dx++)
+                for (var dy = -1; dy <= 1 && !taken; dy++)
+                    taken = live.TryGetValue((cellX + dx, cellY + dy), out var nearby)
+                        && nearby.Any(x => Math.Abs(x.X - node.X) <= RememberedSameSpot && Math.Abs(x.Y - node.Y) <= RememberedSameSpot);
+            if (!taken) shown.Add(node);
+        }
+
+        return shown.ToArray();
     }
+
+    private static (int, int) RememberedCell(double x, double y) =>
+        ((int)Math.Floor(x / RememberedSameSpot), (int)Math.Floor(y / RememberedSameSpot));
+
+    private void Remember(ActivityResourceNode node, bool gatheredOut)
+    {
+        if (RememberKey() is { } key)
+            resourceMemory.Note(key, node.Family, node.Tier, node.Enchantment, node.X, node.Y, node.Charges, gatheredOut, node.SeenAtUtc);
+    }
+
+    // Only open-world maps keep their nodes between visits: an instance is laid out afresh each time. The server is
+    // part of the key, as each server's world is its own. Nothing is remembered while the map's resources are off.
+    private string? RememberKey() =>
+        map is { } current && current.Kind == ActivityMapKind.OpenWorld && !current.RawLocationId.Contains('@')
+            && settings.UserSettings.MapShowResources
+            ? $"{actors.ServerId?.ToString(CultureInfo.InvariantCulture) ?? "0"}:{current.RawLocationId}" : null;
+
+    private void FlushRememberedResources(DateTime now, bool force = false) => resourceMemory.Flush(now, force);
 }

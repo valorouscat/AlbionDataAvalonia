@@ -414,6 +414,20 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // Whether the live map also shows the nodes remembered from earlier visits to the map, faded.
+    private bool mapShowRememberedResources = true;
+    public bool MapShowRememberedResources
+    {
+        get => mapShowRememberedResources;
+        set
+        {
+            if (mapShowRememberedResources == value) return;
+            mapShowRememberedResources = value;
+            OnPropertyChanged(nameof(MapShowRememberedResources));
+            Log.Information("Map remembered resources set to {MapShowRememberedResources}", mapShowRememberedResources);
+        }
+    }
+
     // The lowest tier of resource node the live map shows; 1 shows every tier.
     private int mapResourceMinTier = 1;
     public int MapResourceMinTier
