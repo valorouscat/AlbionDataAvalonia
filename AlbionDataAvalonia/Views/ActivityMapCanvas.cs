@@ -1,3 +1,4 @@
+using AlbionDataAvalonia.Activity;
 using AlbionDataAvalonia.Activity.Models;
 using AlbionDataAvalonia.Items;
 using AlbionDataAvalonia.Maps;
@@ -46,6 +47,9 @@ public sealed class ActivityMapCanvas : Control
     private const double RememberedOpacity = 0.55;
     private const double RememberedGatheredOpacity = 0.4;
     private const double SpotSpacing = 22;
+    // Spawn spots are many and only possible, so they are smaller and fainter than the nodes the game has shown.
+    private const double SpawnClusterRadius = 12;
+    private const double SpawnOpacity = 0.6;
     // The live position updates a few times a second. The marker, and the view while following, glide to
     // each new one over about as long as the last update took, so walking reads as movement, not hops.
     private static readonly TimeSpan MaxGlide = TimeSpan.FromMilliseconds(400);
@@ -271,6 +275,7 @@ public sealed class ActivityMapCanvas : Control
             DrawExits(context, scene, scale);
         }
 
+        if (scene.Layers.HasFlag(ActivityMapLayers.ResourceSpawns)) DrawResourceSpawns(context, scene, scale);
         if (scene.Layers.HasFlag(ActivityMapLayers.Resources))
         {
             DrawResources(context, scene, scale);
@@ -395,10 +400,19 @@ public sealed class ActivityMapCanvas : Control
                 var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 9,
                     gathered ? color : UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
                 tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
-                // What a single node has left, under it, so a glance tells a full node from a picked one.
-                if (count == 1 && !gathered && best.Charges > 0)
+            }
+
+            // What the node, or all the nodes of a group, have left, under it, so a glance tells a full spot from a
+            // picked one. A "+" marks a group with nodes whose charges aren't known.
+            var standing = group.Nodes.Where(x => x.GatheredAtUtc is null).ToArray();
+            var charges = standing.Sum(x => Math.Max(x.Charges, 0));
+            if (charges > 0)
+            {
+                var unknown = count > 1 && standing.Any(x => x.Charges <= 0);
+                using (context.PushOpacity(standing.Any(x => x.Live && x.Charges > 0) ? 1 : RememberedOpacity))
                 {
-                    var left = ChartDrawing.Text(UiFormat.Whole(best.Charges), 8, UiPalette.Color("UiMapResourceChargesColor"), FontWeight.Bold);
+                    var left = ChartDrawing.Text(UiFormat.Whole(charges) + (unknown ? "+" : ""), 8,
+                        UiPalette.Color("UiMapResourceChargesColor"), FontWeight.Bold);
                     var origin = new Point(group.At.X - left.Width / 2, group.At.Y + radius + 1);
                     context.DrawRectangle(UiPalette.Brush(UiPalette.WithAlpha(UiPalette.Color("UiMapResourceTextColor"), 190)), null,
                         new Rect(origin.X - 2, origin.Y, left.Width + 4, left.Height), 3, 3);
@@ -441,6 +455,93 @@ public sealed class ActivityMapCanvas : Control
         }
     }
 
+    // A spawn spot is a square, or a hollow diamond for a resource mob's spot, so it reads apart from the round nodes
+    // in view. Spots close together on screen merge into the best of them; the tooltip counts what the group holds.
+    private void DrawResourceSpawns(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        if (scene.ResourceSpawns is not { Count: > 0 } spawns) return;
+        var groups = new List<SpawnGroup>();
+        var grid = new Dictionary<(int X, int Y), List<SpawnGroup>>();
+        // The scene lists the best last, so walking it backwards puts the best spot first in its group.
+        for (var index = spawns.Count - 1; index >= 0; index--)
+        {
+            var spawn = spawns[index];
+            var at = ToScreen(ImagePoint(scene, spawn.Position.X, spawn.Position.Y), scale);
+            if (!Visible(at, SpawnClusterRadius)) continue;
+            var cellX = (int)Math.Floor(at.X / SpawnClusterRadius);
+            var cellY = (int)Math.Floor(at.Y / SpawnClusterRadius);
+            SpawnGroup? group = null;
+            for (var dx = -1; dx <= 1 && group is null; dx++)
+                for (var dy = -1; dy <= 1 && group is null; dy++)
+                    if (grid.TryGetValue((cellX + dx, cellY + dy), out var nearby))
+                        group = nearby.FirstOrDefault(x => Distance(x.At, at) <= SpawnClusterRadius);
+            if (group is null)
+            {
+                group = new SpawnGroup(at);
+                groups.Add(group);
+                if (!grid.TryGetValue((cellX, cellY), out var cell)) grid[(cellX, cellY)] = cell = new List<SpawnGroup>();
+                cell.Add(group);
+            }
+
+            group.Spawns.Add(spawn);
+        }
+
+        const double half = 6;
+        foreach (var group in Enumerable.Reverse(groups))
+        {
+            var best = group.Spawns[0];
+            var color = ActivityPalette.Resource(best.Family);
+            using (context.PushOpacity(SpawnOpacity))
+            {
+                if (best.Mob)
+                {
+                    var shape = new StreamGeometry();
+                    using (var draw = shape.Open())
+                    {
+                        draw.BeginFigure(new Point(group.At.X, group.At.Y - half - 1), true);
+                        draw.LineTo(new Point(group.At.X + half + 1, group.At.Y));
+                        draw.LineTo(new Point(group.At.X, group.At.Y + half + 1));
+                        draw.LineTo(new Point(group.At.X - half - 1, group.At.Y));
+                        draw.EndFigure(true);
+                    }
+
+                    context.DrawGeometry(null, UiPalette.Pen(color, 2), shape);
+                }
+                else context.DrawRectangle(UiPalette.Brush(color), OutlinePen, new Rect(group.At.X - half, group.At.Y - half, half * 2, half * 2), 2, 2);
+
+                var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 8,
+                    best.Mob ? color : UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
+                tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
+            }
+
+            hits.Add(SpawnHit(group.At, group.Spawns));
+        }
+    }
+
+    private static string SpawnLabel(MapResourceSpawn spawn) => $"T{spawn.Tier} {spawn.Family}{(spawn.Mob ? " mob" : "")}";
+
+    private static string SpawnItem(MapResourceSpawn spawn) => ActivityResourceNodePackets.ItemUniqueName(spawn.Family, spawn.Tier, 0);
+
+    private static Hit SpawnHit(Point at, IReadOnlyList<MapResourceSpawn> spawns)
+    {
+        if (spawns.Count == 1)
+        {
+            var spawn = spawns[0];
+            return new(at, 8, $"{SpawnLabel(spawn)} spawn spot",
+                [spawn.Mob ? "A spot where this mob can appear, from the game files" : "A spot where this resource can grow, from the game files",
+                    "Not what stands there now; any enchantment is picked when it spawns"],
+                [new ItemRow(SpawnItem(spawn), 1, SpawnLabel(spawn), "")]);
+        }
+
+        var kinds = spawns.GroupBy(x => (x.Family, x.Tier, x.Mob)).OrderByDescending(x => x.Key.Tier).ThenBy(x => x.Key.Mob).ToArray();
+        var rows = kinds.Take(GroupLinesShown).Select(x => new ItemRow(SpawnItem(x.First()), 1, SpawnLabel(x.First()),
+            UiFormat.Count(x.Count(), "spot"))).ToArray();
+        var lines = new List<string>();
+        if (kinds.Length > GroupLinesShown) lines.Add($"and {UiFormat.Count(kinds.Length - GroupLinesShown, "more kind")}");
+        lines.Add("Possible spots from the game files; zoom in to see each");
+        return new(at, 10, UiFormat.Count(spawns.Count, "spawn spot"), lines, rows);
+    }
+
     private static string ResourceLabel(string family, int tier, int enchantment) =>
         $"T{tier}{(enchantment > 0 ? $".{enchantment}" : "")} {family}";
 
@@ -467,6 +568,8 @@ public sealed class ActivityMapCanvas : Control
             KindCount(x.ToArray()))).ToArray();
         var lines = new List<string>();
         if (kinds.Length > GroupLinesShown) lines.Add($"and {UiFormat.Count(kinds.Length - GroupLinesShown, "more kind")}");
+        var charges = nodes.Where(x => x.GatheredAtUtc is null).Sum(x => Math.Max(x.Charges, 0));
+        if (charges > 0) lines.Add($"{UiFormat.Whole(charges)} left in all");
         lines.Add("Zoom in to see each node");
         return new(at, 11, UiFormat.Count(nodes.Count, "resource node"), lines, rows);
     }
@@ -475,7 +578,9 @@ public sealed class ActivityMapCanvas : Control
     {
         var remembered = nodes.Count(x => !x.Live && x.GatheredAtUtc is null);
         var gathered = nodes.Count(x => x.GatheredAtUtc is not null);
+        var charges = nodes.Where(x => x.GatheredAtUtc is null).Sum(x => Math.Max(x.Charges, 0));
         var parts = new List<string> { UiFormat.Count(nodes.Count, "node") };
+        if (charges > 0) parts.Add($"{UiFormat.Whole(charges)} left");
         if (remembered > 0) parts.Add($"{remembered} remembered");
         if (gathered > 0) parts.Add($"{gathered} gathered out");
         return string.Join(", ", parts);
@@ -954,6 +1059,12 @@ public sealed class ActivityMapCanvas : Control
     {
         public Point At { get; } = at;
         public List<ActivityResourceNode> Nodes { get; } = new();
+    }
+
+    private sealed class SpawnGroup(Point at)
+    {
+        public Point At { get; } = at;
+        public List<MapResourceSpawn> Spawns { get; } = new();
     }
 
     private sealed class MarkerCluster(ActivityMapMarkerKind kind, Point at, double opacity)

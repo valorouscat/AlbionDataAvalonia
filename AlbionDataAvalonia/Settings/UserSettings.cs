@@ -414,6 +414,19 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // Whether the map window's legend and filters are folded down to a single button.
+    private bool mapLegendCollapsed;
+    public bool MapLegendCollapsed
+    {
+        get => mapLegendCollapsed;
+        set
+        {
+            if (mapLegendCollapsed == value) return;
+            mapLegendCollapsed = value;
+            OnPropertyChanged(nameof(MapLegendCollapsed));
+        }
+    }
+
     // Whether the live map also shows the nodes remembered from earlier visits to the map, faded.
     private bool mapShowRememberedResources = true;
     public bool MapShowRememberedResources
@@ -472,6 +485,20 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // Whether the map shows where the zone can grow resources, from the game files.
+    private bool mapShowResourceSpawns;
+    public bool MapShowResourceSpawns
+    {
+        get => mapShowResourceSpawns;
+        set
+        {
+            if (mapShowResourceSpawns == value) return;
+            mapShowResourceSpawns = value;
+            OnPropertyChanged(nameof(MapShowResourceSpawns));
+            Log.Information("Map resource spawns set to {MapShowResourceSpawns}", mapShowResourceSpawns);
+        }
+    }
+
     private void SetStreamerOption(ref bool field, bool value, string propertyName)
     {
         if (field == value) return;
@@ -524,6 +551,22 @@ public class UserSettings : INotifyPropertyChanged
             {
                 LogLevel = nextLevel;
             }
+        }
+    }
+
+    // The network adapter capture is limited to, by driver name or display name; empty listens on every adapter
+    // and keeps the first one that carries game traffic. Pinning helps when a VPN routes the game through its tunnel.
+    private string captureAdapterName = string.Empty;
+    public string CaptureAdapterName
+    {
+        get => captureAdapterName;
+        set
+        {
+            var next = value?.Trim() ?? string.Empty;
+            if (captureAdapterName == next) return;
+            captureAdapterName = next;
+            OnPropertyChanged(nameof(CaptureAdapterName));
+            Log.Information("Capture adapter set to {CaptureAdapterName}", next.Length == 0 ? "automatic" : next);
         }
     }
 

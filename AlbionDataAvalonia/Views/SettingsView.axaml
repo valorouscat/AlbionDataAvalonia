@@ -43,6 +43,18 @@
                         </controls:SettingsRow>
                     </controls:SettingsGroup>
 
+                    <controls:SettingsGroup Header="NETWORK" IsVisible="{Binding CanChooseCaptureAdapter}">
+                        <controls:SettingsRow Classes="Stacked" Title="Network adapter" Hint="{Binding CaptureAdapterHint}">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <ComboBox ItemsSource="{Binding CaptureAdapterOptions}" SelectedItem="{Binding SelectedCaptureAdapter}"
+                                          HorizontalAlignment="Stretch" AutomationProperties.Name="Network adapter" />
+                                <Button Grid.Column="1" Content="Refresh" Padding="10,3" FontSize="{DynamicResource UiFontSizeSmall}"
+                                        Command="{Binding RefreshCaptureAdaptersCommand}" IsEnabled="{Binding !IsListingAdapters}"
+                                        VerticalAlignment="Center" />
+                            </Grid>
+                        </controls:SettingsRow>
+                    </controls:SettingsGroup>
+
                     <controls:SettingsGroup Header="WINDOW BUTTONS">
                         <controls:SettingsRow Title="Minimize hides to tray" Hint="The window leaves the taskbar. Open it again from the tray icon.">
                             <ToggleSwitch IsChecked="{Binding UserSettings.MinimizeButtonMinimizesToTray}" />

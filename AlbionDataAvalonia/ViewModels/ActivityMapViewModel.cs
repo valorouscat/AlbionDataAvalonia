@@ -67,6 +67,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         showResources = settings.MapShowResources;
         showRememberedResources = settings.MapShowRememberedResources;
         showResourceMobs = settings.MapShowResourceMobs;
+        showResourceSpawns = settings.MapShowResourceSpawns;
+        legendCollapsed = settings.MapLegendCollapsed;
         var hidden = HiddenFamilies(settings.MapResourceHiddenFamilies);
         showWood = !hidden.Contains("Wood");
         showStone = !hidden.Contains("Stone");
@@ -86,7 +88,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         [new(1, "All tiers"), new(4, "T4+"), new(5, "T5+"), new(6, "T6+"), new(7, "T7+"), new(8, "T8")];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLive), nameof(IsHistory), nameof(ShowFollow), nameof(ShowResourceTier))]
+    [NotifyPropertyChangedFor(nameof(IsLive), nameof(IsHistory), nameof(ShowFollow), nameof(ShowResourceTier), nameof(ShowResourceFilters))]
     private int selectedModeIndex;
 
     [ObservableProperty] private int selectedFadeIndex;
@@ -109,8 +111,11 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool showDeaths = true;
     [ObservableProperty] private bool showFeatures = true;
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowResourceTier))]
+    [NotifyPropertyChangedFor(nameof(ShowResourceTier), nameof(ShowResourceFilters))]
     private bool showResources;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowResourceFilters))]
+    private bool showResourceSpawns;
     [ObservableProperty] private Option<int> selectedResourceTier;
     [ObservableProperty] private bool showRememberedResources;
     [ObservableProperty] private bool showResourceMobs;
@@ -150,6 +155,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     public bool ShowFollow => IsLive && Scene?.Position is not null;
     public bool HasNote => !string.IsNullOrEmpty(Note);
     public bool ShowResourceTier => IsLive && ShowResources;
+    // The tier and kind choices apply to the live nodes and to the spawn spots alike.
+    public bool ShowResourceFilters => ShowResourceTier || ShowResourceSpawns;
     public bool HasRuns => Runs.Count > 0;
     public bool HasMultipleRunMaps => RunMaps.Count > 1;
     public string PlayButtonText => IsPlaying ? "❚❚" : "▶";
@@ -159,7 +166,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private ActivityMapLayers Layers =>
         (ShowPath ? ActivityMapLayers.Path : 0) | (ShowKills ? ActivityMapLayers.Kills : 0) | (ShowLoot ? ActivityMapLayers.Loot : 0)
         | (ShowGathering ? ActivityMapLayers.Gathering : 0) | (ShowDeaths ? ActivityMapLayers.Deaths : 0) | (ShowFeatures ? ActivityMapLayers.Features : 0)
-        | (ShowResources ? ActivityMapLayers.Resources : 0);
+        | (ShowResources ? ActivityMapLayers.Resources : 0) | (ShowResourceSpawns ? ActivityMapLayers.ResourceSpawns : 0);
 
     private double FadeSeconds => FadeOptionValues[Math.Clamp(SelectedFadeIndex, 0, FadeOptionValues.Length - 1)] * 60d;
 
@@ -198,6 +205,13 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Rebuild();
     }
 
+    [ObservableProperty] private bool legendCollapsed;
+
+    partial void OnLegendCollapsedChanged(bool value) => settings.MapLegendCollapsed = value;
+
+    [RelayCommand]
+    private void ToggleLegend() => LegendCollapsed = !LegendCollapsed;
+
     partial void OnShowPathChanged(bool value) => Rebuild();
     partial void OnShowKillsChanged(bool value) => Rebuild();
     partial void OnShowLootChanged(bool value) => Rebuild();
@@ -219,6 +233,12 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
     [RelayCommand]
     private void ForgetRememberedResources() => tracker.ForgetRememberedResources();
+
+    partial void OnShowResourceSpawnsChanged(bool value)
+    {
+        settings.MapShowResourceSpawns = value;
+        Rebuild();
+    }
 
     partial void OnShowResourceMobsChanged(bool value)
     {
@@ -376,7 +396,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var turns = LayoutTurns(zone, live.Layout, live.LayoutTurns);
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
-            null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs));
+            null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
+            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)));
     }
 
     // Grows with the path so the view stays steady while walking a zone without a minimap.
@@ -523,7 +544,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var turns = LayoutTurns(zone, option.Layout, option.LayoutTurns);
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
-            Layers, turns);
+            Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)));
     }
 
     // Only a minimap found by its layout follows the instance's turn.
@@ -537,6 +558,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private static IReadOnlyList<ActivityMapIcon> Turned(IReadOnlyList<ActivityMapIcon> icons, int turns) =>
         turns % 4 == 0 ? icons : icons.Select(icon => icon with { Position = Turn(icon.Position, turns) }).ToArray();
 
+    private static IReadOnlyList<MapResourceSpawn> Turned(IReadOnlyList<MapResourceSpawn> spawns, int turns) =>
+        turns % 4 == 0 ? spawns : spawns.Select(spawn => spawn with { Position = Turn(spawn.Position, turns) }).ToArray();
+
     private static MapPoint Turn(MapPoint point, int turns)
     {
         for (var turn = 0; turn < turns % 4; turn++) point = new MapPoint(point.Y, -point.X);
@@ -548,9 +572,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         try
         {
             var zone = await maps.FindZoneAsync(rawMapId, layout);
-            if (zone is null) return new ZoneView(rawMapId, null, null, null, [], [], fallbackName, "", null, false);
+            if (zone is null) return new ZoneView(rawMapId, null, null, null, [], [], [], fallbackName, "", null, false);
             var imageTask = maps.GetImageAsync(zone);
-            var iconsTask = maps.GetIconsAsync(zone);
+            var featuresTask = maps.GetFeaturesAsync(zone);
             var frameTask = maps.GetFrameImageAsync();
             var exits = new List<ActivityMapExit>();
             foreach (var exit in zone.Exits)
@@ -559,7 +583,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
                 exits.Add(new ActivityMapExit(exit.Position, $"To {target?.DisplayName ?? exit.TargetId}", Zone(target?.PvpCategory)));
             }
 
-            var icons = await iconsTask;
+            var features = await featuresTask;
+            var icons = features.Icons;
             var iconImages = new Dictionary<string, Bitmap?>();
             foreach (var type in icons.Select(x => x.MarkerType).OfType<string>().Distinct()) iconImages[type] = await maps.GetIconImageAsync(type);
             // The game draws a bank, market or city portal on its exit instead of an exit marker; so does the map,
@@ -580,18 +605,19 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
                 Log.Warning(error, "Could not load the minimap for {RawMapId}", rawMapId);
                 failed = true;
             }
-            return new ZoneView(rawMapId, zone, image, await frameTask, exits, shownIcons, zone.DisplayName, ZoneDescription(zone), zone.Geometry, failed);
+            return new ZoneView(rawMapId, zone, image, await frameTask, exits, shownIcons, features.ResourceSpawns, zone.DisplayName,
+                ZoneDescription(zone), zone.Geometry, failed);
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.IO.IOException or JsonException)
         {
             Log.Warning(error, "Could not load map data for {RawMapId}", rawMapId);
-            return new ZoneView(rawMapId, null, null, null, [], [], fallbackName, "", null, true);
+            return new ZoneView(rawMapId, null, null, null, [], [], [], fallbackName, "", null, true);
         }
         // The callers start this without waiting, so any other failure would vanish and leave the map empty.
         catch (Exception error) when (error is not OperationCanceledException)
         {
             Log.Error(error, "Could not build the map for {RawMapId}", rawMapId);
-            return new ZoneView(rawMapId, null, null, null, [], [], fallbackName, "", null, true);
+            return new ZoneView(rawMapId, null, null, null, [], [], [], fallbackName, "", null, true);
         }
     }
 
@@ -608,6 +634,12 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         !ShowResources || !ShowResourceMobs || mobs is not { Count: > 0 } ? [] : mobs
             .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family))
             .OrderBy(x => x.Tier).ThenBy(x => x.Enchantment).ToArray();
+
+    // Spawn spots follow the same tier and kind choices as the nodes, the lowest first so the best end up on top.
+    private IReadOnlyList<MapResourceSpawn> ShownResourceSpawns(IReadOnlyList<MapResourceSpawn> spawns) =>
+        !ShowResourceSpawns || spawns.Count == 0 ? [] : spawns
+            .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family))
+            .OrderBy(x => x.Tier).ThenBy(x => x.Mob).ToArray();
 
     // The path is always the character's own; events follow the Personal or Party choice.
     private IReadOnlyList<ActivityMapMarker> Shown(IReadOnlyList<ActivityMapMarker> markers) =>
@@ -711,5 +743,5 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     }
 
     private sealed record ZoneView(string RawMapId, MapZone? Zone, Bitmap? Image, Bitmap? Frame, IReadOnlyList<ActivityMapExit> Exits,
-        IReadOnlyList<ActivityMapIcon> Icons, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed);
+        IReadOnlyList<ActivityMapIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed);
 }

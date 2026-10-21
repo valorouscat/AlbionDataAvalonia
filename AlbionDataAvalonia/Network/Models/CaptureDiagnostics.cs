@@ -14,7 +14,12 @@ public enum GameTrafficTransport
     IPv6
 }
 
-public sealed record CaptureAdapterState(string Name, string State);
+/// <summary>An adapter in Copy diagnostics. LinkType is set once it opened with something other than Ethernet, such as
+/// Raw or Null for a VPN tunnel.</summary>
+public sealed record CaptureAdapterState(string Name, string State, string? LinkType = null);
+
+/// <summary>An adapter the settings picker offers. Key is what settings store to pin capture to it.</summary>
+public sealed record CaptureAdapterInfo(string Key, string Label, bool IsTunnel);
 
 public sealed record CaptureRestart(string Reason, DateTime Utc);
 
@@ -25,4 +30,6 @@ public sealed record CaptureDiagnostics(
     IReadOnlyList<string> UnknownServerIps,
     GameTrafficTransport Transport,
     int RestartCount,
-    CaptureRestart? LastRestart);
+    CaptureRestart? LastRestart,
+    IReadOnlyList<string> AdaptersMissingFromCapture,
+    string? PinnedAdapter);

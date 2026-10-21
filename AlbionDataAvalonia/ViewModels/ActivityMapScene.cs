@@ -10,8 +10,8 @@ namespace AlbionDataAvalonia.ViewModels;
 [Flags]
 public enum ActivityMapLayers
 {
-    None = 0, Path = 1, Kills = 2, Loot = 4, Gathering = 8, Deaths = 16, Features = 32, Resources = 64,
-    All = Path | Kills | Loot | Gathering | Deaths | Features | Resources
+    None = 0, Path = 1, Kills = 2, Loot = 4, Gathering = 8, Deaths = 16, Features = 32, Resources = 64, ResourceSpawns = 128,
+    All = Path | Kills | Loot | Gathering | Deaths | Features | Resources | ResourceSpawns
 }
 
 /// <summary>A zone's danger level, which colors its exits.</summary>
@@ -27,7 +27,8 @@ public sealed record ActivityMapIcon(MapPoint Position, string Label, Bitmap? Im
 /// which resets zoom and panning; the rest can change every frame. Frame is the in-game paper frame drawn around the zone.
 /// ImageQuarterTurns turns the minimap clockwise about its centre, as a Mists instance turns its layout.
 /// Resources are the live map's resource nodes, already filtered by tier and kind and sorted best first; ResourceMobs are
-/// the mobs that yield resources, filtered the same way and sorted best last.
+/// the mobs that yield resources, filtered the same way and sorted best last. ResourceSpawns are the zone's possible
+/// resource spots from the game files, filtered the same way and sorted best last.
 /// </summary>
 public sealed record ActivityMapScene(
     string ViewKey,
@@ -48,4 +49,5 @@ public sealed record ActivityMapScene(
     ActivityMapLayers Layers,
     int ImageQuarterTurns = 0,
     IReadOnlyList<ActivityResourceNode>? Resources = null,
-    IReadOnlyList<ActivityResourceMob>? ResourceMobs = null);
+    IReadOnlyList<ActivityResourceMob>? ResourceMobs = null,
+    IReadOnlyList<MapResourceSpawn>? ResourceSpawns = null);
