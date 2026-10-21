@@ -39,6 +39,9 @@ namespace AlbionDataAvalonia.Network.Services
             "/Library/LaunchDaemons/com.albionfreemarket.afmdataclient.chmodbpf.plist";
         private const string MacOSLegacyCapturePermissionScheduleKey = "<key>StartInterval</key>";
         private const ushort AlbionGamePort = 5056;
+        private static readonly System.Text.RegularExpressions.Regex FilterInstanceName = new(
+            @"(Filter|Scheduler|Driver|Monitor).*-\d{4}$",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
         private static readonly TimeSpan RepeatedFailureLogInterval = TimeSpan.FromMinutes(1);
         private readonly HashSet<string> _unknownServerIps = new HashSet<string>();
         private readonly object _unknownServerIpsLock = new object();
@@ -312,6 +315,13 @@ namespace AlbionDataAvalonia.Network.Services
                 {
                     Log.Error("NpCap is not installed, please install it to use this application");
                     return;
+                }
+
+                if (NpCapInstallationChecker.IsLegacyWinPcap())
+                {
+                    Log.Warning(
+                        "The old WinPcap capture library is loaded ({Library}). It can't see VPN tunnels such as sing-box or WireGuard. Uninstall WinPcap and install Npcap in WinPcap API-compatible mode.",
+                        NpCapInstallationChecker.DescribeCaptureLibrary());
                 }
 
                 var filter = _settingsManager.AppSettings.PacketFilterPortText ?? string.Empty;
@@ -926,6 +936,13 @@ namespace AlbionDataAvalonia.Network.Services
                         ? captureDeviceNames.Any(name => name.Contains(networkInterface.Id, StringComparison.OrdinalIgnoreCase))
                         : captureDeviceNames.Contains(networkInterface.Name);
                     if (seen)
+                    {
+                        continue;
+                    }
+
+                    // Windows lists filter drivers bound to an adapter as interfaces of their own, such as
+                    // "Ethernet-WFP 802.3 MAC Layer LightWeight Filter-0000"; they carry no traffic of their own.
+                    if (FilterInstanceName.IsMatch(networkInterface.Name))
                     {
                         continue;
                     }
