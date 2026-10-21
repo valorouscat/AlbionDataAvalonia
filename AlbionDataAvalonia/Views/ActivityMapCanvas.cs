@@ -528,7 +528,9 @@ public sealed class ActivityMapCanvas : Control
         {
             var spawn = spawns[0];
             return new(at, 8, $"{SpawnLabel(spawn)} spawn spot",
-                [spawn.Mob ? "A spot where this mob can appear, from the game files" : "A spot where this resource can grow, from the game files",
+                [spawn.Mob ? "A spot where this mob can appear, from the game files"
+                    : spawn.Candidate ? "One of the spots the game picks this zone's nodes from, from the game files"
+                    : "A node this part of the zone places, from the game files",
                     "Not what stands there now; any enchantment is picked when it spawns"],
                 [new ItemRow(SpawnItem(spawn), 1, SpawnLabel(spawn), "")]);
         }
