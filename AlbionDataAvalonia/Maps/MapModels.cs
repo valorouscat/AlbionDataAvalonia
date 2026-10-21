@@ -17,9 +17,10 @@ public sealed record MapZoneIcon(string? MarkerType, string Label, MapPoint Posi
 /// <summary>
 /// A spot where the game's zone layout can grow a resource, from AlbionWorld's map features: a node (Wood, Stone, Fiber,
 /// Hide or Ore, as ActivityResourceIdentity names them) or, when Mob is set, a mob that yields one, such as a hide animal.
-/// It says what can stand there, not what stands there now; the game picks the enchantment when the node spawns.
+/// Candidate is one of the many spots the game picks a zone's ordinary nodes from; the rest are nodes the layout places
+/// itself. It says what can stand there, not what stands there now; the game picks the enchantment when the node spawns.
 /// </summary>
-public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false);
+public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false, bool Candidate = false);
 
 /// <summary>A zone's minimap icons and resource spawn spots, read from one AlbionWorld feature file.</summary>
 public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns)

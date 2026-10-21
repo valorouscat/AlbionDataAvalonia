@@ -320,13 +320,16 @@ public sealed class MapDataService : IDisposable
         }
     }
 
-    // AlbionWorld lists where the zone's layout places resource nodes ("harvestable") and the mobs that yield
-    // resources ("resource_mob_spawnpoint"), by the game's resource type and tier.
+    // AlbionWorld lists, by the game's resource type and tier, the spots an open-world zone picks its ordinary nodes
+    // from ("resource_candidate", thousands a zone), the nodes a layout section places itself ("harvestable") and the
+    // mobs that yield resources ("resource_mob_spawnpoint").
     private static MapResourceSpawn? ResourceSpawn(Feature feature)
     {
         var mob = feature.Type == "resource_mob_spawnpoint";
-        if (feature.Type != "harvestable" && !mob || feature.Tier is not (>= 1 and <= 8) || Family(feature.ResourceType) is not { } family) return null;
-        return new(family, feature.Tier.Value, new MapPoint(feature.X!.Value, feature.Z!.Value), mob);
+        var candidate = feature.Type == "resource_candidate";
+        if (feature.Type != "harvestable" && !mob && !candidate || feature.Tier is not (>= 1 and <= 8)
+            || Family(feature.ResourceType) is not { } family) return null;
+        return new(family, feature.Tier.Value, new MapPoint(feature.X!.Value, feature.Z!.Value), mob, candidate);
     }
 
     private static string? Family(string? resourceType) => resourceType?.ToUpperInvariant() switch
