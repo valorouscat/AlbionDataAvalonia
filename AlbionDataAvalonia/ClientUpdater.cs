@@ -18,6 +18,12 @@ public static class ClientUpdater
     public const string StableChannel = "stable";
     public const string BetaChannel = "beta";
 
+    // The fork updates from its own GitHub releases (fork-release.yml) instead of the
+    // official manifest that the remote app settings point to.
+    public const string ForkRepositoryUrl = "https://github.com/valorouscat/AlbionDataAvalonia";
+    public const string ForkLatestVersionUrl = ForkRepositoryUrl + "/releases/latest/download/LatestVersion.json";
+    public const string ForkLatestDownloadUrl = ForkRepositoryUrl + "/releases/latest/download/{fileName}";
+
     private static readonly HttpClient httpClient = new HttpClient(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All });
 
     /// <summary>The outcome of the latest update check, for Copy diagnostics.</summary>
@@ -306,7 +312,7 @@ public static class ClientUpdater
             ? $"v.{version}-beta"
             : $"v.{version}";
 
-        return $"https://github.com/JPCodeCraft/AlbionDataAvalonia/releases/tag/{tag}";
+        return $"{ForkRepositoryUrl}/releases/tag/{tag}";
     }
 }
 
