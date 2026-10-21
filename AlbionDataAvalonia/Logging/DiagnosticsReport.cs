@@ -176,13 +176,22 @@ public sealed class DiagnosticsReport
             .ToArray();
         foreach (var (adapter, router) in adapters.Take(MaxAdapters))
         {
-            var line = Join(Shorten(adapter.Name, MaxAdapterNameLength), adapter.State);
+            var line = adapter.LinkType is null
+                ? Join(Shorten(adapter.Name, MaxAdapterNameLength), adapter.State)
+                : Join(Shorten(adapter.Name, MaxAdapterNameLength), adapter.State, adapter.LinkType);
             text.AppendLine(AdapterIndent + (router is null ? line : Join(line, router)));
         }
 
         if (adapters.Length > MaxAdapters)
         {
             text.AppendLine($"{AdapterIndent}… {adapters.Length - MaxAdapters} more");
+        }
+
+        text.AppendLine(Indent + $"Adapter choice: {(capture.PinnedAdapter is { } pinned ? Shorten(pinned, MaxAdapterNameLength) : "automatic")}");
+        if (capture.AdaptersMissingFromCapture.Count > 0)
+        {
+            var missing = capture.AdaptersMissingFromCapture.Take(MaxAdapters).Select(name => Shorten(name, MaxAdapterNameLength));
+            text.AppendLine(Indent + $"Up but not seen by the capture driver: {string.Join(", ", missing)}");
         }
 
         text.AppendLine(Indent + $"VPNs and boosters running: {(scan.TrafficRouters.Count > 0 ? string.Join(", ", scan.TrafficRouters) : "none from the list")}");
