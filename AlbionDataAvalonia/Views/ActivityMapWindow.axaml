@@ -142,12 +142,19 @@
                             <TextBlock Text="Resources" Margin="4,0,0,0" />
                         </StackPanel>
                     </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResourceSpawns}"
+                                  ToolTip.Tip="Where this zone can grow resource nodes and resource mobs, from the game files, like the interactive maps on the web. Squares are nodes and hollow diamonds are mobs, with the tier inside. These are possible spots, not what stands there now, and they need no packet reading.">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Border Width="9" Height="9" CornerRadius="2" Background="{DynamicResource UiResourceFiberBrush}" Opacity="0.6" VerticalAlignment="Center" />
+                            <TextBlock Text="Spawn spots" />
+                        </StackPanel>
+                    </ToggleButton>
                 </WrapPanel>
-                <!-- The resource choices get their own row, shown while resources are on. -->
-                <WrapPanel MaxWidth="560" IsVisible="{Binding ShowResourceTier}">
+                <!-- The resource choices get their own row, shown while resources or spawn spots are on. -->
+                <WrapPanel MaxWidth="560" IsVisible="{Binding ShowResourceFilters}">
                     <ComboBox ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceTier}" VerticalAlignment="Center"
                               AutomationProperties.Name="Lowest resource tier shown"
-                              ToolTip.Tip="Show only resource nodes and mobs of this tier and higher" Margin="0,0,4,0" />
+                              ToolTip.Tip="Show only resource nodes, mobs and spawn spots of this tier and higher" Margin="0,0,4,0" />
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowWood}" ToolTip.Tip="Show or hide trees and wood critters">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="9" Height="9" Fill="{DynamicResource UiResourceWoodBrush}" VerticalAlignment="Center" />
@@ -178,21 +185,21 @@
                             <TextBlock Text="Stone" />
                         </StackPanel>
                     </ToggleButton>
-                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResourceMobs}"
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResourceMobs}" IsVisible="{Binding ShowResourceTier}"
                                   ToolTip.Tip="Also show the mobs near you that yield resources, such as hide animals and ore, wood, fiber and stone critters, as diamonds in their resource's color with the tier inside. They follow the mobs as they move.">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Path Data="M5,0 L10,5 L5,10 L0,5 Z" Fill="{DynamicResource UiResourceHideBrush}" Stroke="{DynamicResource UiMarkerOutlineBrush}" StrokeThickness="1" VerticalAlignment="Center" />
                             <TextBlock Text="Mobs" />
                         </StackPanel>
                     </ToggleButton>
-                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowRememberedResources}"
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowRememberedResources}" IsVisible="{Binding ShowResourceTier}"
                                   ToolTip.Tip="Also show, faded, the nodes seen on earlier visits to this map and not in view now, with when they were last seen and the units they had. A hollow ring is a node gathered out. The game only shows nodes near you, so these are what was there then, not now.">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="9" Height="9" Fill="{DynamicResource UiResourceOreBrush}" Opacity="0.55" VerticalAlignment="Center" />
                             <TextBlock Text="Remembered" />
                         </StackPanel>
                     </ToggleButton>
-                    <Button Content="Forget" Command="{Binding ForgetRememberedResourcesCommand}"
+                    <Button Content="Forget" Command="{Binding ForgetRememberedResourcesCommand}" IsVisible="{Binding ShowResourceTier}"
                             VerticalAlignment="Center" FontSize="{DynamicResource UiFontSizeSmall}" Margin="4,0,0,0"
                             ToolTip.Tip="Forget the resource nodes remembered on this map" />
                 </WrapPanel>
