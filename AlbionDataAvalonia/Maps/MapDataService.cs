@@ -12,6 +12,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -52,7 +53,7 @@ public sealed class MapDataService : IDisposable
     private readonly HttpClient http = new(new HttpClientHandler { AutomaticDecompression = DecompressionMethods.All }) { Timeout = TimeSpan.FromSeconds(60) };
     private readonly SemaphoreSlim downloads = new(3);
     private readonly object sync = new();
-    private readonly ConcurrentDictionary<string, Task<IReadOnlyList<MapZoneIcon>>> icons = new();
+    private readonly ConcurrentDictionary<string, Task<MapZoneFeatures>> features = new();
     private readonly ConcurrentDictionary<string, Task<Bitmap?>> iconImages = new();
     private readonly LinkedList<(string File, Task<Bitmap?> Image)> images = new();
     private Task<Bitmap?>? frameImage;
@@ -129,8 +130,9 @@ public sealed class MapDataService : IDisposable
         }
     }
 
-    public Task<IReadOnlyList<MapZoneIcon>> GetIconsAsync(MapZone zone) =>
-        icons.GetOrAdd(zone.Id, _ => LoadIconsAsync(zone));
+    /// <summary>The zone's minimap icons and resource spawn spots; empty when its feature file can't be had.</summary>
+    public Task<MapZoneFeatures> GetFeaturesAsync(MapZone zone) =>
+        features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
 
     public Task<Bitmap?> GetIconImageAsync(string markerType) =>
         iconImages.GetOrAdd(markerType, LoadIconImageAsync);
@@ -234,7 +236,7 @@ public sealed class MapDataService : IDisposable
                 // Everything loaded so far belongs to the old version.
                 Log.Information("Map data version changed from {OldVersion} to {Version}", version, next);
                 catalog = null;
-                icons.Clear();
+                features.Clear();
                 iconImages.Clear();
                 images.Clear();
                 frameImage = null;
@@ -297,27 +299,45 @@ public sealed class MapDataService : IDisposable
     private static bool IsValidVersion(string? value) =>
         !string.IsNullOrEmpty(value) && value.Length <= 64 && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_');
 
-    private async Task<IReadOnlyList<MapZoneIcon>> LoadIconsAsync(MapZone zone)
+    private async Task<MapZoneFeatures> LoadFeaturesAsync(MapZone zone)
     {
         try
         {
             var path = await DownloadAsync($"{FeaturesBase}/maps/{Uri.EscapeDataString(zone.Id)}.json",
                 Path.Combine("features", SafeFileName(zone.Id) + ".json")).ConfigureAwait(false);
             await using var stream = File.OpenRead(path);
-            var features = await JsonSerializer.DeserializeAsync<FeatureFile>(stream, JsonOptions).ConfigureAwait(false);
-            return (features?.Features ?? [])
+            var file = await JsonSerializer.DeserializeAsync<FeatureFile>(stream, JsonOptions).ConfigureAwait(false);
+            var placed = (file?.Features ?? [])
                 .Where(x => x.X is { } featureX && x.Z is { } featureZ && double.IsFinite(featureX) && double.IsFinite(featureZ))
-                .Select(Icon)
-                .OfType<MapZoneIcon>()
                 .ToArray();
+            return new(placed.Select(Icon).OfType<MapZoneIcon>().ToArray(), placed.Select(ResourceSpawn).OfType<MapResourceSpawn>().ToArray());
         }
         catch (Exception error) when (error is HttpRequestException or IOException or JsonException or TaskCanceledException)
         {
             Log.Warning(error, "Could not load map features for {ZoneId}", zone.Id);
-            icons.TryRemove(zone.Id, out _);
-            return [];
+            features.TryRemove(zone.Id, out _);
+            return MapZoneFeatures.Empty;
         }
     }
+
+    // AlbionWorld lists where the zone's layout places resource nodes ("harvestable") and the mobs that yield
+    // resources ("resource_mob_spawnpoint"), by the game's resource type and tier.
+    private static MapResourceSpawn? ResourceSpawn(Feature feature)
+    {
+        var mob = feature.Type == "resource_mob_spawnpoint";
+        if (feature.Type != "harvestable" && !mob || feature.Tier is not (>= 1 and <= 8) || Family(feature.ResourceType) is not { } family) return null;
+        return new(family, feature.Tier.Value, new MapPoint(feature.X!.Value, feature.Z!.Value), mob);
+    }
+
+    private static string? Family(string? resourceType) => resourceType?.ToUpperInvariant() switch
+    {
+        "WOOD" => "Wood",
+        "ROCK" or "STONE" => "Stone",
+        "FIBER" => "Fiber",
+        "HIDE" => "Hide",
+        "ORE" => "Ore",
+        _ => null
+    };
 
     // Any feature with a minimap icon (markers, resource landmarks, Roads chests) and world bosses, drawn with their
     // portrait. An icon on an exit's spot is kept; the map shows it in place of that exit's dot.
@@ -490,6 +510,9 @@ public sealed class MapDataService : IDisposable
         public string? MarkerType { get; set; }
         public string? Label { get; set; }
         public string? Mob { get; set; }
+        public string? ResourceType { get; set; }
+        [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
+        public int? Tier { get; set; }
         public double? X { get; set; }
         public double? Z { get; set; }
     }

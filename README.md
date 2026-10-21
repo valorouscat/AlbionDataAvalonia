@@ -19,6 +19,7 @@ A free, open-source companion app for Albion Online on Windows, Linux and macOS.
 > - **Remembered nodes**: open-world nodes are kept per server and map for 7 days and shown faded with when they were last seen and how many units they had.
 > - **Filters**: a lowest tier and each kind of resource on or off, kept between restarts.
 > - **Resource mobs**: hide animals and resource critters as diamonds with their tier, ringed when enchanted.
+> - **Spawn spots**: a map layer with every spot where the zone can grow resource nodes and resource mobs, from the game files (like the web interactive maps), in Live and History, using the same tier and kind filters.
 > - **Fork releases**: every push to `master` publishes a [release of the fork](https://github.com/valorouscat/AlbionDataAvalonia/releases/latest) (version 1.0.x), and the installed client updates itself from it instead of the official releases. Other branches build a test installer as an Actions artifact.
 >
 > The download links and instructions below point to the official client.
@@ -199,6 +200,7 @@ Click **Open map** on the Activity page to open the map in its own window.
 - **Live** follows you through the zone and draws your path, kills, loot, gathering, deaths, zone exits and map icons. Choose whether they fade after 1, 5 or 15 minutes, or never.
 - **History** replays any past run. Pick it from the list and press play, or drag along the timeline.
 - **Resources** (Live only, off until you turn it on) marks the gathering nodes the game has shown near you: wood, ore, fiber, hide and stone, with the tier written on each and a colored ring for enchanted nodes. Nodes stay on the map after you walk past them until they're gathered out or you change zone, and the units each has left show under it. Pick a lowest tier to hide the rest, and turn kinds of resource (wood, ore, fiber, hide, stone) on or off to show only what you gather; the choices are kept between restarts. With **Mobs** on, the mobs near you that yield resources (hide animals, and the wood, ore, fiber and stone critters) show as diamonds in their resource's color with the tier inside, and follow the mobs as they move. Open-world nodes are also remembered between visits and restarts (for a week, per server): with **Remembered** on, nodes seen on earlier visits and not in view now show faded with when they were last seen and how many units they had, and a hollow ring marks one gathered out. The game only tells the client about nodes near you, so a remembered node is what was there when you last saw it, not now. **Forget** clears the current map's memory.
+- **Spawn spots** (off until you turn it on) marks every spot where the zone can grow resource nodes (squares) or resource mobs (hollow diamonds), with the tier inside, like the interactive maps on the web. They come from the game files through the map data the client already downloads, so they show in Live and History and need no packet reading. They say what can grow there, not what stands there now; the game picks the enchantment when a node spawns. The lowest tier and the kinds of resource you choose apply to them too.
 
 ### Streamer window
 

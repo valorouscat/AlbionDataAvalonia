@@ -472,6 +472,20 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // Whether the map shows where the zone can grow resources, from the game files.
+    private bool mapShowResourceSpawns;
+    public bool MapShowResourceSpawns
+    {
+        get => mapShowResourceSpawns;
+        set
+        {
+            if (mapShowResourceSpawns == value) return;
+            mapShowResourceSpawns = value;
+            OnPropertyChanged(nameof(MapShowResourceSpawns));
+            Log.Information("Map resource spawns set to {MapShowResourceSpawns}", mapShowResourceSpawns);
+        }
+    }
+
     private void SetStreamerOption(ref bool field, bool value, string propertyName)
     {
         if (field == value) return;
