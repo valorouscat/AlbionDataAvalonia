@@ -42,6 +42,7 @@ namespace AlbionDataAvalonia;
 public partial class App : Application
 {
     private System.Timers.Timer? _updateTimer;
+    private int _updateCheckActive;
     private DatabaseBackupService? _databaseBackupService;
     private NetworkListenerService? _networkListenerService;
     private DesktopClientCore? _clientCore;
@@ -68,6 +69,7 @@ public partial class App : Application
             Log.Warning(ex, "Failed to check whether app is already running.");
         }
 
+        Dispatcher.UIThread.UnhandledException += (_, args) => RuntimeCrashLog.Record("UI dispatcher", args.Exception);
         AvaloniaXamlLoader.Load(this);
     }
 
@@ -260,13 +262,13 @@ public partial class App : Application
         _updateTimer = new System.Timers.Timer
         {
             AutoReset = true,
-            Interval = TimeSpan.FromMinutes(settings.AppSettings.FirstUpdateCheckDelayMins).TotalMilliseconds, // Delay for the first run
-            Enabled = true
+            Interval = UpdateInterval(settings.AppSettings.FirstUpdateCheckDelayMins * 60_000, 300_000),
+            Enabled = false
         };
-        _updateTimer.Elapsed += async (sender, e) =>
+        _updateTimer.Elapsed += (sender, e) => _ = RunUpdateCheckAsync(async () =>
         {
             // Change the interval to one hour after the first run
-            _updateTimer.Interval = TimeSpan.FromHours(settings.AppSettings.UpdateCheckIntervalHours).TotalMilliseconds;
+            _updateTimer.Interval = UpdateInterval(settings.AppSettings.UpdateCheckIntervalHours * 3_600_000, 3_600_000);
 
             var updateResult = await ClientUpdater.CheckForUpdatesAsync(
                 ClientUpdater.ForkLatestVersionUrl,
@@ -274,7 +276,7 @@ public partial class App : Application
                 settings.AppSettings.FileNameFormat,
                 settings.UserSettings.JoinBetaProgram);
 
-            if (!updateResult.UpdateAvailable || updateResult.Update == null)
+            if (IsShuttingDown || !updateResult.UpdateAvailable || updateResult.Update == null)
             {
                 return;
             }
@@ -289,7 +291,7 @@ public partial class App : Application
             {
                 await ShowManualUpdateDialogOnceAsync(updateResult.Update);
             }
-        };
+        });
         _updateTimer.Start();
 
         try
@@ -354,7 +356,7 @@ public partial class App : Application
                 settings.AppSettings.FileNameFormat,
                 settings.UserSettings.JoinBetaProgram);
 
-            if (!updateResult.UpdateAvailable || updateResult.Update == null)
+            if (IsShuttingDown || !updateResult.UpdateAvailable || updateResult.Update == null)
             {
                 Log.Error(
                     "No newer eligible application version is available. " +
@@ -456,6 +458,23 @@ public partial class App : Application
         }
     }
 
+    private static double UpdateInterval(double milliseconds, double fallback) =>
+        double.IsFinite(milliseconds) && milliseconds >= 1_000 && milliseconds <= int.MaxValue ? milliseconds : fallback;
+
+    private async Task RunUpdateCheckAsync(Func<Task> check)
+    {
+        if (IsShuttingDown || Interlocked.CompareExchange(ref _updateCheckActive, 1, 0) != 0) return;
+        try
+        {
+            if (!IsShuttingDown) await check().ConfigureAwait(false);
+        }
+        catch (Exception error)
+        {
+            Log.Error(error, "Background update check failed; the client will keep running.");
+        }
+        finally { Volatile.Write(ref _updateCheckActive, 0); }
+    }
+
     private void DisposeNetworkListener()
     {
         var listener = Interlocked.Exchange(ref _networkListenerService, null);
@@ -484,6 +503,7 @@ public partial class App : Application
 
     private async Task StopServicesAsync()
     {
+        Log.Information("Client shutdown requested. PID {ProcessId}", Environment.ProcessId);
         _updateTimer?.Stop();
         // Ingress stops before the activity journal is finalized and drained.
         DisposeNetworkListener();

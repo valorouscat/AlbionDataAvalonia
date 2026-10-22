@@ -100,6 +100,8 @@ public sealed partial class ActivityTrackerService
     // Move says where the character faces, standing or not; an arrival has no facing, so the last step decides.
     private void PlacePosition(DateTime at, ActivityWorldPosition point, double? facing = null)
     {
+        if (!double.IsFinite(point.X) || !double.IsFinite(point.Y)) return;
+        if (facing is { } invalid && !double.IsFinite(invalid)) facing = null;
         var moved = position is { } previous && positionEpoch == mapEpoch
             && Math.Abs(point.X - previous.X) + Math.Abs(point.Y - previous.Y) > 0.3;
         if (facing is { } angle) heading = angle;

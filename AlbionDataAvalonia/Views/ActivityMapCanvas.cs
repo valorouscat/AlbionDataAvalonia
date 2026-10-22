@@ -2,6 +2,8 @@ using AlbionDataAvalonia.Activity;
 using AlbionDataAvalonia.Activity.Models;
 using AlbionDataAvalonia.Items;
 using AlbionDataAvalonia.Maps;
+using AlbionDataAvalonia.Logging;
+using Serilog;
 using AlbionDataAvalonia.Ui;
 using AlbionDataAvalonia.ViewModels;
 using Avalonia;
@@ -235,7 +237,32 @@ public sealed class ActivityMapCanvas : Control
         if (e.PreviousSize.Width <= 0 && Scene is { IsLive: false }) Fit();
     }
 
+    private ActivityMapScene? failedScene;
+    private bool renderFailureLogged;
+
     public override void Render(DrawingContext context)
+    {
+        if (Scene is { } scene)
+            RuntimeCrashLog.MapState = $"Map {scene.ViewKey}; live={scene.IsLive}; canvas={Bounds.Width:0}x{Bounds.Height:0}; "
+                + $"path={scene.Path.Count}; markers={scene.Markers.Count}; nodes={scene.Resources?.Count ?? 0}; mobs={scene.ResourceMobs?.Count ?? 0}; layers={scene.Layers}";
+        if (Scene is not null && ReferenceEquals(Scene, failedScene)) return;
+        try
+        {
+            RenderMap(context);
+            renderFailureLogged = false;
+            failedScene = null;
+        }
+        catch (Exception error) when (error is not (OutOfMemoryException or AccessViolationException))
+        {
+            failedScene = Scene;
+            hits.Clear();
+            hovered = null;
+            if (!renderFailureLogged) Log.Error(error, "Map rendering failed; skipping this frame. {MapState}", RuntimeCrashLog.MapState);
+            renderFailureLogged = true;
+        }
+    }
+
+    private void RenderMap(DrawingContext context)
     {
         var bounds = new Rect(Bounds.Size);
         context.FillRectangle(UiPalette.Brush("UiMapBackgroundColor"), bounds);
@@ -1112,7 +1139,7 @@ public sealed class ActivityMapCanvas : Control
         var at = ToScreen(ImagePoint(scene, point.X, point.Y), scale);
         var you = ActivityPalette.PathEnd;
         context.DrawEllipse(UiPalette.Brush(UiPalette.WithAlpha(you, 50)), UiPalette.Pen(UiPalette.WithAlpha(you, 140)), at, 16, 16);
-        if (heading is not { } angle)
+        if (heading is not { } angle || !double.IsFinite(angle))
         {
             context.DrawEllipse(UiPalette.Brush(you), WhitePen, at, 6, 6);
             return;
