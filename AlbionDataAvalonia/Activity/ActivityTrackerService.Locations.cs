@@ -1,6 +1,7 @@
 using Albion.Network;
 using AlbionDataAvalonia.Activity.Models;
 using AlbionDataAvalonia.Locations;
+using AlbionDataAvalonia.Maps;
 using AlbionDataAvalonia.Network.Events;
 using AlbionDataAvalonia.Network.Responses;
 using Serilog;
@@ -20,6 +21,8 @@ public sealed partial class ActivityTrackerService
     // new connection, so only landmarks on the current map's connection from shortly before its join place it.
     private static readonly TimeSpan LandmarkLead = TimeSpan.FromSeconds(10);
     private readonly List<(ActivityWorldPosition Position, DateTime At, string ConnectionId, PhotonMessageIdentity? Identity)> mistsLandmarks = new();
+    // The Depths floor of each Depths map entered lately, so rejoining one after a disconnect keeps its floor.
+    private readonly Dictionary<string, int> depthsFloors = new(StringComparer.OrdinalIgnoreCase);
 
     internal void CancelEntranceSelection(RequestPacket packet)
     {
@@ -61,6 +64,23 @@ public sealed partial class ActivityTrackerService
         Log.Debug("Placed {RawMapId} as Mists layout {Layout} turned {QuarterTurns} quarter turns from {Count} landmarks",
             map.RawLocationId, placement.Layout, placement.QuarterTurns, landmarks.Length);
         return metadata with { Layout = placement.Layout, LayoutTurns = placement.QuarterTurns };
+    }
+
+    // Joining the Depths names no layout, so the floor is counted: a party enters at the first floor and each exit
+    // down leads one floor deeper.
+    private ActivityMapMetadata WithDepthsFloor(ActivityMapMetadata metadata, ActivityLocationDescriptor? previous)
+    {
+        if (map is not { Kind: ActivityMapKind.AbyssalDepths } || metadata.Layout is not null) return metadata;
+        if (!depthsFloors.TryGetValue(map.RawLocationId, out var floor))
+        {
+            floor = previous is { Kind: ActivityMapKind.AbyssalDepths } && depthsFloors.TryGetValue(previous.RawLocationId, out var above)
+                ? Math.Min(above + 1, DepthsMapData.FloorCount) : 1;
+            if (depthsFloors.Count >= 32) depthsFloors.Clear();
+            depthsFloors[map.RawLocationId] = floor;
+        }
+
+        Log.Debug("Placed {RawMapId} as Depths floor {Floor}", map.RawLocationId, floor);
+        return DepthsMapData.FloorLayout(floor) is { } layout ? metadata with { Layout = layout } : metadata;
     }
 
     private void ApplyMapMetadata(ActivityMapMetadata enriched)

@@ -26,6 +26,11 @@ internal static partial class DepthsMapData
         return null;
     }
 
+    /// <summary>The master layout of the Depths floor at this level, counted from 1 at the entrance, or null.</summary>
+    public static string? FloorLayout(int level) => Floors.FirstOrDefault(x => x.Value.Level == level).Key;
+
+    public static int FloorCount => Floors.Count;
+
     /// <summary>A zone without a minimap for a Depths floor, or null for any other layout.</summary>
     public static MapZone? Zone(string master)
     {

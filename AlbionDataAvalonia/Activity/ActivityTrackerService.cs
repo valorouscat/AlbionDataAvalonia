@@ -434,7 +434,7 @@ public sealed partial class ActivityTrackerService : IDisposable
         locationObservation = null;
         if (sameCharacter) RestoreLocationMetadata();
         mapEnteredAt = at;
-        mapMetadata = WithMistsLayout(mapMetadata);
+        mapMetadata = WithDepthsFloor(WithMistsLayout(mapMetadata), previous);
         partialEntry = !enabled;
         awaitingContext = !actors.HasIdentity;
         captureSuspended = false;

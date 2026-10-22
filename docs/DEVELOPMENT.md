@@ -106,4 +106,4 @@ git -C /tmp/ao-bin-dumps sparse-checkout set --no-cone /helldungeons.xml /helldu
 python3 scripts/generate-depths-map-data.py /tmp/ao-bin-dumps
 ```
 
-The floor is picked from the layout the client gets on entering (a `helldungeons.xml` map id such as `DUO_ORANGE_HELL_DUNGEON_02`) or a part of the map id. When neither names a floor, the map logs `No Depths floor for map …` at Information level with what the client sent.
+Joining the Depths names no layout (the map id is only `@HELLDUNGEON@<guid>`), so the tracker counts floors: a map entered from outside the Depths is floor 1, and each Depths map entered from another one floor deeper, remembered per map id so a rejoin keeps its floor. A layout the client does get (a `helldungeons.xml` map id such as `DUO_ORANGE_HELL_DUNGEON_02`, or a master name) wins. When nothing names a floor, the map logs `No Depths floor for map …` at Information level.
