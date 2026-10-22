@@ -181,6 +181,28 @@
                     </ToggleButton>
                 </WrapPanel>
                             </StackPanel>
+                            <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowHostileSoundSettings}">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Hostile alert sound" Classes="UiSectionTitle" />
+                                    <ToggleSwitch IsChecked="{Binding HostileSoundEnabled}" Content="Play sound on detection" />
+                                    <TextBlock Text="Works while Hostile alert is on, even with the map window closed. Arrivals within 3 seconds share one sound." Classes="UiFine" TextWrapping="Wrap" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Volume" Classes="UiLabel" />
+                                        <TextBlock Grid.Column="1" Text="{Binding HostileSoundVolumeText}" Classes="UiValue" />
+                                    </Grid>
+                                    <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                                            Value="{Binding HostileSoundVolume}" AutomationProperties.Name="Hostile alert volume" />
+                                    <TextBlock Text="{Binding HostileSoundFileName}" Classes="UiLabel" TextWrapping="Wrap"
+                                               ToolTip.Tip="{Binding HostileSoundFile}" />
+                                    <WrapPanel MaxWidth="360">
+                                        <Button Classes="UiAction" Content="Choose MP3…" Command="{Binding ChooseHostileSoundCommand}" Margin="0,0,6,6" />
+                                        <Button Classes="UiAction" Content="Use default" Command="{Binding UseDefaultHostileSoundCommand}" Margin="0,0,6,6" />
+                                        <Button Classes="UiAction" Content="Test sound" Command="{Binding TestHostileSoundCommand}" Margin="0,0,6,6" />
+                                        <Button Classes="UiAction" Content="Stop" Command="{Binding StopHostileSoundCommand}" Margin="0,0,6,6" />
+                                    </WrapPanel>
+                                    <TextBlock Text="{Binding HostileSoundError}" Classes="UiError" TextWrapping="Wrap" IsVisible="{Binding HasHostileSoundError}" />
+                                </StackPanel>
+                            </Border>
                             <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowResourceFilters}">
                                 <StackPanel Spacing="6">
                                     <TextBlock Text="Resource kinds" Classes="UiLabel" />

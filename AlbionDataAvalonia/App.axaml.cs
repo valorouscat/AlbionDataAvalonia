@@ -1,5 +1,6 @@
 using AlbionDataAvalonia.Auth.Services;
 using AlbionDataAvalonia.Activity;
+using AlbionDataAvalonia.Audio;
 using AlbionDataAvalonia.DB;
 using AlbionDataAvalonia.Legendary;
 using AlbionDataAvalonia.Items;
@@ -45,6 +46,7 @@ public partial class App : Application
     private NetworkListenerService? _networkListenerService;
     private DesktopClientCore? _clientCore;
     private ActivityTrackerService? _activityTracker;
+    private HostileAlertSoundService? _hostileAlertSound;
     private ActivityPersistence? _activityPersistence;
     private readonly object _shutdownLock = new();
     private Task? _shutdownTask;
@@ -77,6 +79,7 @@ public partial class App : Application
         catch (Exception ex)
         {
             DisposeNetworkListener();
+            if (_hostileAlertSound is not null) await _hostileAlertSound.DisposeAsync();
             _clientCore?.Dispose();
             _databaseBackupService?.Dispose();
             TryWriteStartupCrashLog(ex);
@@ -171,6 +174,8 @@ public partial class App : Application
         _activityPersistence = services.GetRequiredService<ActivityPersistence>();
         await _activityPersistence.RecoverInterruptedAsync();
         _activityTracker = services.GetRequiredService<ActivityTrackerService>();
+        _hostileAlertSound = services.GetRequiredService<HostileAlertSoundService>();
+        _hostileAlertSound.Start(_activityTracker);
 
         //CONFIGURE AUTHENTICATED BACKENDS BEFORE VIEWMODELS SUBSCRIBE TO LOGIN CHANGES
         emvBackendLoader.Initialize();
@@ -484,6 +489,7 @@ public partial class App : Application
             if (_activityTracker is not null) await _activityTracker.StopAsync(deadline.Token).ConfigureAwait(false);
         }
         catch (Exception error) { Log.Error(error, "Activity journal could not fully drain during shutdown; recovery will mark unfinished activity Interrupted."); }
+        if (_hostileAlertSound is not null) await _hostileAlertSound.DisposeAsync().ConfigureAwait(false);
         _activityTracker?.Dispose();
         if (_activityPersistence is not null) await _activityPersistence.DisposeAsync().ConfigureAwait(false);
         _clientCore?.Dispose();
@@ -595,6 +601,9 @@ public static class ServiceCollectionExtensions
         collection.AddSingleton<ActivityPersistence>();
         collection.AddSingleton<ActivityItemValuationService>();
         collection.AddSingleton<ActivityTrackerService>();
+        collection.AddSingleton<IAlertSoundPlayer, AlertSoundPlayer>();
+        collection.AddSingleton(service => new HostileAlertSoundService(
+            service.GetRequiredService<SettingsManager>().UserSettings, service.GetRequiredService<IAlertSoundPlayer>()));
         collection.AddSingleton<ActivityStreamerWindowService>();
         collection.AddSingleton<MapDataService>();
         collection.AddSingleton<ActivityMapWindowService>();

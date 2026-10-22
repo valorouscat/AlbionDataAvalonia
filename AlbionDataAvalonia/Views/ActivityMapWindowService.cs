@@ -1,4 +1,6 @@
 using AlbionDataAvalonia.Activity;
+using AlbionDataAvalonia.Audio;
+using AlbionDataAvalonia.Ui.Services;
 using AlbionDataAvalonia.Maps;
 using AlbionDataAvalonia.Settings;
 using AlbionDataAvalonia.ViewModels;
@@ -11,10 +13,11 @@ public sealed class ActivityMapWindowService
 {
     private readonly SingleWindowHost<ActivityMapWindow, ActivityMapViewModel> host;
 
-    public ActivityMapWindowService(ActivityTrackerService tracker, ActivityPersistence persistence, MapDataService maps, SettingsManager settings)
+    public ActivityMapWindowService(ActivityTrackerService tracker, ActivityPersistence persistence, MapDataService maps, SettingsManager settings,
+        IFileDialogService files, HostileAlertSoundService sound)
     {
         var user = settings.UserSettings;
-        host = new(() => new ActivityMapViewModel(tracker, persistence, maps, user), model => model.Start(), new WindowMemory(
+        host = new(() => new ActivityMapViewModel(tracker, persistence, maps, user, files, sound), model => model.Start(), new WindowMemory(
             () => user.MapWindowOpen, open => user.MapWindowOpen = open,
             () => user.MapWindowPlacement, placement => user.MapWindowPlacement = placement), restoreSize: true);
     }
