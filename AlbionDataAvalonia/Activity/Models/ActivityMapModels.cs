@@ -83,11 +83,10 @@ public sealed record ActivityRunMap(ActivitySession Run, IReadOnlyList<ActivityP
 /// <summary>
 /// A gatherable node the game client was told about on the current map: its kind (Wood, Stone, Fiber, Hide or Ore, as
 /// ActivityResourceIdentity names them), tier and enchantment, where it stands, and how many units it has left.
-/// ItemUniqueName is the raw resource it yields, for its icon. Live is false for a node remembered from an earlier
-/// visit and not seen since, which shows what was there when last seen; GatheredAtUtc is set once it was gathered out.
+/// ItemUniqueName is the raw resource it yields, for its icon. Empty nodes are removed immediately.
 /// </summary>
 public sealed record ActivityResourceNode(long Id, string Family, int Tier, int Enchantment, double X, double Y, int Charges,
-    DateTime SeenAtUtc, string ItemUniqueName, bool Live = true, DateTime? GatheredAtUtc = null);
+    DateTime SeenAtUtc, string ItemUniqueName);
 
 /// <summary>
 /// A mob near the character that yields a gathering resource: a hide animal, or a wood, stone, fiber or ore critter,
