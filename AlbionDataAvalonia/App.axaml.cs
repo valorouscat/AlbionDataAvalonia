@@ -627,6 +627,10 @@ public static class ServiceCollectionExtensions
         collection.AddSingleton<IClipboardService, ClipboardService>();
         collection.AddSingleton<IFileDialogService, FileDialogService>();
 
+        collection.AddSingleton<AlbionDataAvalonia.Crafting.CraftingCatalog>();
+        collection.AddSingleton(_ => new AlbionDataAvalonia.Crafting.CraftingPriceService(
+            new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) }));
+        collection.AddSingleton<CraftingViewModel>();
         collection.AddSingleton<MainViewModel>();
         collection.AddSingleton<SettingsViewModel>();
         collection.AddSingleton<LogsViewModel>();

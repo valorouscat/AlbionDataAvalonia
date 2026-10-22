@@ -1,0 +1,91 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:AlbionDataAvalonia.ViewModels" xmlns:craft="clr-namespace:AlbionDataAvalonia.Crafting"
+             xmlns:controls="using:AlbionDataAvalonia.Views.Controls"
+             x:Class="AlbionDataAvalonia.Views.CraftingView" x:DataType="vm:CraftingViewModel" Classes="AppPage">
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+        <WrapPanel>
+            <controls:FilterField Label="Server"><ComboBox Width="130" ItemsSource="{Binding Regions}" SelectedItem="{Binding SelectedRegion}" /></controls:FilterField>
+            <controls:FilterField Label="Market city"><ComboBox Width="150" ItemsSource="{Binding Cities}" SelectedItem="{Binding SelectedCity}" /></controls:FilterField>
+            <controls:FilterField Label="Materials"><ComboBox Width="140" ItemsSource="{Binding BuyModes}" SelectedItem="{Binding SelectedBuyMode}" /></controls:FilterField>
+            <controls:FilterField Label="Output sale"><ComboBox Width="140" ItemsSource="{Binding SellModes}" SelectedItem="{Binding SelectedSellMode}" /></controls:FilterField>
+            <Button Classes="UiAction" Margin="0,18,8,0" Content="Refresh prices" Command="{Binding RefreshPricesCommand}" IsEnabled="{Binding !IsLoadingPrices}" />
+            <Button Classes="UiAction" Margin="0,18,0,0" Content="Use market prices" Command="{Binding UseMarketPricesCommand}" ToolTip.Tip="Clear manual overrides and reload this market" />
+        </WrapPanel>
+        <TextBlock Grid.Row="1" Classes="UiFine" Text="{Binding PriceStatus}" TextWrapping="Wrap" />
+        <Grid Grid.Row="2" ColumnDefinitions="250,*" ColumnSpacing="12">
+            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8">
+                <TextBox Text="{Binding SearchText}" Watermark="Search items or resources…" AutomationProperties.Name="Search crafting recipes" />
+                <ComboBox Grid.Row="1" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" HorizontalAlignment="Stretch" AutomationProperties.Name="Recipe category" />
+                <TextBlock Grid.Row="2" Text="{Binding CatalogStatus}" Classes="UiFine" TextWrapping="Wrap" />
+                <ListBox Grid.Row="3" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="craft:CraftableItem">
+                            <StackPanel Spacing="2" Margin="0,3">
+                                <TextBlock Text="{Binding Label}" Classes="UiLabel" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding ItemId}" Classes="UiFine" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="12" IsVisible="{Binding HasSelection}">
+                    <Border Classes="UiCard Subtle" Padding="12">
+                        <StackPanel Spacing="10">
+                            <controls:ItemCell ItemUniqueName="{Binding SelectedItem.ItemId}" Title="{Binding SelectedItem.Label}" Subtitle="{Binding SelectedItem.Category}" />
+                            <controls:FilterField Label="Recipe / materials per craft">
+                                <ComboBox ItemsSource="{Binding Recipes}" SelectedItem="{Binding SelectedRecipe}" HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate><DataTemplate x:DataType="craft:CraftingRecipe"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </controls:FilterField>
+                            <WrapPanel>
+                                <controls:FilterField Label="Items to produce"><NumericUpDown Width="140" Value="{Binding Quantity}" Minimum="1" Maximum="1000000" Increment="1" FormatString="0" /></controls:FilterField>
+                                <controls:FilterField Label="Output quality"><ComboBox Width="145" ItemsSource="{Binding Qualities}" SelectedItem="{Binding SelectedQuality}" IsEnabled="{Binding CanChooseQuality}" /></controls:FilterField>
+                                <controls:FilterField Label="Return rate %"><NumericUpDown Width="130" Value="{Binding ReturnPercent}" Minimum="0" Maximum="99" Increment="0.1" FormatString="0.##" /></controls:FilterField>
+                                <controls:FilterField Label="Station fee / craft"><NumericUpDown Width="145" Value="{Binding StationFee}" Minimum="0" Maximum="1000000000" FormatString="0.##" /></controls:FilterField>
+                            </WrapPanel>
+                            <TextBlock Classes="UiFine" Text="Enter the return rate and station fee shown in game, including city bonuses and focus. Recipe silver is added automatically. Quality changes the output price, not the recipe." TextWrapping="Wrap" />
+                            <WrapPanel>
+                                <controls:FilterField Label="Sales tax %"><NumericUpDown Width="125" Value="{Binding SalesTax}" Minimum="0" Maximum="95" Increment="0.1" FormatString="0.##" /></controls:FilterField>
+                                <controls:FilterField Label="Sell order fee %"><NumericUpDown Width="140" Value="{Binding SetupFee}" Minimum="0" Maximum="95" Increment="0.1" FormatString="0.##" /></controls:FilterField>
+                                <controls:FilterField Label="Buy order fee %"><NumericUpDown Width="140" Value="{Binding BuySetupFee}" Minimum="0" Maximum="95" Increment="0.1" FormatString="0.##" /></controls:FilterField>
+                                <controls:FilterField Label="Output unit price"><NumericUpDown Width="155" Value="{Binding SalePrice}" Minimum="0" Maximum="1000000000000" FormatString="0.##" /></controls:FilterField>
+                            </WrapPanel>
+                            <TextBlock Classes="UiFine" Text="{Binding SaleSource}" />
+                            <TextBlock Classes="UiFine" Text="Order fees apply only in the corresponding order mode. Tax defaults to 4%; adjust it for your account. Manual prices are retained on refresh." TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <WrapPanel>
+                        <controls:StatTile Width="170" Classes="Card Small" Label="Silver needed upfront" Value="{Binding UpfrontText}" Margin="0,0,8,8" />
+                        <controls:StatTile Width="170" Classes="Card Small" Label="Net cost / item" Value="{Binding CostText}" Margin="0,0,8,8" />
+                        <controls:StatTile Width="170" Classes="Card Small" Label="Net sale revenue" Value="{Binding RevenueText}" Margin="0,0,8,8" />
+                        <controls:StatTile Width="170" Classes="Card Small" Label="Expected profit" Value="{Binding ProfitText}" Margin="0,0,8,8" />
+                        <controls:StatTile Width="170" Classes="Card Small" Label="Break-even unit price" Value="{Binding BreakEvenText}" Margin="0,0,8,8" />
+                        <controls:StatTile Width="170" Classes="Card Small" Label="Return on cost" Value="{Binding RoiText}" Margin="0,0,8,8" />
+                    </WrapPanel>
+                    <TextBlock Classes="UiWarning" Text="This recipe currently makes a loss at the entered prices." IsVisible="{Binding IsLoss}" TextWrapping="Wrap" />
+                    <TextBlock Classes="UiMuted" Text="{Binding CalculationStatus}" TextWrapping="Wrap" />
+                    <DataGrid Classes="Compact" Height="240" ItemsSource="{Binding Materials}" AutoGenerateColumns="False" IsReadOnly="False" CanUserSortColumns="False">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn Header="Material" Width="190" IsReadOnly="True">
+                                <DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:CraftingMaterialViewModel">
+                                    <controls:ItemCell Classes="Compact" IconSize="28" ItemUniqueName="{Binding ItemId}" Title="{Binding Name}" Subtitle="{Binding Source}" />
+                                </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Required" Binding="{Binding RequiredText}" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Expected return" Binding="{Binding ReturnedText}" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Net used" Binding="{Binding ConsumedText}" IsReadOnly="True" />
+                            <DataGridTemplateColumn Header="Unit price" Width="130">
+                                <DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:CraftingMaterialViewModel">
+                                    <NumericUpDown Value="{Binding UnitPrice}" Minimum="0" Maximum="1000000000000" FormatString="0.##" AutomationProperties.Name="Material unit price" />
+                                </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Net cost" Binding="{Binding CostText}" IsReadOnly="True" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBlock Classes="UiFine" Text="Prices are community snapshots from albion-online-data.com, not guaranteed fills. Materials are valued at the selected market price; intermediate materials are bought, not recursively crafted. Transport, journals, nutrition and focus opportunity costs are excluded." TextWrapping="Wrap" />
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
