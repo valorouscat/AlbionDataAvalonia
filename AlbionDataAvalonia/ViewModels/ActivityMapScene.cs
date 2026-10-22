@@ -31,7 +31,7 @@ public sealed record ActivityMapIcon(MapPoint Position, string Label, Bitmap? Im
 /// the mobs that yield resources, filtered the same way and sorted best last. ResourceSpawns are the zone's possible
 /// resource spots from the game files, filtered the same way and sorted best last. Pois are the zone's possible
 /// loot chest spots from the game files, sorted best last. Rooms outline a zone drawn without a minimap, such as a Mists
-/// dungeon; the layout never turns them. RoamingBosses are the live map's roaming bosses in
+/// dungeon, and Outline is the rough shape of its ground under them, such as a Depths floor's; the layout never turns them. RoamingBosses are the live map's roaming bosses in
 /// view, sorted best last. Hostiles are the hostile players who came into view in the last few seconds, which the
 /// map flags over the character since the game gives no position for them.
 /// </summary>
@@ -58,5 +58,6 @@ public sealed record ActivityMapScene(
     IReadOnlyList<MapResourceSpawn>? ResourceSpawns = null,
     IReadOnlyList<MapPoi>? Pois = null,
     IReadOnlyList<MapRect>? Rooms = null,
+    IReadOnlyList<MapRect>? Outline = null,
     IReadOnlyList<ActivityLiveActor>? RoamingBosses = null,
     IReadOnlyList<ActivityHostileSighting>? Hostiles = null);

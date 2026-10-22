@@ -6,8 +6,8 @@ namespace AlbionDataAvalonia.Maps;
 public readonly record struct MapPoint(double X, double Y);
 
 /// <summary>A connection to another zone, at its position in this zone's local coordinates. A Mists dungeon's exits
-/// back to the Mists have no TargetId.</summary>
-public sealed record MapZoneExit(string TargetId, MapPoint Position);
+/// back to the Mists and a Depths floor's exits have no TargetId; Label, when set, names such an exit.</summary>
+public sealed record MapZoneExit(string TargetId, MapPoint Position, string? Label = null);
 
 /// <summary>
 /// One of the game's own minimap icons (banks, markets, outposts, Roads chests) in a zone, or a world boss, which
@@ -24,7 +24,7 @@ public sealed record MapZoneIcon(string? MarkerType, string Label, MapPoint Posi
 public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false, bool Candidate = false);
 
 /// <summary>The kinds of point of interest the map shows in one layer, each drawn its own way.</summary>
-public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp }
+public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown }
 
 /// <summary>
 /// A point of interest from the game files, a spot where something can stand rather than what stands there now:
@@ -36,10 +36,15 @@ public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp }
 /// <item>Shrine: a Corrupted Dungeon's shrine and other shrines.</item>
 /// <item>Camp: one of the spots the game picks a zone's mob camps from.</item>
 /// <item>Wisp: where a Mists wisp can appear.</item>
+/// <item>Key: where a Depths key can appear.</item>
+/// <item>Coffer: where a Depths coffer can spawn.</item>
+/// <item>Altar: a Depths demon altar, where the floor's monsters spawn.</item>
+/// <item>ExitUp and ExitDown: a Depths exit out or a floor deeper.</item>
 /// </list>
-/// Grade orders the spots of a kind: 1 small, 2 medium, 3 boss, large or high-tier.
+/// Grade orders the spots of a kind: 1 small, 2 medium, 3 boss, large or high-tier. Notes, when set, are the spot's
+/// tooltip lines in place of its kind's.
 /// </summary>
-public sealed record MapPoi(MapPoiKind Kind, string Label, int Grade, MapPoint Position, double Radius = 0);
+public sealed record MapPoi(MapPoiKind Kind, string Label, int Grade, MapPoint Position, double Radius = 0, IReadOnlyList<string>? Notes = null);
 
 /// <summary>A zone's minimap icons, resource spawn spots and points of interest, read from one AlbionWorld feature file.</summary>
 public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns,
@@ -51,10 +56,12 @@ public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnly
 /// <summary>A rectangle in a zone's local coordinates, such as one of a dungeon's rooms.</summary>
 public readonly record struct MapRect(MapPoint Min, MapPoint Max);
 
-/// <summary>A zone from the AlbionWorld catalog the website also uses, or a Mists dungeon from the game files, which has
-/// no minimap (ImageFile is empty) and is drawn as its Rooms on a grid.</summary>
+/// <summary>A zone from the AlbionWorld catalog the website also uses, or a Mists dungeon or Depths floor from the game
+/// files, which has no minimap (ImageFile is empty) and is drawn as its Rooms on a grid, over the rough Outline of
+/// its ground when the game files give one.</summary>
 public sealed record MapZone(string Id, string DisplayName, string ImageFile, string MapCategory, string PvpCategory, int? Tier,
-    MapPoint BoundsMin, MapPoint BoundsMax, IReadOnlyList<MapZoneExit> Exits, IReadOnlyList<MapRect>? Rooms = null)
+    MapPoint BoundsMin, MapPoint BoundsMax, IReadOnlyList<MapZoneExit> Exits, IReadOnlyList<MapRect>? Rooms = null,
+    IReadOnlyList<MapRect>? Outline = null)
 {
     public MapImageGeometry? Geometry { get; } = MapImageGeometry.From(BoundsMin, BoundsMax);
 }

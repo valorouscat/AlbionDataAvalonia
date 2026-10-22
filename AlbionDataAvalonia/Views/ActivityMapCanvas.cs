@@ -333,9 +333,26 @@ public sealed class ActivityMapCanvas : Control
         DrawRooms(context, scene, scale);
     }
 
-    // A zone the client draws itself, such as a Mists dungeon, shows its rooms over the grid in place of a minimap.
+    // A zone the client draws itself, such as a Mists dungeon, shows its rooms over the grid in place of a minimap,
+    // over the rough outline of its ground when it has one. The outline's cells touch, so they get no edge.
     private void DrawRooms(DrawingContext context, ActivityMapScene scene, double scale)
     {
+        if (scene.Outline is { Count: > 0 } outline)
+        {
+            var ground = new StreamGeometry();
+            using (var path = ground.Open())
+                foreach (var cell in outline)
+                {
+                    path.BeginFigure(ToScreen(ImagePoint(scene, cell.Min.X, cell.Min.Y), scale), true);
+                    path.LineTo(ToScreen(ImagePoint(scene, cell.Max.X, cell.Min.Y), scale));
+                    path.LineTo(ToScreen(ImagePoint(scene, cell.Max.X, cell.Max.Y), scale));
+                    path.LineTo(ToScreen(ImagePoint(scene, cell.Min.X, cell.Max.Y), scale));
+                    path.EndFigure(true);
+                }
+
+            context.DrawGeometry(UiPalette.Brush("UiMapOutlineColor"), null, ground);
+        }
+
         if (scene.Rooms is not { Count: > 0 } rooms) return;
         var fill = UiPalette.Brush("UiMapRoomColor");
         var edge = UiPalette.Pen(UiPalette.Color("UiMapRoomEdgeColor"), 1, join: PenLineJoin.Round);
@@ -547,7 +564,9 @@ public sealed class ActivityMapCanvas : Control
     }
 
     // Each kind of point of interest has its own mark, larger for a better grade: a gold chest, a red diamond for a boss,
-    // a violet triangle for a shrine, a hollow orange square for a mob camp spot and a small blue dot for a Mists wisp.
+    // a violet triangle for a shrine, a hollow orange square for a mob camp spot, a small blue dot for a Mists wisp, and in
+    // the Depths a gold ring for a key, a silver chest for a coffer, a red-orange disc for a demon altar and an arrow in a
+    // green circle for an exit up or a blue one for an exit down.
     // Spots of one kind close together on screen merge, with a count. A Mists camp slot also gets a dashed ring for where
     // its chest can stand, once the ring is big enough on screen to read.
     private void DrawPois(DrawingContext context, ActivityMapScene scene, double scale)
@@ -582,12 +601,12 @@ public sealed class ActivityMapCanvas : Control
         var size = poi.Grade switch { >= 3 => 1.25, 2 => 1.05, _ => 0.9 };
         switch (poi.Kind)
         {
-            case MapPoiKind.Chest:
+            case MapPoiKind.Chest or MapPoiKind.Coffer:
             {
                 var half = 6 * size;
                 var box = new Rect(at.X - half, at.Y - half * 0.75, half * 2, half * 1.5);
                 var lidY = box.Top + box.Height * 0.4;
-                context.DrawRectangle(UiPalette.Brush("UiMapChestColor"), OutlinePen, box, 2, 2);
+                context.DrawRectangle(UiPalette.Brush(poi.Kind == MapPoiKind.Coffer ? "UiMapPoiCofferColor" : "UiMapChestColor"), OutlinePen, box, 2, 2);
                 context.DrawLine(UiPalette.Pen(UiPalette.Color("UiMapChestLidColor"), 1.2), new Point(box.Left + 1, lidY), new Point(box.Right - 1, lidY));
                 context.DrawRectangle(UiPalette.Brush("UiMapChestLidColor"), null, new Rect(at.X - 1, lidY - 1, 2, 3));
                 break;
@@ -613,6 +632,27 @@ public sealed class ActivityMapCanvas : Control
                 context.DrawRectangle(null, UiPalette.Pen(UiPalette.Color("UiMapPoiCampColor"), 2), new Rect(at.X - half, at.Y - half, half * 2, half * 2), 1.5, 1.5);
                 break;
             }
+            case MapPoiKind.Altar:
+            {
+                var radius = 4.5 * size;
+                context.DrawEllipse(UiPalette.Brush("UiMapPoiAltarColor"), OutlinePen, at, radius, radius);
+                context.DrawEllipse(UiPalette.Brush("UiMapPoiAltarCoreColor"), null, at, radius * 0.4, radius * 0.4);
+                break;
+            }
+            case MapPoiKind.ExitUp or MapPoiKind.ExitDown:
+            {
+                var radius = 6.5 * size;
+                var up = poi.Kind == MapPoiKind.ExitUp;
+                context.DrawEllipse(UiPalette.Brush(up ? "UiMapPoiExitUpColor" : "UiMapPoiExitDownColor"), OutlinePen, at, radius, radius);
+                var tip = up ? -radius * 0.55 : radius * 0.55;
+                context.DrawGeometry(UiPalette.Brush("UiMapMarkerEdgeColor"), null, Polygon(
+                    new Point(at.X, at.Y + tip), new Point(at.X + radius * 0.5, at.Y - tip * 0.6), new Point(at.X - radius * 0.5, at.Y - tip * 0.6)));
+                break;
+            }
+            case MapPoiKind.Key:
+                context.DrawEllipse(null, UiPalette.Pen(MarkerOutline, 4.5), at, 4 * size, 4 * size);
+                context.DrawEllipse(null, UiPalette.Pen(UiPalette.Color("UiMapChestColor"), 2.5), at, 4 * size, 4 * size);
+                break;
             default:
                 context.DrawEllipse(UiPalette.Brush("UiMapPoiWispColor"), OutlinePen, at, 3.5, 3.5);
                 break;
@@ -669,7 +709,8 @@ public sealed class ActivityMapCanvas : Control
         if (pois.Count == 1)
         {
             var poi = pois[0];
-            IReadOnlyList<string> lines = poi.Radius > 0
+            IReadOnlyList<string> lines = poi.Notes is { } notes ? notes.Where(x => x.Length > 0).ToArray()
+                : poi.Radius > 0
                 ? [$"A camp slot of this Mists layout. If the game puts a PvE camp here, its chest stands within {UiFormat.Whole(poi.Radius)} m",
                     "Otherwise the slot holds resources, an exit or plain landscape"]
                 : poi.Kind switch
@@ -696,6 +737,11 @@ public sealed class ActivityMapCanvas : Control
         MapPoiKind.Boss => "boss spot",
         MapPoiKind.Shrine => "shrine",
         MapPoiKind.Camp => "mob camp spot",
+        MapPoiKind.Key => "key spawn",
+        MapPoiKind.Coffer => "coffer spot",
+        MapPoiKind.Altar => "demon altar",
+        MapPoiKind.ExitUp => "exit up",
+        MapPoiKind.ExitDown => "exit down",
         _ => "wisp spawn"
     };
 
