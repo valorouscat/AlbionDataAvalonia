@@ -133,6 +133,8 @@
     <!-- The rooms of a zone drawn without a minimap, such as a Mists dungeon. -->
     <Color x:Key="UiMapRoomColor">#2EC9B98F</Color>
     <Color x:Key="UiMapRoomEdgeColor">#80C9B98F</Color>
+    <!-- The rough outline of a zone's ground drawn under its rooms, such as a Depths floor's. -->
+    <Color x:Key="UiMapOutlineColor">#1FC9B98F</Color>
     <Color x:Key="UiMapMarkerOutlineColor">#CC111111</Color>
     <Color x:Key="UiMapMarkerEdgeColor">#FFFFFF</Color>
     <Color x:Key="UiMapDeathFillColor">#E0212121</Color>

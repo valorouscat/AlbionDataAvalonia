@@ -414,6 +414,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             : zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
             : zone is { Zone: null } && live.Layout is null && AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.Mists
                 ? "Finding this Mists layout. The map shows once a wisp or exit comes into view."
+            : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
             : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing your path only."
             : "";
@@ -428,7 +429,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
             ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownPois(Turned(zone?.Pois ?? [], turns)),
-            zone?.Zone?.Rooms, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
+            zone?.Zone?.Rooms, zone?.Zone?.Outline, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone));
     }
 
@@ -573,6 +574,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var geometry = zone?.Geometry ?? (points.Length == 0 ? null
             : FallbackGeometry((points.Min(x => x.X), points.Min(x => x.Y), points.Max(x => x.X), points.Max(x => x.Y))));
         Note = zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
+            : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
             : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing your path only."
             : "";
@@ -586,7 +588,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
             Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)),
-            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: zone?.Zone?.Rooms);
+            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: zone?.Zone?.Rooms, Outline: zone?.Zone?.Outline);
     }
 
     // Only a minimap found by its layout follows the instance's turn.
@@ -625,8 +627,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             foreach (var exit in zone.Exits)
             {
                 var target = await maps.ZoneAsync(exit.TargetId);
-                // A Mists dungeon's exits lead back to the Mists, which has no zone of its own.
-                var label = exit.TargetId.Length == 0 ? "Exit to the Mists" : $"To {target?.DisplayName ?? exit.TargetId}";
+                // A Mists dungeon's exits lead back to the Mists, which has no zone of its own; a Depths floor names its own.
+                var label = exit.Label ?? (exit.TargetId.Length == 0 ? "Exit to the Mists" : $"To {target?.DisplayName ?? exit.TargetId}");
                 exits.Add(new ActivityMapExit(exit.Position, label, Zone(target?.PvpCategory)));
             }
 
@@ -698,6 +700,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         MapPoiKind.Wisp => 0,
         MapPoiKind.Camp => 1,
         MapPoiKind.Shrine => 2,
+        MapPoiKind.Key => 3,
         MapPoiKind.Chest => 3,
         _ => 4
     };
@@ -735,6 +738,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             "dungeon" => "Dungeon",
             "corrupted" => "Corrupted dungeon",
             "mistsdungeon" => "Mists dungeon",
+            "helldungeon" => "Depths",
             "hellden" => "Hellgate",
             "hideout" => "Hideout area",
             "expedition" => "Expedition",

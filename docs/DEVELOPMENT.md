@@ -95,3 +95,15 @@ python3 scripts/generate-resource-mobs.py /tmp/mobs.json
 ```
 
 The first resource mob of each map logs its NewMob parameters at Information level, for checking the packet layout read in `ActivityResourceMobs`.
+
+### Depths map
+
+AlbionWorld has no minimap or map features for the Depths, so `AlbionDataAvalonia/Maps/DepthsMapData.g.cs` brings each floor from the game's hell dungeon files: its rough ground outline, camp slots, exits and chest, coffer, key and shrine spots. Regenerate it after a patch changes the Depths:
+
+```sh
+git clone --depth 1 --filter=blob:none --sparse https://github.com/ao-data/ao-bin-dumps.git /tmp/ao-bin-dumps
+git -C /tmp/ao-bin-dumps sparse-checkout set --no-cone /helldungeons.xml /helldungeonstemplatemetadata.xml '/templates/DEAD/HELLDNG_*'
+python3 scripts/generate-depths-map-data.py /tmp/ao-bin-dumps
+```
+
+The floor is picked from the layout the client gets on entering (a `helldungeons.xml` map id such as `DUO_ORANGE_HELL_DUNGEON_02`) or a part of the map id. When neither names a floor, the map logs `No Depths floor for map …` at Information level with what the client sent.

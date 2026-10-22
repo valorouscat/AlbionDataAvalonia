@@ -69,14 +69,22 @@ public sealed class MapDataService : IDisposable
     private static string LastVersionFile => Path.Combine(CacheRoot, "version.txt");
 
     /// <summary>The catalog zone for a captured map id, trying the full id first and then its '@' parts.
-    /// A Mists instance has no zone of its own, so its fixed layout is tried last; a Mists dungeon's layout has no catalog
-    /// zone either, so the client's own map of it stands in.</summary>
+    /// A Mists instance has no zone of its own, so its fixed layout is tried last; a Mists dungeon's layout and a Depths
+    /// floor have no catalog zone either, so the client's own map of them stands in.</summary>
     public async Task<MapZone?> FindZoneAsync(string rawMapId, string? layout = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(rawMapId)) return null;
         var zones = await GetCatalogAsync(cancellationToken).ConfigureAwait(false);
         foreach (var candidate in Candidates(rawMapId))
             if (zones.TryGetValue(candidate, out var zone)) return zone;
+        if (AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.AbyssalDepths)
+        {
+            if (DepthsMapData.Master(rawMapId, layout) is { } master) return zones.GetValueOrDefault(master) ?? DepthsMapData.Zone(master);
+            // The floor is named by a layout no one has checked in game yet, so the log says what the client sent.
+            Log.Information("No Depths floor for map {RawMapId} with layout {Layout}", rawMapId, layout);
+            return null;
+        }
+
         if (string.IsNullOrWhiteSpace(layout)) return null;
         return zones.TryGetValue(layout, out var layoutZone) ? layoutZone : MistsMapData.DungeonZone(layout);
     }
@@ -134,10 +142,10 @@ public sealed class MapDataService : IDisposable
     }
 
     /// <summary>The zone's minimap icons, resource spawn spots and points of interest; empty when its feature file can't be had,
-    /// but for the Mists chest spots that come with the app.</summary>
+    /// but for the Mists and Depths spots that come with the app.</summary>
     public Task<MapZoneFeatures> GetFeaturesAsync(MapZone zone) =>
         // A zone the client draws itself has no AlbionWorld feature file.
-        zone.ImageFile.Length == 0 ? Task.FromResult(new MapZoneFeatures([], [], MistsMapData.Chests(zone.Id)))
+        zone.ImageFile.Length == 0 ? Task.FromResult(new MapZoneFeatures([], [], [.. MistsMapData.Chests(zone.Id), .. DepthsMapData.Pois(zone.Id)]))
             : features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
 
     public Task<Bitmap?> GetIconImageAsync(string markerType) =>
