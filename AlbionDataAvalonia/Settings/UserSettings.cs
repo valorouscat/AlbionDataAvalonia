@@ -507,6 +507,19 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    private int mapResourceSpawnIconOpacity = 50;
+    public int MapResourceSpawnIconOpacity
+    {
+        get => mapResourceSpawnIconOpacity;
+        set
+        {
+            var clamped = Math.Clamp(value, 25, 100);
+            if (mapResourceSpawnIconOpacity == clamped) return;
+            mapResourceSpawnIconOpacity = clamped;
+            OnPropertyChanged(nameof(MapResourceSpawnIconOpacity));
+        }
+    }
+
     private int mapResourceClusterRadius = 16;
     public int MapResourceClusterRadius
     {

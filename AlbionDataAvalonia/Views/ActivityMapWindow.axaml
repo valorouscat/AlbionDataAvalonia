@@ -247,6 +247,12 @@
                             <TextBlock Text="Mobs" />
                         </StackPanel>
                     </ToggleButton>
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Seen resource opacity" Classes="UiLabel" />
+                                        <ComboBox ItemsSource="{Binding IconOpacityOptions}" SelectedItem="{Binding SelectedIconOpacity}"
+                                                  HorizontalAlignment="Stretch" AutomationProperties.Name="Seen resource opacity"
+                                                  ToolTip.Tip="Opacity of seen resource nodes, resource mobs and their labels" />
+                                    </StackPanel>
                                     <TextBlock Text="Empty nodes are hidden. Sightings last only for this visit." Classes="UiFine" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
@@ -258,6 +264,12 @@
                                 <ComboBox ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceSpawnTier}"
                                           HorizontalAlignment="Stretch" AutomationProperties.Name="Minimum spawn tier" ToolTip.Tip="Independent of the seen-resource tier and enchantment filters" />
                             </StackPanel>
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Spawn spot opacity" Classes="UiLabel" />
+                                        <ComboBox ItemsSource="{Binding IconOpacityOptions}" SelectedItem="{Binding SelectedSpawnIconOpacity}"
+                                                  HorizontalAlignment="Stretch" AutomationProperties.Name="Spawn spot opacity"
+                                                  ToolTip.Tip="Opacity of possible node and resource-mob spawn spots and their labels; independent of seen resources" />
+                                    </StackPanel>
                                 </StackPanel>
                             </Border>
                             <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowResourceFilters}">
@@ -268,11 +280,6 @@
                                 <TextBlock Text="Icon size" Classes="UiLabel" />
                                 <ComboBox ItemsSource="{Binding IconSizeOptions}" SelectedItem="{Binding SelectedIconSize}"
                                           HorizontalAlignment="Stretch" AutomationProperties.Name="Icon size" ToolTip.Tip="Scale resource markers, labels and hover areas" />
-                            </StackPanel>
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Opacity" Classes="UiLabel" />
-                                <ComboBox ItemsSource="{Binding IconOpacityOptions}" SelectedItem="{Binding SelectedIconOpacity}"
-                                          HorizontalAlignment="Stretch" AutomationProperties.Name="Opacity" ToolTip.Tip="Opacity of resource markers and their labels" />
                             </StackPanel>
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Grouping radius" Classes="UiLabel" />

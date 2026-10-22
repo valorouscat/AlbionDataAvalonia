@@ -523,7 +523,7 @@ public sealed class ActivityMapCanvas : Control
             var best = group.Spawns[0];
             var color = ActivityPalette.Resource(best.Family);
             using var transform = context.PushTransform(ResourceIconTransform(group.At, scene.ResourceIconScale));
-            using (context.PushOpacity(scene.ResourceIconOpacity))
+            using (context.PushOpacity(scene.ResourceSpawnIconOpacity))
             {
                 if (best.Mob)
                 {

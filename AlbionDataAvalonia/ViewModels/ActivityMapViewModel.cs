@@ -83,6 +83,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         selectedLowerTierEnchantment = UiOptions.Nearest(EnchantmentOptions, settings.MapResourceLowerTierMinEnchantment);
         selectedIconSize = UiOptions.Nearest(IconSizeOptions, settings.MapResourceIconSize);
         selectedIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceIconOpacity);
+        selectedSpawnIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceSpawnIconOpacity);
         selectedClusterRadius = UiOptions.Nearest(ClusterRadiusOptions, settings.MapResourceClusterRadius);
         liveTimer.Tick += (_, _) => RefreshLive();
         replayTimer.Tick += (_, _) => AdvanceReplay();
@@ -144,6 +145,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty] private Option<int> selectedLowerTierEnchantment;
     [ObservableProperty] private Option<int> selectedIconSize;
     [ObservableProperty] private Option<int> selectedIconOpacity;
+    [ObservableProperty] private Option<int> selectedSpawnIconOpacity;
     [ObservableProperty] private Option<int> selectedClusterRadius;
     [ObservableProperty] private Option<int> selectedResourceTier;
     [ObservableProperty] private bool showResourceMobs;
@@ -349,6 +351,12 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Rebuild();
     }
 
+    partial void OnSelectedSpawnIconOpacityChanged(Option<int> value)
+    {
+        settings.MapResourceSpawnIconOpacity = value.Value;
+        Rebuild();
+    }
+
     partial void OnSelectedClusterRadiusChanged(Option<int> value)
     {
         settings.MapResourceClusterRadius = value.Value;
@@ -480,7 +488,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownPois(Turned(zone?.Pois ?? [], turns)),
             zone?.Zone?.Rooms, zone?.Zone?.Outline, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
-            ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value);
+            ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d);
     }
 
     // No one can attack the character in a blue zone, so a player there is no threat.
@@ -639,7 +648,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
             Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)),
             Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: zone?.Zone?.Rooms, Outline: zone?.Zone?.Outline, ResourceIconScale: SelectedIconSize.Value / 100d,
-            ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value);
+            ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d);
     }
 
     // Only a minimap found by its layout follows the instance's turn.
