@@ -100,9 +100,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         [new(0, "Off"), new(1, "1 tier below"), new(2, "2 tiers below"), new(3, "3 tiers below"),
          new(4, "4 tiers below"), new(5, "5 tiers below"), new(6, "6 tiers below"), new(7, "7 tiers below")];
     public IReadOnlyList<Option<MapResourceEnchantmentFilter>> EnchantmentOptions { get; } =
-        [new(new(0, 4), ".0+"), new(new(1, 4), ".1+"), new(new(2, 4), ".2+"), new(new(3, 4), ".3+"),
-         new(new(0, 0), "Only .0"), new(new(1, 1), "Only .1"), new(new(2, 2), "Only .2"),
-         new(new(3, 3), "Only .3"), new(new(4, 4), "Only .4")];
+        [new(new(0), ".0+"), new(new(1), ".1+"), new(new(2), ".2+"), new(new(3), ".3+"), new(new(4), ".4+")];
     public IReadOnlyList<Option<int>> IconSizeOptions { get; } =
         [new(50, "50%"), new(75, "75%"), new(100, "100%"), new(125, "125%"), new(150, "150%"), new(200, "200%")];
     public IReadOnlyList<Option<int>> IconOpacityOptions { get; } =

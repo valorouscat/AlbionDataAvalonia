@@ -242,7 +242,7 @@
                                                     <ComboBox Grid.Column="1" ItemsSource="{Binding EnchantmentOptions}"
                                                               SelectedItem="{Binding SelectedEnchantment}" MinWidth="112"
                                                               AutomationProperties.Name="{Binding Label}"
-                                                              ToolTip.Tip="A + includes higher enchantments; Only matches exactly. Applies to seen nodes and resource mobs." />
+                                                              ToolTip.Tip="Show this enchantment and higher for this tier. Applies to seen nodes and resource mobs." />
                                                 </Grid>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>

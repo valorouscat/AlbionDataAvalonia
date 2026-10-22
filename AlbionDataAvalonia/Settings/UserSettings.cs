@@ -497,8 +497,7 @@ public class UserSettings : INotifyPropertyChanged
                 foreach (var (offset, filter) in value)
                 {
                     if (offset is < 1 or > 7 || filter is null) continue;
-                    var minimum = Math.Clamp(filter.Minimum, 0, 4);
-                    normalized[offset] = new(minimum, Math.Clamp(filter.Maximum, minimum, 4));
+                    normalized[offset] = new(Math.Clamp(filter.Minimum, 0, 4));
                 }
             }
             mapResourceLowerTierEnchantments = new ReadOnlyDictionary<int, MapResourceEnchantmentFilter>(normalized);
@@ -508,7 +507,7 @@ public class UserSettings : INotifyPropertyChanged
 
     public MapResourceEnchantmentFilter GetMapResourceLowerTierEnchantment(int offset) =>
         MapResourceLowerTierEnchantments.TryGetValue(offset, out var filter)
-            ? filter : new(MapResourceLowerTierMinEnchantment, 4);
+            ? filter : new(MapResourceLowerTierMinEnchantment);
 
     private int mapResourceIconSize = 100;
     public int MapResourceIconSize
