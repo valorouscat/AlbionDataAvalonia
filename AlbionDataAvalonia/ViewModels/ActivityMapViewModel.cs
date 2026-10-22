@@ -58,7 +58,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private readonly LatestLoad loads = new();
 
     public ActivityMapViewModel(ActivityTrackerService tracker, ActivityPersistence persistence, MapDataService maps, UserSettings settings,
-        IFileDialogService? files = null, HostileAlertSoundService? sound = null)
+        IFileDialogService? files = null, HostileAlertSoundService? sound = null, ResourceAlertSoundService? resourceSound = null)
     {
         this.tracker = tracker;
         this.persistence = persistence;
@@ -71,6 +71,12 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         hostileSoundFile = settings.MapHostileSoundFile;
         hostileSoundError = hostileSoundService?.Error ?? "";
         if (hostileSoundService is not null) hostileSoundService.ErrorChanged += SoundErrorChanged;
+        resourceSoundService = resourceSound;
+        resourceSoundEnabled = settings.MapResourceSoundEnabled;
+        resourceSoundVolume = settings.MapResourceSoundVolume;
+        resourceSoundFile = settings.MapResourceSoundFile;
+        resourceSoundError = resourceSoundService?.Error ?? "";
+        if (resourceSoundService is not null) resourceSoundService.ErrorChanged += ResourceSoundErrorChanged;
         selectedScopeIndex = settings.MapPartyEvents ? 1 : 0;
         selectedFadeIndex = Math.Max(0, Array.FindIndex(FadeOptionValues, x => x == settings.MapFadeMinutes));
         if (FadeOptionValues[selectedFadeIndex] != settings.MapFadeMinutes) selectedFadeIndex = 1;
@@ -119,7 +125,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         [new(0, "Off"), new(8, "8 px"), new(12, "12 px"), new(16, "16 px"), new(24, "24 px"), new(32, "32 px"), new(48, "48 px"), new(64, "64 px")];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLive), nameof(IsHistory), nameof(ShowFollow), nameof(ShowResourceTier), nameof(ShowResourceFilters), nameof(ShowHostileSoundSettings))]
+    [NotifyPropertyChangedFor(nameof(IsLive), nameof(IsHistory), nameof(ShowFollow), nameof(ShowResourceTier), nameof(ShowResourceFilters), nameof(ShowHostileSoundSettings), nameof(ShowResourceSoundSettings))]
     private int selectedModeIndex;
 
     [ObservableProperty] private int selectedFadeIndex;
@@ -142,7 +148,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool showDeaths = true;
     [ObservableProperty] private bool showFeatures = true;
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowResourceTier), nameof(ShowResourceFilters))]
+    [NotifyPropertyChangedFor(nameof(ShowResourceTier), nameof(ShowResourceFilters), nameof(ShowResourceSoundSettings))]
     private bool showResources;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowResourceFilters))]
@@ -756,12 +762,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     }
 
     // The lower-tier exception never changes which nodes meet the main threshold.
-    private bool ShowsSeenTier(int tier, int enchantment)
-    {
-        if (tier >= SelectedResourceTier.Value) return true;
-        var offset = SelectedResourceTier.Value - tier;
-        return offset <= SelectedLowerTiers.Value && settings.GetMapResourceLowerTierEnchantment(offset).Matches(enchantment);
-    }
+    private bool ShowsSeenTier(int tier, int enchantment) => ActivityResourceFilter.ShowsTier(settings, tier, enchantment);
 
     private IReadOnlyList<ActivityResourceNode> ShownResources(IReadOnlyList<ActivityResourceNode>? nodes) =>
         !ShowResources || nodes is not { Count: > 0 } ? [] : nodes
@@ -894,6 +895,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     {
         disposed = true;
         if (hostileSoundService is not null) hostileSoundService.ErrorChanged -= SoundErrorChanged;
+        if (resourceSoundService is not null) resourceSoundService.ErrorChanged -= ResourceSoundErrorChanged;
         liveTimer.Stop();
         replayTimer.Stop();
     }

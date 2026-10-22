@@ -14,10 +14,10 @@ public sealed class ActivityMapWindowService
     private readonly SingleWindowHost<ActivityMapWindow, ActivityMapViewModel> host;
 
     public ActivityMapWindowService(ActivityTrackerService tracker, ActivityPersistence persistence, MapDataService maps, SettingsManager settings,
-        IFileDialogService files, HostileAlertSoundService sound)
+        IFileDialogService files, HostileAlertSoundService sound, ResourceAlertSoundService resourceSound)
     {
         var user = settings.UserSettings;
-        host = new(() => new ActivityMapViewModel(tracker, persistence, maps, user, files, sound), model => model.Start(), new WindowMemory(
+        host = new(() => new ActivityMapViewModel(tracker, persistence, maps, user, files, sound, resourceSound), model => model.Start(), new WindowMemory(
             () => user.MapWindowOpen, open => user.MapWindowOpen = open,
             () => user.MapWindowPlacement, placement => user.MapWindowPlacement = placement), restoreSize: true);
     }

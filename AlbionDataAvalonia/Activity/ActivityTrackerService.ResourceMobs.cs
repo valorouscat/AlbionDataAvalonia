@@ -34,7 +34,7 @@ public sealed partial class ActivityTrackerService
             {
                 EventCodes.NewMob => ActivityResourceMobs.ReadNew(packet.Parameters) is { } mob
                     && (PlaceResourceMob(mob, packet, at) | PlaceRoamingBoss(mob, at)),
-                EventCodes.MobChangeState => ActivityResourceMobs.ReadChange(packet.Parameters) is { } change && EnchantResourceMob(change.Id, change.Enchantment),
+                EventCodes.MobChangeState => ActivityResourceMobs.ReadChange(packet.Parameters) is { } change && EnchantResourceMob(change.Id, change.Enchantment, at),
                 // Roaming bosses move with the same packet.
                 EventCodes.Move => ActivityResourceMobs.ReadMove(packet.Parameters) is { } move
                     && (MoveResourceMob(move.Id, move.X, move.Y, at) | MoveLiveActor(move.Id, move.X, move.Y, at)),
@@ -55,15 +55,18 @@ public sealed partial class ActivityTrackerService
                 descriptor!.UniqueName, sighting.X, sighting.Y, sighting.Enchantment, ActivityResourceMobs.Describe(packet.Parameters));
         }
 
+        resourceMobs.TryGetValue(sighting.Id, out var previous);
         if (resourceMobs.Count >= MaxResourceMobs && !resourceMobs.ContainsKey(sighting.Id))
             resourceMobs.Remove(resourceMobs.Values.MinBy(x => x.SeenAtUtc)!.Id);
         resourceMobs[sighting.Id] = new ActivityResourceMob(sighting.Id, resource.Family, resource.Tier, sighting.Enchantment, sighting.X,
             sighting.Y, at, descriptor!.UniqueName ?? "", descriptor.DisplayName,
             ActivityResourceNodePackets.ItemUniqueName(resource.Family, resource.Tier, sighting.Enchantment));
+        NotifyResourceAppearance(at, new(resource.Family, resource.Tier, sighting.Enchantment, true),
+            previous is null ? null : new(previous.Family, previous.Tier, previous.Enchantment, true));
         return true;
     }
 
-    private bool EnchantResourceMob(long id, int enchantment)
+    private bool EnchantResourceMob(long id, int enchantment, DateTime at)
     {
         if (!resourceMobs.TryGetValue(id, out var mob) || mob.Enchantment == enchantment) return false;
         resourceMobs[id] = mob with
@@ -71,6 +74,8 @@ public sealed partial class ActivityTrackerService
             Enchantment = enchantment,
             ItemUniqueName = ActivityResourceNodePackets.ItemUniqueName(mob.Family, mob.Tier, enchantment)
         };
+        NotifyResourceAppearance(at, new(mob.Family, mob.Tier, enchantment, true),
+            new(mob.Family, mob.Tier, mob.Enchantment, true));
         return true;
     }
 

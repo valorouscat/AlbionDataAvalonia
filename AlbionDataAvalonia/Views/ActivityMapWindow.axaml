@@ -285,6 +285,28 @@
                                     <TextBlock Text="Empty nodes are hidden. Sightings last only for this visit." Classes="UiFine" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
+                            <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowResourceSoundSettings}">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="Resource found sound" Classes="UiSectionTitle" />
+                                    <ToggleSwitch IsChecked="{Binding ResourceSoundEnabled}" Content="Play sound on detection" />
+                                    <TextBlock Text="Matches the seen-resource filters, even with the map window closed. Finds within 3 seconds share one sound." Classes="UiFine" TextWrapping="Wrap" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Volume" Classes="UiLabel" />
+                                        <TextBlock Grid.Column="1" Text="{Binding ResourceSoundVolumeText}" Classes="UiValue" />
+                                    </Grid>
+                                    <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                                            Value="{Binding ResourceSoundVolume}" AutomationProperties.Name="Resource alert volume" />
+                                    <TextBlock Text="{Binding ResourceSoundFileName}" Classes="UiLabel" TextWrapping="Wrap"
+                                               ToolTip.Tip="{Binding ResourceSoundFile}" />
+                                    <WrapPanel MaxWidth="360">
+                                        <Button Classes="UiAction" Content="Choose MP3…" Command="{Binding ChooseResourceSoundCommand}" Margin="0,0,6,6" />
+                                        <Button Classes="UiAction" Content="Use default" Command="{Binding UseDefaultResourceSoundCommand}" Margin="0,0,6,6" />
+                                        <Button Classes="UiAction" Content="Test sound" Command="{Binding TestResourceSoundCommand}" Margin="0,0,6,6" />
+                                        <Button Classes="UiAction" Content="Stop" Command="{Binding StopResourceSoundCommand}" Margin="0,0,6,6" />
+                                    </WrapPanel>
+                                    <TextBlock Text="{Binding ResourceSoundError}" Classes="UiError" TextWrapping="Wrap" IsVisible="{Binding HasResourceSoundError}" />
+                                </StackPanel>
+                            </Border>
                             <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowResourceSpawns}">
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="Possible spawn spots" Classes="UiSectionTitle" />

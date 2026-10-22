@@ -76,10 +76,13 @@ public sealed partial class ActivityTrackerService
     {
         // Empty sightings can arrive in both full and simple node packets. Remove a previous sighting too.
         if (node.Charges <= 0) return resourceNodes.Remove(node.Id);
+        resourceNodes.TryGetValue(node.Id, out var previous);
         if (resourceNodes.Count >= MaxResourceNodes && !resourceNodes.ContainsKey(node.Id))
             resourceNodes.Remove(resourceNodes.Values.MinBy(x => x.SeenAtUtc)!.Id);
         resourceNodes[node.Id] = new ActivityResourceNode(node.Id, node.Family, node.Tier, node.Enchantment, node.X, node.Y,
             node.Charges, at, ActivityResourceNodePackets.ItemUniqueName(node.Family, node.Tier, node.Enchantment));
+        NotifyResourceAppearance(at, new(node.Family, node.Tier, node.Enchantment, false),
+            previous is null ? null : new(previous.Family, previous.Tier, previous.Enchantment, false));
         return true;
     }
 
@@ -98,6 +101,8 @@ public sealed partial class ActivityTrackerService
             SeenAtUtc = at,
             ItemUniqueName = ActivityResourceNodePackets.ItemUniqueName(node.Family, node.Tier, enchantment)
         };
+        NotifyResourceAppearance(at, new(node.Family, node.Tier, enchantment, false),
+            new(node.Family, node.Tier, node.Enchantment, false));
         return true;
     }
 
