@@ -226,20 +226,27 @@
                                 <ComboBox ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceTier}"
                                           HorizontalAlignment="Stretch" AutomationProperties.Name="Minimum seen tier" ToolTip.Tip="Show seen resources of this tier and higher" />
                             </StackPanel>
-                                    <TextBlock Text="Include enchanted resources below this tier" Classes="UiMuted" TextWrapping="Wrap" />
-                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                            <StackPanel Spacing="4">
-                                <TextBlock Text="Lower tiers" Classes="UiLabel" />
-                                <ComboBox ItemsSource="{Binding LowerTierOptions}" SelectedItem="{Binding SelectedLowerTiers}"
-                                          HorizontalAlignment="Stretch" AutomationProperties.Name="Lower tiers" ToolTip.Tip="Off disables the exception; otherwise include this many tiers below the seen threshold" />
-                            </StackPanel>
-                                        <StackPanel Grid.Column="1" Spacing="4">
-                                            <TextBlock Text="Minimum enchantment" Classes="UiLabel" />
-                                            <ComboBox ItemsSource="{Binding EnchantmentOptions}" SelectedItem="{Binding SelectedLowerTierEnchantment}"
-                                                      HorizontalAlignment="Stretch" AutomationProperties.Name="Minimum lower-tier enchantment"
-                                                      ToolTip.Tip="Applies only to the additional lower tiers, including resource mobs" />
-                                        </StackPanel>
-                                    </Grid>
+                                    <TextBlock Text="Include resources below this tier" Classes="UiMuted" TextWrapping="Wrap" />
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Text="Lower tiers" Classes="UiLabel" />
+                                        <ComboBox ItemsSource="{Binding LowerTierOptions}" SelectedItem="{Binding SelectedLowerTiers}"
+                                                  HorizontalAlignment="Stretch" AutomationProperties.Name="Lower tiers"
+                                                  ToolTip.Tip="Choose how many tiers below the target can appear, then set enchantment separately for each" />
+                                    </StackPanel>
+                                    <!-- At most seven fixed tier offsets; each row labels its current absolute tier. -->
+                                    <ItemsControl ItemsSource="{Binding ResourceTierFilters}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ActivityMapResourceTierFilterViewModel">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,0,0,6">
+                                                    <TextBlock Text="{Binding Label}" Classes="UiLabel" VerticalAlignment="Center" />
+                                                    <ComboBox Grid.Column="1" ItemsSource="{Binding EnchantmentOptions}"
+                                                              SelectedItem="{Binding SelectedEnchantment}" MinWidth="112"
+                                                              AutomationProperties.Name="{Binding Label}"
+                                                              ToolTip.Tip="A + includes higher enchantments; Only matches exactly. Applies to seen nodes and resource mobs." />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResourceMobs}" IsVisible="{Binding ShowResourceTier}"
                                   ToolTip.Tip="Also show the mobs near you that yield resources, such as hide animals and ore, wood, fiber and stone critters, as diamonds in their resource's color with the tier inside. They follow the mobs as they move.">
                         <StackPanel Orientation="Horizontal" Spacing="6">

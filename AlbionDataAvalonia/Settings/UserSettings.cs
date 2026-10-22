@@ -4,6 +4,8 @@ using Serilog;
 using Serilog.Events;
 using System;
 using System.ComponentModel;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 public enum StartupWindowMode
 {
@@ -468,6 +470,7 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    // Legacy shared threshold: supplies defaults for offsets that have no individual rule yet.
     private int mapResourceLowerTierMinEnchantment = 1;
     public int MapResourceLowerTierMinEnchantment
     {
@@ -480,6 +483,32 @@ public class UserSettings : INotifyPropertyChanged
             OnPropertyChanged(nameof(MapResourceLowerTierMinEnchantment));
         }
     }
+
+    private IReadOnlyDictionary<int, MapResourceEnchantmentFilter> mapResourceLowerTierEnchantments =
+        new ReadOnlyDictionary<int, MapResourceEnchantmentFilter>(new Dictionary<int, MapResourceEnchantmentFilter>());
+    public IReadOnlyDictionary<int, MapResourceEnchantmentFilter> MapResourceLowerTierEnchantments
+    {
+        get => mapResourceLowerTierEnchantments;
+        set
+        {
+            var normalized = new Dictionary<int, MapResourceEnchantmentFilter>();
+            if (value is not null)
+            {
+                foreach (var (offset, filter) in value)
+                {
+                    if (offset is < 1 or > 7 || filter is null) continue;
+                    var minimum = Math.Clamp(filter.Minimum, 0, 4);
+                    normalized[offset] = new(minimum, Math.Clamp(filter.Maximum, minimum, 4));
+                }
+            }
+            mapResourceLowerTierEnchantments = new ReadOnlyDictionary<int, MapResourceEnchantmentFilter>(normalized);
+            OnPropertyChanged(nameof(MapResourceLowerTierEnchantments));
+        }
+    }
+
+    public MapResourceEnchantmentFilter GetMapResourceLowerTierEnchantment(int offset) =>
+        MapResourceLowerTierEnchantments.TryGetValue(offset, out var filter)
+            ? filter : new(MapResourceLowerTierMinEnchantment, 4);
 
     private int mapResourceIconSize = 100;
     public int MapResourceIconSize

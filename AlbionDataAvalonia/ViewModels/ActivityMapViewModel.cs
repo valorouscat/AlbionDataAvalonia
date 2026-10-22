@@ -80,11 +80,11 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         selectedResourceTier = UiOptions.Find(ResourceTierOptions, settings.MapResourceMinTier);
         selectedResourceSpawnTier = UiOptions.Nearest(ResourceTierOptions, settings.MapResourceSpawnMinTier);
         selectedLowerTiers = UiOptions.Nearest(LowerTierOptions, settings.MapResourceLowerTiers);
-        selectedLowerTierEnchantment = UiOptions.Nearest(EnchantmentOptions, settings.MapResourceLowerTierMinEnchantment);
         selectedIconSize = UiOptions.Nearest(IconSizeOptions, settings.MapResourceIconSize);
         selectedIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceIconOpacity);
         selectedSpawnIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceSpawnIconOpacity);
         selectedClusterRadius = UiOptions.Nearest(ClusterRadiusOptions, settings.MapResourceClusterRadius);
+        UpdateResourceTierFilters();
         liveTimer.Tick += (_, _) => RefreshLive();
         replayTimer.Tick += (_, _) => AdvanceReplay();
     }
@@ -99,8 +99,10 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     public IReadOnlyList<Option<int>> LowerTierOptions { get; } =
         [new(0, "Off"), new(1, "1 tier below"), new(2, "2 tiers below"), new(3, "3 tiers below"),
          new(4, "4 tiers below"), new(5, "5 tiers below"), new(6, "6 tiers below"), new(7, "7 tiers below")];
-    public IReadOnlyList<Option<int>> EnchantmentOptions { get; } =
-        [new(0, ".0+"), new(1, ".1+"), new(2, ".2+"), new(3, ".3+"), new(4, ".4")];
+    public IReadOnlyList<Option<MapResourceEnchantmentFilter>> EnchantmentOptions { get; } =
+        [new(new(0, 4), ".0+"), new(new(1, 4), ".1+"), new(new(2, 4), ".2+"), new(new(3, 4), ".3+"),
+         new(new(0, 0), "Only .0"), new(new(1, 1), "Only .1"), new(new(2, 2), "Only .2"),
+         new(new(3, 3), "Only .3"), new(new(4, 4), "Only .4")];
     public IReadOnlyList<Option<int>> IconSizeOptions { get; } =
         [new(50, "50%"), new(75, "75%"), new(100, "100%"), new(125, "125%"), new(150, "150%"), new(200, "200%")];
     public IReadOnlyList<Option<int>> IconOpacityOptions { get; } =
@@ -142,7 +144,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool showHostileAlert;
     [ObservableProperty] private Option<int> selectedResourceSpawnTier;
     [ObservableProperty] private Option<int> selectedLowerTiers;
-    [ObservableProperty] private Option<int> selectedLowerTierEnchantment;
+    [ObservableProperty] private IReadOnlyList<ActivityMapResourceTierFilterViewModel> resourceTierFilters = [];
     [ObservableProperty] private Option<int> selectedIconSize;
     [ObservableProperty] private Option<int> selectedIconOpacity;
     [ObservableProperty] private Option<int> selectedSpawnIconOpacity;
@@ -318,6 +320,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     partial void OnSelectedResourceTierChanged(Option<int> value)
     {
         settings.MapResourceMinTier = value.Value;
+        UpdateResourceTierFilters();
         Rebuild();
     }
 
@@ -330,13 +333,24 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     partial void OnSelectedLowerTiersChanged(Option<int> value)
     {
         settings.MapResourceLowerTiers = value.Value;
+        UpdateResourceTierFilters();
         Rebuild();
     }
 
-    partial void OnSelectedLowerTierEnchantmentChanged(Option<int> value)
+    private void UpdateResourceTierFilters()
     {
-        settings.MapResourceLowerTierMinEnchantment = value.Value;
-        Rebuild();
+        var count = Math.Min(SelectedLowerTiers.Value, SelectedResourceTier.Value - 1);
+        ResourceTierFilters = Enumerable.Range(1, count).Select(offset =>
+            new ActivityMapResourceTierFilterViewModel(offset, SelectedResourceTier.Value - offset, EnchantmentOptions,
+                settings.GetMapResourceLowerTierEnchantment(offset), filter =>
+                {
+                    var saved = new Dictionary<int, MapResourceEnchantmentFilter>(settings.MapResourceLowerTierEnchantments)
+                    {
+                        [offset] = filter
+                    };
+                    settings.MapResourceLowerTierEnchantments = saved;
+                    Rebuild();
+                })).ToArray();
     }
 
     partial void OnSelectedIconSizeChanged(Option<int> value)
@@ -732,9 +746,12 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     }
 
     // The lower-tier exception never changes which nodes meet the main threshold.
-    private bool ShowsSeenTier(int tier, int enchantment) => tier >= SelectedResourceTier.Value
-        || SelectedLowerTiers.Value > 0 && tier >= SelectedResourceTier.Value - SelectedLowerTiers.Value
-            && enchantment >= SelectedLowerTierEnchantment.Value;
+    private bool ShowsSeenTier(int tier, int enchantment)
+    {
+        if (tier >= SelectedResourceTier.Value) return true;
+        var offset = SelectedResourceTier.Value - tier;
+        return offset <= SelectedLowerTiers.Value && settings.GetMapResourceLowerTierEnchantment(offset).Matches(enchantment);
+    }
 
     private IReadOnlyList<ActivityResourceNode> ShownResources(IReadOnlyList<ActivityResourceNode>? nodes) =>
         !ShowResources || nodes is not { Count: > 0 } ? [] : nodes
