@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace AlbionDataAvalonia.Audio;
 
 /// <summary>Loads audio only when requested; no device or decoder is kept open while idle.</summary>
-public sealed class AlertSoundPlayer : IAlertSoundPlayer
+public sealed class AlertSoundPlayer(string defaultSoundResource = "Audio.hostile-alert.wav") : IAlertSoundPlayer
 {
     private readonly object sync = new();
     private SoundPlayer? current;
@@ -26,7 +26,7 @@ public sealed class AlertSoundPlayer : IAlertSoundPlayer
             desiredVolume = Math.Clamp(volume, 0, 100) / 100f;
         }
         using var stream = string.IsNullOrWhiteSpace(filePath)
-            ? typeof(AlertSoundPlayer).Assembly.GetManifestResourceStream("Audio.hostile-alert.wav")
+            ? typeof(AlertSoundPlayer).Assembly.GetManifestResourceStream(defaultSoundResource)
                 ?? throw new FileNotFoundException("The default alert sound is missing.")
             : File.OpenRead(filePath);
         using var engine = new MiniAudioEngine();
