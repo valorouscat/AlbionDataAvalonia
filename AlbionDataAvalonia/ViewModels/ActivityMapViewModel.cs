@@ -1,4 +1,6 @@
 using AlbionDataAvalonia.Activity;
+using AlbionDataAvalonia.Audio;
+using AlbionDataAvalonia.Ui.Services;
 using AlbionDataAvalonia.Activity.Models;
 using AlbionDataAvalonia.Locations;
 using AlbionDataAvalonia.Maps;
@@ -55,12 +57,20 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private bool disposed;
     private readonly LatestLoad loads = new();
 
-    public ActivityMapViewModel(ActivityTrackerService tracker, ActivityPersistence persistence, MapDataService maps, UserSettings settings)
+    public ActivityMapViewModel(ActivityTrackerService tracker, ActivityPersistence persistence, MapDataService maps, UserSettings settings,
+        IFileDialogService? files = null, HostileAlertSoundService? sound = null)
     {
         this.tracker = tracker;
         this.persistence = persistence;
         this.maps = maps;
         this.settings = settings;
+        soundFiles = files;
+        hostileSoundService = sound;
+        hostileSoundEnabled = settings.MapHostileSoundEnabled;
+        hostileSoundVolume = settings.MapHostileSoundVolume;
+        hostileSoundFile = settings.MapHostileSoundFile;
+        hostileSoundError = hostileSoundService?.Error ?? "";
+        if (hostileSoundService is not null) hostileSoundService.ErrorChanged += SoundErrorChanged;
         selectedScopeIndex = settings.MapPartyEvents ? 1 : 0;
         selectedFadeIndex = Math.Max(0, Array.FindIndex(FadeOptionValues, x => x == settings.MapFadeMinutes));
         if (FadeOptionValues[selectedFadeIndex] != settings.MapFadeMinutes) selectedFadeIndex = 1;
@@ -109,7 +119,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         [new(0, "Off"), new(8, "8 px"), new(12, "12 px"), new(16, "16 px"), new(24, "24 px"), new(32, "32 px"), new(48, "48 px"), new(64, "64 px")];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsLive), nameof(IsHistory), nameof(ShowFollow), nameof(ShowResourceTier), nameof(ShowResourceFilters))]
+    [NotifyPropertyChangedFor(nameof(IsLive), nameof(IsHistory), nameof(ShowFollow), nameof(ShowResourceTier), nameof(ShowResourceFilters), nameof(ShowHostileSoundSettings))]
     private int selectedModeIndex;
 
     [ObservableProperty] private int selectedFadeIndex;
@@ -139,7 +149,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private bool showResourceSpawns;
     [ObservableProperty] private bool showPois;
     [ObservableProperty] private bool showRoamingBosses;
-    [ObservableProperty] private bool showHostileAlert;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowHostileSoundSettings))]
+    private bool showHostileAlert;
     [ObservableProperty] private Option<int> selectedResourceSpawnTier;
     [ObservableProperty] private Option<int> selectedLowerTiers;
     [ObservableProperty] private Option<int> selectedLowerTierEnchantment;
@@ -866,6 +878,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         disposed = true;
+        if (hostileSoundService is not null) hostileSoundService.ErrorChanged -= SoundErrorChanged;
         liveTimer.Stop();
         replayTimer.Stop();
     }

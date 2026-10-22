@@ -1,4 +1,5 @@
 using AlbionDataAvalonia.Activity.Models;
+using AlbionDataAvalonia.Audio;
 using AlbionDataAvalonia.Network.Events;
 using System;
 using System.Collections.Generic;
@@ -16,6 +17,8 @@ public sealed partial class ActivityTrackerService
     private readonly List<ActivityHostileSighting> hostileSightings = new();
     private long hostileEpoch = -1;
 
+    public event Action<HostileAlertArrival>? HostileSpotted;
+
     private void ObserveHostile(NewCharacterEvent packet, DateTime at)
     {
         SyncHostiles();
@@ -23,6 +26,9 @@ public sealed partial class ActivityTrackerService
         hostileSightings.RemoveAll(x => at - x.SeenAtUtc >= HostileAlertLength);
         hostileSightings.Add(new(at, packet.Name, packet.GuildName ?? "", packet.AllianceName ?? ""));
         liveMapVersion++;
+        if (HasConfirmedContext && !captureSuspended && map is { } current)
+            HostileSpotted?.Invoke(new(mapEpoch, current.RawLocationId, at,
+                current.IsHub || string.Equals(current.ZoneType, "Blue", StringComparison.OrdinalIgnoreCase)));
     }
 
     // A new map starts without the last one's arrivals.

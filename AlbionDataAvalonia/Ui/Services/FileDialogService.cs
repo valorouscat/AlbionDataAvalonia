@@ -2,6 +2,7 @@ using AlbionDataAvalonia.Network.Services;
 using AlbionDataAvalonia.Views.Dialogs;
 using Avalonia.Platform.Storage;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace AlbionDataAvalonia.Ui.Services;
 
@@ -9,6 +10,8 @@ public sealed record CsvExportTarget(CsvExportOptions Options, IStorageFile File
 
 public interface IFileDialogService
 {
+    Task<IStorageFile?> OpenAsync(string title, string fileTypeName, string pattern);
+
     /// <summary>Asks where to save a file of one type; null when the user cancels.</summary>
     Task<IStorageFile?> SaveAsync(string title, string suggestedName, string fileTypeName, string pattern);
 
@@ -18,6 +21,18 @@ public interface IFileDialogService
 
 public sealed class FileDialogService(IDialogService dialogs) : IFileDialogService
 {
+    public async Task<IStorageFile?> OpenAsync(string title, string fileTypeName, string pattern)
+    {
+        if (UiWindows.Active is not { } window) return null;
+        var selected = await window.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType(fileTypeName) { Patterns = [pattern] }]
+        });
+        return selected.FirstOrDefault();
+    }
+
     public async Task<IStorageFile?> SaveAsync(string title, string suggestedName, string fileTypeName, string pattern)
     {
         if (UiWindows.Active is not { } window) return null;

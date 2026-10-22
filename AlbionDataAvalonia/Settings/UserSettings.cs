@@ -604,6 +604,45 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
+    private bool mapHostileSoundEnabled = false;
+    public bool MapHostileSoundEnabled
+    {
+        get => mapHostileSoundEnabled;
+        set
+        {
+            var next = value;
+            if (mapHostileSoundEnabled == next) return;
+            mapHostileSoundEnabled = next;
+            OnPropertyChanged(nameof(MapHostileSoundEnabled));
+        }
+    }
+
+    private int mapHostileSoundVolume = 50;
+    public int MapHostileSoundVolume
+    {
+        get => mapHostileSoundVolume;
+        set
+        {
+            var next = Math.Clamp(value, 0, 100);
+            if (mapHostileSoundVolume == next) return;
+            mapHostileSoundVolume = next;
+            OnPropertyChanged(nameof(MapHostileSoundVolume));
+        }
+    }
+
+    private string mapHostileSoundFile = "";
+    public string MapHostileSoundFile
+    {
+        get => mapHostileSoundFile;
+        set
+        {
+            var next = value?.Trim() ?? "";
+            if (mapHostileSoundFile == next) return;
+            mapHostileSoundFile = next;
+            OnPropertyChanged(nameof(MapHostileSoundFile));
+        }
+    }
+
     // Whether the live map flashes a warning over the character when a hostile player comes into view.
     private bool mapShowHostileAlert;
     public bool MapShowHostileAlert

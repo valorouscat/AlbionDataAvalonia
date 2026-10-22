@@ -39,6 +39,7 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
 		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.8" />
 		<PackageReference Include="Microsoft.Win32.SystemEvents" Version="10.0.8" />
+		<PackageReference Include="SoundFlow" Version="1.4.1" />
 		<PackageReference Include="Serilog" Version="4.3.1" />
 		<PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
 		<PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
@@ -75,10 +76,12 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
+		<EmbeddedResource Include="Audio\hostile-alert.wav" LogicalName="Audio.hostile-alert.wav" />
 		<EmbeddedResource Include="ReferenceData\*.gz" LogicalName="ReferenceData.%(Filename)%(Extension)" />
 	</ItemGroup>
 	<ItemGroup>
 		<Folder Include="Themes\" />
+		<None Update="Audio\SOUNDFLOW-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\shared\AFMDataClientCore\src\AFMDataClient.Core\AFMDataClient.Core.csproj" />

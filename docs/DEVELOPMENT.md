@@ -107,3 +107,12 @@ python3 scripts/generate-depths-map-data.py /tmp/ao-bin-dumps
 ```
 
 Joining the Depths names no layout (the map id is only `@HELLDUNGEON@<guid>`), so the tracker counts floors: a map entered from outside the Depths is floor 1, and each Depths map entered from another one floor deeper, remembered per map id so a rejoin keeps its floor. A layout the client does get (a `helldungeons.xml` map id such as `DUO_ORANGE_HELL_DUNGEON_02`, or a master name) wins. When nothing names a floor, the map logs `No Depths floor for map …` at Information level.
+
+
+## Hostile alert audio
+
+`HostileAlertSoundService` subscribes to confirmed hostile arrivals from `ActivityTrackerService`, independently of the map window. Audio requires the Hostile alert layer and sound toggle to be enabled, active capture/context, a current non-hub/non-blue zone, and an arrival less than three seconds old. Bursts are coalesced for three seconds per map epoch; an active sound is never queued or overlapped. Replays do not emit arrivals. Shutdown, disabling the alert/sound, muting or changing the file cancels playback.
+
+Playback uses SoundFlow 1.4.1 (MIT) with its packaged MiniAudio runtime on Windows, Linux and macOS. MP3 decoding and volume control require no external player. Linux uses the system audio backend (normally PulseAudio or ALSA). SoundFlow's notices ship in `Audio/SOUNDFLOW-NOTICES.txt`. The embedded default WAV is a generated two-note signal. Devices and decoder streams are opened lazily on a background task and released after playback; failures are logged and shown in the map panel.
+
+Manual validation should cover default/custom MP3 playback, live volume changes, cancellation, missing/invalid files, safe-zone and friendly-player exclusion, burst coalescing, operation with the map closed, and Windows/Linux/macOS output devices. User settings `MapHostileSoundEnabled`, `MapHostileSoundVolume` and `MapHostileSoundFile` need no database migration.
