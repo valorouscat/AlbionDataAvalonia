@@ -44,12 +44,7 @@ public sealed class ActivityMapCanvas : Control
     // Markers of one kind closer than this on screen are drawn as one group.
     private const double ClusterRadius = 16;
     private const int GroupLinesShown = 6;
-    private const double RememberedOpacity = 0.55;
-    private const double RememberedGatheredOpacity = 0.4;
     private const double SpotSpacing = 22;
-    // Spawn spots are many and only possible, so they are smaller and fainter than the nodes the game has shown.
-    private const double SpawnClusterRadius = 12;
-    private const double SpawnOpacity = 0.6;
     // Points of interest are few and worth finding, so they stay opaque and merge only when nearly on top of each other.
     private const double PoiClusterRadius = 14;
     // The live position updates a few times a second. The marker, and the view while following, glide to
@@ -399,24 +394,25 @@ public sealed class ActivityMapCanvas : Control
         }
     }
 
-    // Nodes close together on screen merge into the best of them (the scene lists the highest tier first) with a
-    // count, so a field of nodes reads as one spot zoomed out; zooming in spreads them apart again.
+    // Merge nearby nodes around the best node; zero radius draws each node independently.
     private void DrawResources(DrawingContext context, ActivityMapScene scene, double scale)
     {
         if (scene.Resources is not { Count: > 0 } resources) return;
+        var clusterRadius = scene.ResourceClusterRadius;
+        var cellSize = Math.Max(1, clusterRadius);
         var groups = new List<ResourceGroup>();
         var grid = new Dictionary<(int X, int Y), List<ResourceGroup>>();
         foreach (var node in resources)
         {
             var at = ToScreen(ImagePoint(scene, node.X, node.Y), scale);
-            if (!Visible(at, ClusterRadius)) continue;
-            var cellX = (int)Math.Floor(at.X / ClusterRadius);
-            var cellY = (int)Math.Floor(at.Y / ClusterRadius);
+            if (!Visible(at, Math.Max(clusterRadius, 24 * scene.ResourceIconScale))) continue;
+            var cellX = (int)Math.Floor(at.X / cellSize);
+            var cellY = (int)Math.Floor(at.Y / cellSize);
             ResourceGroup? group = null;
-            for (var dx = -1; dx <= 1 && group is null; dx++)
+            for (var dx = -1; clusterRadius > 0 && dx <= 1 && group is null; dx++)
                 for (var dy = -1; dy <= 1 && group is null; dy++)
                     if (grid.TryGetValue((cellX + dx, cellY + dy), out var nearby))
-                        group = nearby.FirstOrDefault(x => Distance(x.At, at) <= ClusterRadius);
+                        group = nearby.FirstOrDefault(x => Distance(x.At, at) <= clusterRadius);
             if (group is null)
             {
                 group = new ResourceGroup(at);
@@ -424,51 +420,37 @@ public sealed class ActivityMapCanvas : Control
                 if (!grid.TryGetValue((cellX, cellY), out var cell)) grid[(cellX, cellY)] = cell = new List<ResourceGroup>();
                 cell.Add(group);
             }
-
             group.Nodes.Add(node);
         }
 
-        // The lowest groups first, so the best nodes end up on top. A node remembered from an earlier visit is drawn
-        // faded, and one gathered out is only a ring, so the nodes in view now stand out.
         foreach (var group in Enumerable.Reverse(groups))
         {
             var best = group.Nodes[0];
             var count = group.Nodes.Count;
             var radius = count > 1 ? 8.5 : 7.5;
-            var color = ActivityPalette.Resource(best.Family);
-            var gathered = best.GatheredAtUtc is not null;
-            using (context.PushOpacity(best.Live ? 1 : gathered ? RememberedGatheredOpacity : RememberedOpacity))
-            {
-                var edge = gathered ? UiPalette.Pen(color, 2.2)
-                    : best.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(best.Enchantment), 2.4) : OutlinePen;
-                context.DrawEllipse(gathered ? null : UiPalette.Brush(color), edge, group.At, radius, radius);
-                var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 9,
-                    gathered ? color : UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
-                tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
-            }
+            using var opacity = context.PushOpacity(scene.ResourceIconOpacity);
+            using var transform = context.PushTransform(ResourceIconTransform(group.At, scene.ResourceIconScale));
+            var edge = best.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(best.Enchantment), 2.4) : OutlinePen;
+            context.DrawEllipse(UiPalette.Brush(ActivityPalette.Resource(best.Family)), edge, group.At, radius, radius);
+            var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 9,
+                UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
+            tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
 
-            // What the node, or all the nodes of a group, have left, under it, so a glance tells a full spot from a
-            // picked one. A "+" marks a group with nodes whose charges aren't known.
-            var standing = group.Nodes.Where(x => x.GatheredAtUtc is null).ToArray();
-            var charges = standing.Sum(x => Math.Max(x.Charges, 0));
-            if (charges > 0)
-            {
-                var unknown = count > 1 && standing.Any(x => x.Charges <= 0);
-                using (context.PushOpacity(standing.Any(x => x.Live && x.Charges > 0) ? 1 : RememberedOpacity))
-                {
-                    var left = ChartDrawing.Text(UiFormat.Whole(charges) + (unknown ? "+" : ""), 8,
-                        UiPalette.Color("UiMapResourceChargesColor"), FontWeight.Bold);
-                    var origin = new Point(group.At.X - left.Width / 2, group.At.Y + radius + 1);
-                    context.DrawRectangle(UiPalette.Brush(UiPalette.WithAlpha(UiPalette.Color("UiMapResourceTextColor"), 190)), null,
-                        new Rect(origin.X - 2, origin.Y, left.Width + 4, left.Height), 3, 3);
-                    left.Draw(context, origin);
-                }
-            }
-
+            var charges = group.Nodes.Sum(x => (long)x.Charges);
+            var left = ChartDrawing.Text(UiFormat.Whole(charges), 8,
+                UiPalette.Color("UiMapResourceChargesColor"), FontWeight.Bold);
+            var origin = new Point(group.At.X - left.Width / 2, group.At.Y + radius + 1);
+            context.DrawRectangle(UiPalette.Brush(UiPalette.WithAlpha(UiPalette.Color("UiMapResourceTextColor"), 190)), null,
+                new Rect(origin.X - 2, origin.Y, left.Width + 4, left.Height), 3, 3);
+            left.Draw(context, origin);
             if (count > 1) ChartDrawing.DrawCountBadge(context, group.At, count);
-            hits.Add(count == 1 ? ResourceHit(group.At, best, scene) : ResourceGroupHit(group.At, group.Nodes));
+            var hit = count == 1 ? ResourceHit(group.At, best, scene) : ResourceGroupHit(group.At, group.Nodes);
+            hits.Add(hit with { Radius = hit.Radius * scene.ResourceIconScale });
         }
     }
+
+    private static Matrix ResourceIconTransform(Point at, double scale) =>
+        Matrix.CreateTranslation(-at.X, -at.Y) * Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(at.X, at.Y);
 
     // A resource mob is a diamond in its resource's color, so it reads apart from the round nodes; mobs move and are
     // few, so each is drawn on its own.
@@ -479,7 +461,9 @@ public sealed class ActivityMapCanvas : Control
         foreach (var mob in mobs)
         {
             var at = ToScreen(ImagePoint(scene, mob.X, mob.Y), scale);
-            if (!Visible(at, radius)) continue;
+            if (!Visible(at, radius * scene.ResourceIconScale)) continue;
+            using var opacity = context.PushOpacity(scene.ResourceIconOpacity);
+            using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
             var edge = mob.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(mob.Enchantment), 2.4) : OutlinePen;
             var shape = new StreamGeometry();
             using (var draw = shape.Open())
@@ -494,7 +478,7 @@ public sealed class ActivityMapCanvas : Control
             context.DrawGeometry(UiPalette.Brush(ActivityPalette.Resource(mob.Family)), edge, shape);
             var tier = ChartDrawing.Text(mob.Tier.ToString(CultureInfo.CurrentCulture), 9, UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
             tier.Draw(context, new Point(at.X - tier.Width / 2, at.Y - tier.Height / 2));
-            hits.Add(new Hit(at, 9, $"{ResourceLabel(mob.Family, mob.Tier, mob.Enchantment)} mob",
+            hits.Add(new Hit(at, 9 * scene.ResourceIconScale, $"{ResourceLabel(mob.Family, mob.Tier, mob.Enchantment)} mob",
                 [$"Seen {UiFormat.Ago(mob.SeenAtUtc, scene.NowUtc)}", "Kill it, then gather from it"],
                 [new ItemRow(mob.MobUniqueName, 1, mob.MobName, "", Mob: true), new ItemRow(mob.ItemUniqueName, 1, ResourceLabel(mob.Family, mob.Tier, mob.Enchantment), "")]));
         }
@@ -505,6 +489,8 @@ public sealed class ActivityMapCanvas : Control
     private void DrawResourceSpawns(DrawingContext context, ActivityMapScene scene, double scale)
     {
         if (scene.ResourceSpawns is not { Count: > 0 } spawns) return;
+        var clusterRadius = scene.ResourceClusterRadius;
+        var cellSize = Math.Max(1, clusterRadius);
         var groups = new List<SpawnGroup>();
         var grid = new Dictionary<(int X, int Y), List<SpawnGroup>>();
         // The scene lists the best last, so walking it backwards puts the best spot first in its group.
@@ -512,14 +498,14 @@ public sealed class ActivityMapCanvas : Control
         {
             var spawn = spawns[index];
             var at = ToScreen(ImagePoint(scene, spawn.Position.X, spawn.Position.Y), scale);
-            if (!Visible(at, SpawnClusterRadius)) continue;
-            var cellX = (int)Math.Floor(at.X / SpawnClusterRadius);
-            var cellY = (int)Math.Floor(at.Y / SpawnClusterRadius);
+            if (!Visible(at, Math.Max(clusterRadius, 10 * scene.ResourceIconScale))) continue;
+            var cellX = (int)Math.Floor(at.X / cellSize);
+            var cellY = (int)Math.Floor(at.Y / cellSize);
             SpawnGroup? group = null;
-            for (var dx = -1; dx <= 1 && group is null; dx++)
+            for (var dx = -1; clusterRadius > 0 && dx <= 1 && group is null; dx++)
                 for (var dy = -1; dy <= 1 && group is null; dy++)
                     if (grid.TryGetValue((cellX + dx, cellY + dy), out var nearby))
-                        group = nearby.FirstOrDefault(x => Distance(x.At, at) <= SpawnClusterRadius);
+                        group = nearby.FirstOrDefault(x => Distance(x.At, at) <= clusterRadius);
             if (group is null)
             {
                 group = new SpawnGroup(at);
@@ -536,7 +522,8 @@ public sealed class ActivityMapCanvas : Control
         {
             var best = group.Spawns[0];
             var color = ActivityPalette.Resource(best.Family);
-            using (context.PushOpacity(SpawnOpacity))
+            using var transform = context.PushTransform(ResourceIconTransform(group.At, scene.ResourceIconScale));
+            using (context.PushOpacity(scene.ResourceSpawnIconOpacity))
             {
                 if (best.Mob)
                 {
@@ -559,7 +546,8 @@ public sealed class ActivityMapCanvas : Control
                 tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
             }
 
-            hits.Add(SpawnHit(group.At, group.Spawns));
+            var hit = SpawnHit(group.At, group.Spawns);
+            hits.Add(hit with { Radius = hit.Radius * scene.ResourceIconScale });
         }
     }
 
@@ -602,53 +590,53 @@ public sealed class ActivityMapCanvas : Control
         switch (poi.Kind)
         {
             case MapPoiKind.Chest or MapPoiKind.Coffer:
-            {
-                var half = 6 * size;
-                var box = new Rect(at.X - half, at.Y - half * 0.75, half * 2, half * 1.5);
-                var lidY = box.Top + box.Height * 0.4;
-                context.DrawRectangle(UiPalette.Brush(poi.Kind == MapPoiKind.Coffer ? "UiMapPoiCofferColor" : "UiMapChestColor"), OutlinePen, box, 2, 2);
-                context.DrawLine(UiPalette.Pen(UiPalette.Color("UiMapChestLidColor"), 1.2), new Point(box.Left + 1, lidY), new Point(box.Right - 1, lidY));
-                context.DrawRectangle(UiPalette.Brush("UiMapChestLidColor"), null, new Rect(at.X - 1, lidY - 1, 2, 3));
-                break;
-            }
+                {
+                    var half = 6 * size;
+                    var box = new Rect(at.X - half, at.Y - half * 0.75, half * 2, half * 1.5);
+                    var lidY = box.Top + box.Height * 0.4;
+                    context.DrawRectangle(UiPalette.Brush(poi.Kind == MapPoiKind.Coffer ? "UiMapPoiCofferColor" : "UiMapChestColor"), OutlinePen, box, 2, 2);
+                    context.DrawLine(UiPalette.Pen(UiPalette.Color("UiMapChestLidColor"), 1.2), new Point(box.Left + 1, lidY), new Point(box.Right - 1, lidY));
+                    context.DrawRectangle(UiPalette.Brush("UiMapChestLidColor"), null, new Rect(at.X - 1, lidY - 1, 2, 3));
+                    break;
+                }
             case MapPoiKind.Boss:
-            {
-                var half = 7 * size;
-                context.DrawGeometry(UiPalette.Brush("UiMapPoiBossColor"), WhitePen, Polygon(
-                    new Point(at.X, at.Y - half), new Point(at.X + half, at.Y), new Point(at.X, at.Y + half), new Point(at.X - half, at.Y)));
-                context.DrawEllipse(UiPalette.Brush("UiMapMarkerEdgeColor"), null, at, 1.6 * size, 1.6 * size);
-                break;
-            }
+                {
+                    var half = 7 * size;
+                    context.DrawGeometry(UiPalette.Brush("UiMapPoiBossColor"), WhitePen, Polygon(
+                        new Point(at.X, at.Y - half), new Point(at.X + half, at.Y), new Point(at.X, at.Y + half), new Point(at.X - half, at.Y)));
+                    context.DrawEllipse(UiPalette.Brush("UiMapMarkerEdgeColor"), null, at, 1.6 * size, 1.6 * size);
+                    break;
+                }
             case MapPoiKind.Shrine:
-            {
-                var half = 6.5 * size;
-                context.DrawGeometry(UiPalette.Brush("UiMapPoiShrineColor"), OutlinePen, Polygon(
-                    new Point(at.X, at.Y - half), new Point(at.X + half, at.Y + half * 0.8), new Point(at.X - half, at.Y + half * 0.8)));
-                break;
-            }
+                {
+                    var half = 6.5 * size;
+                    context.DrawGeometry(UiPalette.Brush("UiMapPoiShrineColor"), OutlinePen, Polygon(
+                        new Point(at.X, at.Y - half), new Point(at.X + half, at.Y + half * 0.8), new Point(at.X - half, at.Y + half * 0.8)));
+                    break;
+                }
             case MapPoiKind.Camp:
-            {
-                var half = 5 * size;
-                context.DrawRectangle(null, UiPalette.Pen(UiPalette.Color("UiMapPoiCampColor"), 2), new Rect(at.X - half, at.Y - half, half * 2, half * 2), 1.5, 1.5);
-                break;
-            }
+                {
+                    var half = 5 * size;
+                    context.DrawRectangle(null, UiPalette.Pen(UiPalette.Color("UiMapPoiCampColor"), 2), new Rect(at.X - half, at.Y - half, half * 2, half * 2), 1.5, 1.5);
+                    break;
+                }
             case MapPoiKind.Altar:
-            {
-                var radius = 4.5 * size;
-                context.DrawEllipse(UiPalette.Brush("UiMapPoiAltarColor"), OutlinePen, at, radius, radius);
-                context.DrawEllipse(UiPalette.Brush("UiMapPoiAltarCoreColor"), null, at, radius * 0.4, radius * 0.4);
-                break;
-            }
+                {
+                    var radius = 4.5 * size;
+                    context.DrawEllipse(UiPalette.Brush("UiMapPoiAltarColor"), OutlinePen, at, radius, radius);
+                    context.DrawEllipse(UiPalette.Brush("UiMapPoiAltarCoreColor"), null, at, radius * 0.4, radius * 0.4);
+                    break;
+                }
             case MapPoiKind.ExitUp or MapPoiKind.ExitDown:
-            {
-                var radius = 6.5 * size;
-                var up = poi.Kind == MapPoiKind.ExitUp;
-                context.DrawEllipse(UiPalette.Brush(up ? "UiMapPoiExitUpColor" : "UiMapPoiExitDownColor"), OutlinePen, at, radius, radius);
-                var tip = up ? -radius * 0.55 : radius * 0.55;
-                context.DrawGeometry(UiPalette.Brush("UiMapMarkerEdgeColor"), null, Polygon(
-                    new Point(at.X, at.Y + tip), new Point(at.X + radius * 0.5, at.Y - tip * 0.6), new Point(at.X - radius * 0.5, at.Y - tip * 0.6)));
-                break;
-            }
+                {
+                    var radius = 6.5 * size;
+                    var up = poi.Kind == MapPoiKind.ExitUp;
+                    context.DrawEllipse(UiPalette.Brush(up ? "UiMapPoiExitUpColor" : "UiMapPoiExitDownColor"), OutlinePen, at, radius, radius);
+                    var tip = up ? -radius * 0.55 : radius * 0.55;
+                    context.DrawGeometry(UiPalette.Brush("UiMapMarkerEdgeColor"), null, Polygon(
+                        new Point(at.X, at.Y + tip), new Point(at.X + radius * 0.5, at.Y - tip * 0.6), new Point(at.X - radius * 0.5, at.Y - tip * 0.6)));
+                    break;
+                }
             case MapPoiKind.Key:
                 context.DrawEllipse(null, UiPalette.Pen(MarkerOutline, 4.5), at, 4 * size, 4 * size);
                 context.DrawEllipse(null, UiPalette.Pen(UiPalette.Color("UiMapChestColor"), 2.5), at, 4 * size, 4 * size);
@@ -778,18 +766,11 @@ public sealed class ActivityMapCanvas : Control
 
     private static Hit ResourceHit(Point at, ActivityResourceNode node, ActivityMapScene scene)
     {
-        if (node.GatheredAtUtc is { } gathered)
-            return new(at, 9, ResourceLabel(node), [$"Gathered out {UiFormat.TimeAgo(gathered, scene.NowUtc)}",
-                "It may have grown back since; the game shows it again once you're near"], [new ItemRow(node.ItemUniqueName, 1, "None left", "")]);
-        var left = node.Charges > 0 ? $"{UiFormat.Whole(node.Charges)} left" : "Charges unknown";
-        return node.Live
-            ? new(at, 9, ResourceLabel(node), [$"Seen {UiFormat.Ago(node.SeenAtUtc, scene.NowUtc)}"], [new ItemRow(node.ItemUniqueName, 1, left, "")])
-            : new(at, 9, ResourceLabel(node), [$"Remembered: last seen {UiFormat.TimeAgo(node.SeenAtUtc, scene.NowUtc)}",
-                "Not in view this visit, so it may have changed"], [new ItemRow(node.ItemUniqueName, 1, $"{left} when seen", "")]);
+        return new(at, 9, ResourceLabel(node), [$"Seen {UiFormat.Ago(node.SeenAtUtc, scene.NowUtc)}"],
+            [new ItemRow(node.ItemUniqueName, 1, $"{UiFormat.Whole(node.Charges)} left", "")]);
     }
 
-    // A group lists its kinds of resource, the best first, with how many nodes of each it holds and how many of
-    // those are remembered rather than in view.
+    // A group lists its resource kinds, best first, with the available nodes and charges.
     private static Hit ResourceGroupHit(Point at, IReadOnlyList<ActivityResourceNode> nodes)
     {
         var kinds = nodes.GroupBy(x => (x.Family, x.Tier, x.Enchantment)).ToArray();
@@ -797,7 +778,7 @@ public sealed class ActivityMapCanvas : Control
             KindCount(x.ToArray()))).ToArray();
         var lines = new List<string>();
         if (kinds.Length > GroupLinesShown) lines.Add($"and {UiFormat.Count(kinds.Length - GroupLinesShown, "more kind")}");
-        var charges = nodes.Where(x => x.GatheredAtUtc is null).Sum(x => Math.Max(x.Charges, 0));
+        var charges = nodes.Sum(x => (long)x.Charges);
         if (charges > 0) lines.Add($"{UiFormat.Whole(charges)} left in all");
         lines.Add("Zoom in to see each node");
         return new(at, 11, UiFormat.Count(nodes.Count, "resource node"), lines, rows);
@@ -805,13 +786,9 @@ public sealed class ActivityMapCanvas : Control
 
     private static string KindCount(IReadOnlyList<ActivityResourceNode> nodes)
     {
-        var remembered = nodes.Count(x => !x.Live && x.GatheredAtUtc is null);
-        var gathered = nodes.Count(x => x.GatheredAtUtc is not null);
-        var charges = nodes.Where(x => x.GatheredAtUtc is null).Sum(x => Math.Max(x.Charges, 0));
+        var charges = nodes.Sum(x => (long)x.Charges);
         var parts = new List<string> { UiFormat.Count(nodes.Count, "node") };
         if (charges > 0) parts.Add($"{UiFormat.Whole(charges)} left");
-        if (remembered > 0) parts.Add($"{remembered} remembered");
-        if (gathered > 0) parts.Add($"{gathered} gathered out");
         return string.Join(", ", parts);
     }
 

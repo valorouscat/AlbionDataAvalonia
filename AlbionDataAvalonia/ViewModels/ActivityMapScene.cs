@@ -60,4 +60,8 @@ public sealed record ActivityMapScene(
     IReadOnlyList<MapRect>? Rooms = null,
     IReadOnlyList<MapRect>? Outline = null,
     IReadOnlyList<ActivityLiveActor>? RoamingBosses = null,
-    IReadOnlyList<ActivityHostileSighting>? Hostiles = null);
+    IReadOnlyList<ActivityHostileSighting>? Hostiles = null,
+    double ResourceIconScale = 1,
+    double ResourceIconOpacity = 1,
+    double ResourceClusterRadius = 16,
+    double ResourceSpawnIconOpacity = 0.5);

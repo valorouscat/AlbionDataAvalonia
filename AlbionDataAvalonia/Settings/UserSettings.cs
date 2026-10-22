@@ -427,20 +427,6 @@ public class UserSettings : INotifyPropertyChanged
         }
     }
 
-    // Whether the live map also shows the nodes remembered from earlier visits to the map, faded.
-    private bool mapShowRememberedResources = true;
-    public bool MapShowRememberedResources
-    {
-        get => mapShowRememberedResources;
-        set
-        {
-            if (mapShowRememberedResources == value) return;
-            mapShowRememberedResources = value;
-            OnPropertyChanged(nameof(MapShowRememberedResources));
-            Log.Information("Map remembered resources set to {MapShowRememberedResources}", mapShowRememberedResources);
-        }
-    }
-
     // The lowest tier of resource node the live map shows; 1 shows every tier.
     private int mapResourceMinTier = 1;
     public int MapResourceMinTier
@@ -453,6 +439,97 @@ public class UserSettings : INotifyPropertyChanged
             mapResourceMinTier = clamped;
             OnPropertyChanged(nameof(MapResourceMinTier));
             Log.Information("Map resource minimum tier set to {MapResourceMinTier}", mapResourceMinTier);
+        }
+    }
+
+    private int mapResourceSpawnMinTier = 1;
+    public int MapResourceSpawnMinTier
+    {
+        get => mapResourceSpawnMinTier;
+        set
+        {
+            var clamped = Math.Clamp(value, 1, 8);
+            if (mapResourceSpawnMinTier == clamped) return;
+            mapResourceSpawnMinTier = clamped;
+            OnPropertyChanged(nameof(MapResourceSpawnMinTier));
+        }
+    }
+
+    private int mapResourceLowerTiers = 0;
+    public int MapResourceLowerTiers
+    {
+        get => mapResourceLowerTiers;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 7);
+            if (mapResourceLowerTiers == clamped) return;
+            mapResourceLowerTiers = clamped;
+            OnPropertyChanged(nameof(MapResourceLowerTiers));
+        }
+    }
+
+    private int mapResourceLowerTierMinEnchantment = 1;
+    public int MapResourceLowerTierMinEnchantment
+    {
+        get => mapResourceLowerTierMinEnchantment;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 4);
+            if (mapResourceLowerTierMinEnchantment == clamped) return;
+            mapResourceLowerTierMinEnchantment = clamped;
+            OnPropertyChanged(nameof(MapResourceLowerTierMinEnchantment));
+        }
+    }
+
+    private int mapResourceIconSize = 100;
+    public int MapResourceIconSize
+    {
+        get => mapResourceIconSize;
+        set
+        {
+            var clamped = Math.Clamp(value, 50, 200);
+            if (mapResourceIconSize == clamped) return;
+            mapResourceIconSize = clamped;
+            OnPropertyChanged(nameof(MapResourceIconSize));
+        }
+    }
+
+    private int mapResourceIconOpacity = 100;
+    public int MapResourceIconOpacity
+    {
+        get => mapResourceIconOpacity;
+        set
+        {
+            var clamped = Math.Clamp(value, 25, 100);
+            if (mapResourceIconOpacity == clamped) return;
+            mapResourceIconOpacity = clamped;
+            OnPropertyChanged(nameof(MapResourceIconOpacity));
+        }
+    }
+
+    private int mapResourceSpawnIconOpacity = 50;
+    public int MapResourceSpawnIconOpacity
+    {
+        get => mapResourceSpawnIconOpacity;
+        set
+        {
+            var clamped = Math.Clamp(value, 25, 100);
+            if (mapResourceSpawnIconOpacity == clamped) return;
+            mapResourceSpawnIconOpacity = clamped;
+            OnPropertyChanged(nameof(MapResourceSpawnIconOpacity));
+        }
+    }
+
+    private int mapResourceClusterRadius = 16;
+    public int MapResourceClusterRadius
+    {
+        get => mapResourceClusterRadius;
+        set
+        {
+            var clamped = Math.Clamp(value, 0, 64);
+            if (mapResourceClusterRadius == clamped) return;
+            mapResourceClusterRadius = clamped;
+            OnPropertyChanged(nameof(MapResourceClusterRadius));
         }
     }
 

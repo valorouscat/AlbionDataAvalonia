@@ -65,7 +65,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         selectedFadeIndex = Math.Max(0, Array.FindIndex(FadeOptionValues, x => x == settings.MapFadeMinutes));
         if (FadeOptionValues[selectedFadeIndex] != settings.MapFadeMinutes) selectedFadeIndex = 1;
         showResources = settings.MapShowResources;
-        showRememberedResources = settings.MapShowRememberedResources;
         showResourceMobs = settings.MapShowResourceMobs;
         showResourceSpawns = settings.MapShowResourceSpawns;
         showPois = settings.MapShowPois;
@@ -79,6 +78,13 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         showHide = !hidden.Contains("Hide");
         showOre = !hidden.Contains("Ore");
         selectedResourceTier = UiOptions.Find(ResourceTierOptions, settings.MapResourceMinTier);
+        selectedResourceSpawnTier = UiOptions.Nearest(ResourceTierOptions, settings.MapResourceSpawnMinTier);
+        selectedLowerTiers = UiOptions.Nearest(LowerTierOptions, settings.MapResourceLowerTiers);
+        selectedLowerTierEnchantment = UiOptions.Nearest(EnchantmentOptions, settings.MapResourceLowerTierMinEnchantment);
+        selectedIconSize = UiOptions.Nearest(IconSizeOptions, settings.MapResourceIconSize);
+        selectedIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceIconOpacity);
+        selectedSpawnIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceSpawnIconOpacity);
+        selectedClusterRadius = UiOptions.Nearest(ClusterRadiusOptions, settings.MapResourceClusterRadius);
         liveTimer.Tick += (_, _) => RefreshLive();
         replayTimer.Tick += (_, _) => AdvanceReplay();
     }
@@ -88,7 +94,19 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     public IReadOnlyList<Option<int>> FadeOptions { get; } = [new(1, "1 min"), new(5, "5 min"), new(15, "15 min"), new(0, "Never")];
     public IReadOnlyList<Option<int>> ScopeOptions { get; } = [new(0, "Personal"), new(1, "Party")];
     public IReadOnlyList<Option<int>> ResourceTierOptions { get; } =
-        [new(1, "All tiers"), new(4, "T4+"), new(5, "T5+"), new(6, "T6+"), new(7, "T7+"), new(8, "T8")];
+        [new(1, "All tiers"), new(2, "T2+"), new(3, "T3+"), new(4, "T4+"), new(5, "T5+"), new(6, "T6+"), new(7, "T7+"), new(8, "T8")];
+
+    public IReadOnlyList<Option<int>> LowerTierOptions { get; } =
+        [new(0, "Off"), new(1, "1 tier below"), new(2, "2 tiers below"), new(3, "3 tiers below"),
+         new(4, "4 tiers below"), new(5, "5 tiers below"), new(6, "6 tiers below"), new(7, "7 tiers below")];
+    public IReadOnlyList<Option<int>> EnchantmentOptions { get; } =
+        [new(0, ".0+"), new(1, ".1+"), new(2, ".2+"), new(3, ".3+"), new(4, ".4")];
+    public IReadOnlyList<Option<int>> IconSizeOptions { get; } =
+        [new(50, "50%"), new(75, "75%"), new(100, "100%"), new(125, "125%"), new(150, "150%"), new(200, "200%")];
+    public IReadOnlyList<Option<int>> IconOpacityOptions { get; } =
+        [new(25, "25%"), new(50, "50%"), new(75, "75%"), new(100, "100%")];
+    public IReadOnlyList<Option<int>> ClusterRadiusOptions { get; } =
+        [new(0, "Off"), new(8, "8 px"), new(12, "12 px"), new(16, "16 px"), new(24, "24 px"), new(32, "32 px"), new(48, "48 px"), new(64, "64 px")];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLive), nameof(IsHistory), nameof(ShowFollow), nameof(ShowResourceTier), nameof(ShowResourceFilters))]
@@ -122,8 +140,14 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty] private bool showPois;
     [ObservableProperty] private bool showRoamingBosses;
     [ObservableProperty] private bool showHostileAlert;
+    [ObservableProperty] private Option<int> selectedResourceSpawnTier;
+    [ObservableProperty] private Option<int> selectedLowerTiers;
+    [ObservableProperty] private Option<int> selectedLowerTierEnchantment;
+    [ObservableProperty] private Option<int> selectedIconSize;
+    [ObservableProperty] private Option<int> selectedIconOpacity;
+    [ObservableProperty] private Option<int> selectedSpawnIconOpacity;
+    [ObservableProperty] private Option<int> selectedClusterRadius;
     [ObservableProperty] private Option<int> selectedResourceTier;
-    [ObservableProperty] private bool showRememberedResources;
     [ObservableProperty] private bool showResourceMobs;
     // The kinds of resource shown; the choice is saved as the kinds left out, so a kind added later starts shown.
     [ObservableProperty] private bool showWood;
@@ -161,7 +185,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     public bool ShowFollow => IsLive && Scene?.Position is not null;
     public bool HasNote => !string.IsNullOrEmpty(Note);
     public bool ShowResourceTier => IsLive && ShowResources;
-    // The tier and kind choices apply to the live nodes and to the spawn spots alike.
+    // Kinds are shared; each layer has its own tier threshold.
     public bool ShowResourceFilters => ShowResourceTier || ShowResourceSpawns;
     public bool HasRuns => Runs.Count > 0;
     public bool HasMultipleRunMaps => RunMaps.Count > 1;
@@ -233,15 +257,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Rebuild();
     }
 
-    partial void OnShowRememberedResourcesChanged(bool value)
-    {
-        settings.MapShowRememberedResources = value;
-        Rebuild();
-    }
-
-    [RelayCommand]
-    private void ForgetRememberedResources() => tracker.ForgetRememberedResources();
-
     partial void OnShowResourceSpawnsChanged(bool value)
     {
         settings.MapShowResourceSpawns = value;
@@ -303,6 +318,48 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     partial void OnSelectedResourceTierChanged(Option<int> value)
     {
         settings.MapResourceMinTier = value.Value;
+        Rebuild();
+    }
+
+    partial void OnSelectedResourceSpawnTierChanged(Option<int> value)
+    {
+        settings.MapResourceSpawnMinTier = value.Value;
+        Rebuild();
+    }
+
+    partial void OnSelectedLowerTiersChanged(Option<int> value)
+    {
+        settings.MapResourceLowerTiers = value.Value;
+        Rebuild();
+    }
+
+    partial void OnSelectedLowerTierEnchantmentChanged(Option<int> value)
+    {
+        settings.MapResourceLowerTierMinEnchantment = value.Value;
+        Rebuild();
+    }
+
+    partial void OnSelectedIconSizeChanged(Option<int> value)
+    {
+        settings.MapResourceIconSize = value.Value;
+        Rebuild();
+    }
+
+    partial void OnSelectedIconOpacityChanged(Option<int> value)
+    {
+        settings.MapResourceIconOpacity = value.Value;
+        Rebuild();
+    }
+
+    partial void OnSelectedSpawnIconOpacityChanged(Option<int> value)
+    {
+        settings.MapResourceSpawnIconOpacity = value.Value;
+        Rebuild();
+    }
+
+    partial void OnSelectedClusterRadiusChanged(Option<int> value)
+    {
+        settings.MapResourceClusterRadius = value.Value;
         Rebuild();
     }
 
@@ -430,7 +487,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
             ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownPois(Turned(zone?.Pois ?? [], turns)),
             zone?.Zone?.Rooms, zone?.Zone?.Outline, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
-            ShownHostiles(live.Hostiles, zone?.Zone));
+            ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
+            ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d);
     }
 
     // No one can attack the character in a blue zone, so a player there is no threat.
@@ -588,7 +647,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
             Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)),
-            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: zone?.Zone?.Rooms, Outline: zone?.Zone?.Outline);
+            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: zone?.Zone?.Rooms, Outline: zone?.Zone?.Outline, ResourceIconScale: SelectedIconSize.Value / 100d,
+            ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d);
     }
 
     // Only a minimap found by its layout follows the instance's turn.
@@ -670,24 +731,24 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         }
     }
 
-    // Only nodes at or above the chosen tier, the best first, so a group of nodes on screen shows its best one; a node
-    // gathered out comes after the rest, and one in view before a remembered one of the same kind.
+    // The lower-tier exception never changes which nodes meet the main threshold.
+    private bool ShowsSeenTier(int tier, int enchantment) => tier >= SelectedResourceTier.Value
+        || SelectedLowerTiers.Value > 0 && tier >= SelectedResourceTier.Value - SelectedLowerTiers.Value
+            && enchantment >= SelectedLowerTierEnchantment.Value;
+
     private IReadOnlyList<ActivityResourceNode> ShownResources(IReadOnlyList<ActivityResourceNode>? nodes) =>
         !ShowResources || nodes is not { Count: > 0 } ? [] : nodes
-            .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family) && (x.Live || ShowRememberedResources))
-            .OrderBy(x => x.GatheredAtUtc is not null).ThenByDescending(x => x.Tier).ThenByDescending(x => x.Enchantment)
-            .ThenByDescending(x => x.Live).ThenByDescending(x => x.Charges).ToArray();
+            .Where(x => x.Charges > 0 && ShowsSeenTier(x.Tier, x.Enchantment) && ShowsFamily(x.Family))
+            .OrderByDescending(x => x.Tier).ThenByDescending(x => x.Enchantment).ThenByDescending(x => x.Charges).ToArray();
 
-    // Resource mobs follow the same tier and kind choices as the nodes, the best drawn last so it ends up on top.
     private IReadOnlyList<ActivityResourceMob> ShownResourceMobs(IReadOnlyList<ActivityResourceMob>? mobs) =>
         !ShowResources || !ShowResourceMobs || mobs is not { Count: > 0 } ? [] : mobs
-            .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family))
+            .Where(x => ShowsSeenTier(x.Tier, x.Enchantment) && ShowsFamily(x.Family))
             .OrderBy(x => x.Tier).ThenBy(x => x.Enchantment).ToArray();
 
-    // Spawn spots follow the same tier and kind choices as the nodes, the lowest first so the best end up on top.
     private IReadOnlyList<MapResourceSpawn> ShownResourceSpawns(IReadOnlyList<MapResourceSpawn> spawns) =>
         !ShowResourceSpawns || spawns.Count == 0 ? [] : spawns
-            .Where(x => x.Tier >= SelectedResourceTier.Value && ShowsFamily(x.Family))
+            .Where(x => x.Tier >= SelectedResourceSpawnTier.Value && ShowsFamily(x.Family))
             .OrderBy(x => x.Tier).ThenBy(x => x.Mob).ToArray();
 
     // Points of interest follow only their own switch. Wisps and camp spots, the most numerous, are drawn first and
