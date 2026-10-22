@@ -35,16 +35,14 @@ internal static partial class DepthsMapData
     public static MapZone? Zone(string master)
     {
         if (!Floors.TryGetValue(master, out var floor)) return null;
-        MapZoneExit Exit((double X, double Z) at, string label) => new("", new MapPoint(at.X, at.Z), label);
+        // The exits are points of interest, coloured by where they lead.
         return new MapZone(master, $"{Name}, level {floor.Level}", "", "helldungeon", "black", null,
-            new MapPoint(floor.Min.X, floor.Min.Z), new MapPoint(floor.Max.X, floor.Max.Z),
-            [.. floor.Up.Select(x => Exit(x, "Exit up")), .. floor.Down.Select(x => Exit(x, "Exit down, if it opens")),
-                .. floor.SoulExits.Select(x => Exit(x, "Soul exit"))],
+            new MapPoint(floor.Min.X, floor.Min.Z), new MapPoint(floor.Max.X, floor.Max.Z), [],
             floor.Slots.Select(slot => new MapRect(new MapPoint(slot.X - slot.Half, slot.Z - slot.Half), new MapPoint(slot.X + slot.Half, slot.Z + slot.Half))).ToArray(),
             floor.Outline.Select(cell => new MapRect(new MapPoint(cell.MinX, cell.MinZ), new MapPoint(cell.MaxX, cell.MaxZ))).ToArray());
     }
 
-    /// <summary>The floor's camp slots, loot chest, coffer and key spots and resurrection shrines.</summary>
+    /// <summary>The floor's camp slots, demon altars, loot chest, coffer and key spots, resurrection shrines and exits.</summary>
     public static IReadOnlyList<MapPoi> Pois(string master)
     {
         if (!Floors.TryGetValue(master, out var floor)) return [];
@@ -55,16 +53,21 @@ internal static partial class DepthsMapData
                 new MapPoint(slot.X, slot.Z), Notes: ["A camp section the game picks for this slot when the floor opens; its chests and exits vary", slot.Note])),
             .. floor.Chests.Select(x => new MapPoi(MapPoiKind.Chest, "Treasure chest", 2, At(x),
                 Notes: ["A spot where the floor's treasure chest can spawn, from the game files", "One of these spots gets it"])),
-            .. floor.Coffers.Select(x => new MapPoi(MapPoiKind.Chest, "Coffer", 1, At(x),
+            .. floor.Altars.Select(x => new MapPoi(MapPoiKind.Altar, x.Grade switch { 3 => "Large demon altar", 2 => "Demon altar", _ => "Small demon altar" },
+                x.Grade, new MapPoint(x.X, x.Z), Notes: ["A spot where the floor's monsters spawn, from the game files"])),
+            .. floor.Coffers.Select(x => new MapPoi(MapPoiKind.Coffer, "Coffer", 1, At(x),
                 Notes: ["A spot where a coffer can spawn, from the game files", "A few of these spots get one"])),
             .. floor.Keys.Select(x => new MapPoi(MapPoiKind.Key, "Key spawn", 2, At(x),
                 Notes: ["A spot where a key can appear some minutes into the run, from the game files"])),
             .. floor.Shrines.Select(x => new MapPoi(MapPoiKind.Shrine, "Resurrection shrine", 2, At(x))),
+            .. floor.Up.Select(x => new MapPoi(MapPoiKind.ExitUp, "Exit up", 2, At(x), Notes: ["Leaves the Depths"])),
+            .. floor.SoulExits.Select(x => new MapPoi(MapPoiKind.ExitUp, "Soul exit", 3, At(x), Notes: ["Leaves the Depths once its souls are brought"])),
+            .. floor.Down.Select(x => new MapPoi(MapPoiKind.ExitDown, "Exit down", 2, At(x), Notes: ["Leads a floor deeper, if it opens this run"])),
         ];
     }
 
     private sealed record Floor(int Level, (double X, double Z) Min, (double X, double Z) Max,
         (double X, double Z, double Half, string Note)[] Slots, (double MinX, double MinZ, double MaxX, double MaxZ)[] Outline,
         (double X, double Z)[] Chests, (double X, double Z)[] Coffers, (double X, double Z)[] Keys, (double X, double Z)[] Shrines,
-        (double X, double Z)[] Up, (double X, double Z)[] Down, (double X, double Z)[] SoulExits);
+        (double X, double Z)[] Up, (double X, double Z)[] Down, (double X, double Z)[] SoulExits, (double X, double Z, int Grade)[] Altars);
 }

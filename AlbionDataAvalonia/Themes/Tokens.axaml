@@ -172,6 +172,12 @@
     <Color x:Key="UiMapPoiShrineColor">#A77BE8</Color>
     <Color x:Key="UiMapPoiCampColor">#E8893B</Color>
     <Color x:Key="UiMapPoiWispColor">#8FD3F4</Color>
+    <!-- The Depths: coffers, demon altars and exits up and down. -->
+    <Color x:Key="UiMapPoiCofferColor">#C3CBD4</Color>
+    <Color x:Key="UiMapPoiAltarColor">#F2622E</Color>
+    <Color x:Key="UiMapPoiAltarCoreColor">#FFD27A</Color>
+    <Color x:Key="UiMapPoiExitUpColor">#4CB860</Color>
+    <Color x:Key="UiMapPoiExitDownColor">#3F7FE0</Color>
     <SolidColorBrush x:Key="UiMapPoiBossBrush" Color="{StaticResource UiMapPoiBossColor}" />
     <SolidColorBrush x:Key="UiMapPoiShrineBrush" Color="{StaticResource UiMapPoiShrineColor}" />
     <!-- The live map's warning over the character when a hostile player comes into view. -->

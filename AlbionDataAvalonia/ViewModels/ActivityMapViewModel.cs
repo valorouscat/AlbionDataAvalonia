@@ -699,9 +699,10 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     {
         MapPoiKind.Wisp => 0,
         MapPoiKind.Camp => 1,
-        MapPoiKind.Shrine => 2,
-        MapPoiKind.Key => 3,
+        MapPoiKind.Shrine or MapPoiKind.Altar => 2,
+        MapPoiKind.Key or MapPoiKind.Coffer => 3,
         MapPoiKind.Chest => 3,
+        MapPoiKind.ExitUp or MapPoiKind.ExitDown => 5,
         _ => 4
     };
 

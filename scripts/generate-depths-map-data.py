@@ -11,7 +11,8 @@ https://github.com/ao-data/ao-bin-dumps:
   is kept, small gaps closed, and the cells merged into rectangles: a rough outline of where the floor has ground, not
   a minimap. The camp slots are drawn as rooms of their section's size on top of it.
 - Points of interest. The master places the loot chest and coffer spots, key spawns, resurrection shrines and the
-  exits up, down and out. A camp section is picked when the instance opens and fills its slot, so a slot shows as one
+  exits up, down and out, and the demon altars (the room nodes the in-game map marks) that spawn its monsters. The game
+  turns each floor half a turn from its template, so every position is turned the same way. A camp section is picked when the instance opens and fills its slot, so a slot shows as one
   camp spot, with the chance of a boss the floor's template pool gives that slot size.
 
 Rerun after a game patch changes the Depths:
@@ -30,14 +31,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 TILE = re.compile(r'<(?:tile|compoundtile|criticaltile) name="([^"]+)" pos="([^"]+)"')
 CELL = 10
+# The demon altars a floor's monsters spawn at, by how strong the room is.
+ALTARS = {"DNG_HELL_ROOM_LOW_NODE": 1, "DNG_HELL_ROOM_MEDIUM_NODE": 2, "DNG_HELL_ROOM_HIGH_NODE": 3}
 # Tiles that are lights, sound, atmosphere, water, roofs or the backdrop around the floor, or markers, don't outline it.
 NOT_FLOOR = ("LIGHT", "ATMOSPHERE", "WATER", "RIVER", "ROOF", "BACKDROP", "SPAWN", "MARKER", "NODE", "FX")
 
 
 def ground(pos: str) -> tuple[float, float]:
-    """A template position is "x height z"; the map uses x and z."""
+    """A template position is "x height z"; the map uses x and z. The game turns a Depths floor half a turn from its
+    template (seen in game on level 1: the floor's altars match the in-game map only so), so both are negated."""
     x, _, z = (float(value) for value in pos.split())
-    return round(x, 1), round(z, 1)
+    return round(-x, 1) + 0.0, round(-z, 1) + 0.0
 
 
 def pair(value: str) -> tuple[float, float]:
@@ -167,13 +171,18 @@ def main(source: str) -> None:
             low_x, low_z, high_x, high_z = bounds(section, "editor")
             sections[medium] = (max(high_x - low_x, high_z - low_z) / 2, boss_note(weights))
         found = {kind: [] for kind in ("chest", "coffer", "key", "shrine", "up", "down", "soul")}
+        altars = []
         for tile, pos in TILE.findall(text):
+            if tile in ALTARS:
+                altars.append(ground(pos) + (ALTARS[tile],))
+                continue
             kind = ("chest" if tile == "TreasureSpawnpointLootchest" else "coffer" if tile == "TreasureSpawnpointCoffer"
                     else "key" if tile == "helldungeonkeyspawnMarker" else "soul" if "SOUL_EXIT" in tile
                     else "shrine" if "RESHRINE" in tile or "RESSHRINE" in tile else "up" if "_EXIT_UP" in tile
                     else "down" if "_EXIT_DOWN" in tile else None)
             if kind:
                 found[kind].append(ground(pos))
+        found["altar"] = unique(altars)
         floors[name] = (level, low, high, slots, sections,
                         outline(text, low, high, slots, {medium: sections[medium][0] for medium in sections}),
                         {kind: unique(values) for kind, values in found.items()})
@@ -211,7 +220,8 @@ def main(source: str) -> None:
             f"            [{rect_text}],",
         ]
         lines += [f"            [{points(found[kind])}]," for kind in ("chest", "coffer", "key", "shrine", "up", "down")]
-        lines.append(f"            [{points(found['soul'])}]),")
+        lines.append(f"            [{points(found['soul'])}],")
+        lines.append(f"            [{', '.join(f'({number(x)}, {number(z)}, {grade})' for x, z, grade in found['altar'])}]),")
     lines += ["    };", "}", ""]
     target = ROOT / "AlbionDataAvalonia" / "Maps" / "DepthsMapData.g.cs"
     target.write_text("\n".join(lines), encoding="utf-8")

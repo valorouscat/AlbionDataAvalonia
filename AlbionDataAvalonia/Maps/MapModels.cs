@@ -24,7 +24,7 @@ public sealed record MapZoneIcon(string? MarkerType, string Label, MapPoint Posi
 public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false, bool Candidate = false);
 
 /// <summary>The kinds of point of interest the map shows in one layer, each drawn its own way.</summary>
-public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key }
+public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown }
 
 /// <summary>
 /// A point of interest from the game files, a spot where something can stand rather than what stands there now:
@@ -37,6 +37,9 @@ public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key }
 /// <item>Camp: one of the spots the game picks a zone's mob camps from.</item>
 /// <item>Wisp: where a Mists wisp can appear.</item>
 /// <item>Key: where a Depths key can appear.</item>
+/// <item>Coffer: where a Depths coffer can spawn.</item>
+/// <item>Altar: a Depths demon altar, where the floor's monsters spawn.</item>
+/// <item>ExitUp and ExitDown: a Depths exit out or a floor deeper.</item>
 /// </list>
 /// Grade orders the spots of a kind: 1 small, 2 medium, 3 boss, large or high-tier. Notes, when set, are the spot's
 /// tooltip lines in place of its kind's.

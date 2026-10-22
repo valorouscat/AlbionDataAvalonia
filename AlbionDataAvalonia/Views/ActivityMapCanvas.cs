@@ -564,8 +564,9 @@ public sealed class ActivityMapCanvas : Control
     }
 
     // Each kind of point of interest has its own mark, larger for a better grade: a gold chest, a red diamond for a boss,
-    // a violet triangle for a shrine, a hollow orange square for a mob camp spot, a small blue dot for a Mists wisp and a
-    // gold ring for a Depths key.
+    // a violet triangle for a shrine, a hollow orange square for a mob camp spot, a small blue dot for a Mists wisp, and in
+    // the Depths a gold ring for a key, a silver chest for a coffer, a red-orange disc for a demon altar and an arrow in a
+    // green circle for an exit up or a blue one for an exit down.
     // Spots of one kind close together on screen merge, with a count. A Mists camp slot also gets a dashed ring for where
     // its chest can stand, once the ring is big enough on screen to read.
     private void DrawPois(DrawingContext context, ActivityMapScene scene, double scale)
@@ -600,12 +601,12 @@ public sealed class ActivityMapCanvas : Control
         var size = poi.Grade switch { >= 3 => 1.25, 2 => 1.05, _ => 0.9 };
         switch (poi.Kind)
         {
-            case MapPoiKind.Chest:
+            case MapPoiKind.Chest or MapPoiKind.Coffer:
             {
                 var half = 6 * size;
                 var box = new Rect(at.X - half, at.Y - half * 0.75, half * 2, half * 1.5);
                 var lidY = box.Top + box.Height * 0.4;
-                context.DrawRectangle(UiPalette.Brush("UiMapChestColor"), OutlinePen, box, 2, 2);
+                context.DrawRectangle(UiPalette.Brush(poi.Kind == MapPoiKind.Coffer ? "UiMapPoiCofferColor" : "UiMapChestColor"), OutlinePen, box, 2, 2);
                 context.DrawLine(UiPalette.Pen(UiPalette.Color("UiMapChestLidColor"), 1.2), new Point(box.Left + 1, lidY), new Point(box.Right - 1, lidY));
                 context.DrawRectangle(UiPalette.Brush("UiMapChestLidColor"), null, new Rect(at.X - 1, lidY - 1, 2, 3));
                 break;
@@ -629,6 +630,23 @@ public sealed class ActivityMapCanvas : Control
             {
                 var half = 5 * size;
                 context.DrawRectangle(null, UiPalette.Pen(UiPalette.Color("UiMapPoiCampColor"), 2), new Rect(at.X - half, at.Y - half, half * 2, half * 2), 1.5, 1.5);
+                break;
+            }
+            case MapPoiKind.Altar:
+            {
+                var radius = 4.5 * size;
+                context.DrawEllipse(UiPalette.Brush("UiMapPoiAltarColor"), OutlinePen, at, radius, radius);
+                context.DrawEllipse(UiPalette.Brush("UiMapPoiAltarCoreColor"), null, at, radius * 0.4, radius * 0.4);
+                break;
+            }
+            case MapPoiKind.ExitUp or MapPoiKind.ExitDown:
+            {
+                var radius = 6.5 * size;
+                var up = poi.Kind == MapPoiKind.ExitUp;
+                context.DrawEllipse(UiPalette.Brush(up ? "UiMapPoiExitUpColor" : "UiMapPoiExitDownColor"), OutlinePen, at, radius, radius);
+                var tip = up ? -radius * 0.55 : radius * 0.55;
+                context.DrawGeometry(UiPalette.Brush("UiMapMarkerEdgeColor"), null, Polygon(
+                    new Point(at.X, at.Y + tip), new Point(at.X + radius * 0.5, at.Y - tip * 0.6), new Point(at.X - radius * 0.5, at.Y - tip * 0.6)));
                 break;
             }
             case MapPoiKind.Key:
@@ -720,6 +738,10 @@ public sealed class ActivityMapCanvas : Control
         MapPoiKind.Shrine => "shrine",
         MapPoiKind.Camp => "mob camp spot",
         MapPoiKind.Key => "key spawn",
+        MapPoiKind.Coffer => "coffer spot",
+        MapPoiKind.Altar => "demon altar",
+        MapPoiKind.ExitUp => "exit up",
+        MapPoiKind.ExitDown => "exit down",
         _ => "wisp spawn"
     };
 
