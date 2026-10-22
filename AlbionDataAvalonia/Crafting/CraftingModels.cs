@@ -7,8 +7,9 @@ namespace AlbionDataAvalonia.Crafting;
 public sealed record CraftingIngredient(string ItemId, decimal Count, decimal? MaxReturnPerCraft, string? Name = null);
 public sealed record CraftingRecipe(string Label, decimal OutputCount, decimal Silver, IReadOnlyList<CraftingIngredient> Ingredients);
 public sealed record CraftableItem(string ItemId, string Name, string SearchText, string Category, int Tier, int Enchantment,
-    int MaxQuality, IReadOnlyList<CraftingRecipe> Recipes)
+    int MaxQuality, IReadOnlyList<CraftingRecipe> Recipes, string RussianName = "")
 {
+    public bool HasRussianName => !string.IsNullOrWhiteSpace(RussianName);
     public string Label => $"{Name} · T{Tier}.{Enchantment}";
 }
 public sealed record CraftingInput(CraftingIngredient Ingredient, decimal? UnitPrice);

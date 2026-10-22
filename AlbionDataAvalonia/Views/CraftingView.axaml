@@ -14,7 +14,7 @@
         <TextBlock Grid.Row="1" Classes="UiFine" Text="{Binding PriceStatus}" TextWrapping="Wrap" />
         <Grid Grid.Row="2" ColumnDefinitions="250,*" ColumnSpacing="12">
             <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8">
-                <TextBox Text="{Binding SearchText}" Watermark="Search items or resources…" AutomationProperties.Name="Search crafting recipes" />
+                <TextBox Text="{Binding SearchText}" Watermark="Item name / название / ID…" AutomationProperties.Name="Search crafting recipes" />
                 <ComboBox Grid.Row="1" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" HorizontalAlignment="Stretch" AutomationProperties.Name="Recipe category" />
                 <TextBlock Grid.Row="2" Text="{Binding CatalogStatus}" Classes="UiFine" TextWrapping="Wrap" />
                 <ListBox Grid.Row="3" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -22,6 +22,7 @@
                         <DataTemplate x:DataType="craft:CraftableItem">
                             <StackPanel Spacing="2" Margin="0,3">
                                 <TextBlock Text="{Binding Label}" Classes="UiLabel" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding RussianName}" Classes="UiFine" IsVisible="{Binding HasRussianName}" TextWrapping="Wrap" />
                                 <TextBlock Text="{Binding ItemId}" Classes="UiFine" TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </DataTemplate>
@@ -32,7 +33,7 @@
                 <StackPanel Spacing="12" IsVisible="{Binding HasSelection}">
                     <Border Classes="UiCard Subtle" Padding="12">
                         <StackPanel Spacing="10">
-                            <controls:ItemCell ItemUniqueName="{Binding SelectedItem.ItemId}" Title="{Binding SelectedItem.Label}" Subtitle="{Binding SelectedItem.Category}" />
+                            <controls:ItemCell ItemUniqueName="{Binding SelectedItem.ItemId}" Title="{Binding SelectedItem.Label}" Subtitle="{Binding SelectedItem.Category}" Detail="{Binding SelectedItem.RussianName}" />
                             <controls:FilterField Label="Recipe / materials per craft">
                                 <ComboBox ItemsSource="{Binding Recipes}" SelectedItem="{Binding SelectedRecipe}" HorizontalAlignment="Stretch">
                                     <ComboBox.ItemTemplate><DataTemplate x:DataType="craft:CraftingRecipe"><TextBlock Text="{Binding Label}" TextWrapping="Wrap" /></DataTemplate></ComboBox.ItemTemplate>

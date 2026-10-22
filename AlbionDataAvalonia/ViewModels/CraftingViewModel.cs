@@ -91,9 +91,9 @@ public sealed partial class CraftingViewModel : ViewModelBase
     }
     private void FilterItems()
     {
-        var terms = SearchText.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var terms = CraftingSearch.Terms(SearchText);
         var matches = allItems.Where(x => (SelectedCategory == "All recipes" || x.Category == SelectedCategory)
-            && terms.All(t => x.SearchText.Contains(t, StringComparison.OrdinalIgnoreCase))).ToArray();
+            && CraftingSearch.Matches(x, terms)).ToArray();
         var selection = SelectedItem;
         Items.ReplaceAll(matches.Take(150));
         if (selection is not null && Items.Contains(selection)) SelectedItem = selection;

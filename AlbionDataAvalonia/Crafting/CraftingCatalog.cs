@@ -74,8 +74,15 @@ public sealed class CraftingCatalog
                     var category = Text(item, "@shopsubcategory1") == "refinedresources" ? "Refining"
                         : group.Name is "weapon" or "equipmentitem" ? "Equipment"
                         : group.Name is "consumableitem" or "consumablefrominventoryitem" ? "Consumables" : "Other crafting";
-                    result.Add(new(marketId, name, name + " " + marketId + " " + (names.TryGetValue(marketId, out var n) ? n.Russian : ""),
-                        category, (int)Number(item, "@tier"), enchantment, (int)Number(item, "@maxqualitylevel", 1), recipes));
+                    var russian = names.TryGetValue(marketId, out var n) ? n.Russian
+                        : names.TryGetValue(id, out var baseName) ? baseName.Russian : "";
+                    if ((string.IsNullOrWhiteSpace(russian) || russian == marketId) && names.TryGetValue(id, out var baseLocalized))
+                        russian = baseLocalized.Russian;
+                    if (russian == marketId || russian == id) russian = "";
+                    var tier = (int)Number(item, "@tier");
+                    var search = CraftingSearch.Normalize($"{name} {marketId} {russian} T{tier}.{enchantment}");
+                    result.Add(new(marketId, name, search, category, tier, enchantment,
+                        (int)Number(item, "@maxqualitylevel", 1), recipes, russian));
                 }
             }
         if (result.Count == 0) throw new InvalidDataException("No supported crafting recipes were found.");
