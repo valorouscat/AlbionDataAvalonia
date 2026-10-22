@@ -19,6 +19,8 @@ public static class UiFormat
     public static string Noun(long count, string singular, string? plural = null) =>
         count == 1 ? singular : plural ?? singular + "s";
 
+    public static string Decimal(decimal value) => value.ToString("N2", Culture);
+
     /// <summary>A whole number with group separators: "12,480".</summary>
     public static string Whole(double value) => value.ToString("N0", Culture);
 

@@ -82,6 +82,13 @@
 						</StackPanel>
 					</Button>
 
+                    <Button Classes="UiNav" Classes.Active="{Binding IsCraftingSelected}" Command="{Binding ShowCraftingCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <PathIcon Data="M4,3H20V21H4V3M6,5V9H18V5H6M6,11V13H9V11H6M11,11V13H14V11H11M16,11V13H18V11H16M6,15V17H9V15H6M11,15V17H14V15H11M16,15V19H18V15H16M6,19H14V18H6V19Z" Width="16" Height="16" Margin="0,0,8,0" />
+                            <TextBlock Text="Crafting" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
 					<Button Classes="UiNav"
 						Classes.Active="{Binding IsSettingsSelected}"
 						Command="{Binding ShowSettingsCommand}">
@@ -277,6 +284,7 @@
 				<DataTemplate DataType="vm:ActivityViewModel"><views:ActivityView /></DataTemplate>
 				<DataTemplate DataType="vm:LegendaryViewModel"><views:LegendaryView /></DataTemplate>
 				<DataTemplate DataType="vm:TradesViewModel"><views:TradesView /></DataTemplate>
+                <DataTemplate DataType="vm:CraftingViewModel"><views:CraftingView /></DataTemplate>
 				<DataTemplate DataType="vm:SettingsViewModel"><views:SettingsView /></DataTemplate>
 				<DataTemplate DataType="vm:LogsViewModel"><views:LogsView /></DataTemplate>
 			</views:PageHost.DataTemplates>

@@ -34,6 +34,7 @@ public partial class MainViewModel : ViewModelBase
         Activity,
         Legendary,
         Trades,
+        Crafting,
         Settings,
         Logs
     }
@@ -46,6 +47,7 @@ public partial class MainViewModel : ViewModelBase
     private readonly LogsViewModel _logsViewModel;
     private readonly TradesViewModel _tradesViewModel;
     private readonly ActivityViewModel _activityViewModel;
+    private readonly CraftingViewModel? _craftingViewModel;
     private readonly LegendaryViewModel _legendaryViewModel;
     private readonly Uploader _uploader;
     private readonly AuthService _authService;
@@ -238,7 +240,7 @@ public partial class MainViewModel : ViewModelBase
     {
     }
 
-    public MainViewModel(NetworkListenerService networkListener, PlayerState playerState, PlayerIdentityService playerIdentityService, SettingsManager settingsManager, SettingsViewModel settingsViewModel, LogsViewModel logsViewModel, TradesViewModel tradesViewModel, ActivityViewModel activityViewModel, LegendaryViewModel legendaryViewModel, Uploader uploader, AuthService authService, PacketDiagnostics? packetDiagnostics = null, IClipboardService? clipboard = null, DiagnosticsReport? diagnosticsReport = null)
+    public MainViewModel(NetworkListenerService networkListener, PlayerState playerState, PlayerIdentityService playerIdentityService, SettingsManager settingsManager, SettingsViewModel settingsViewModel, LogsViewModel logsViewModel, TradesViewModel tradesViewModel, ActivityViewModel activityViewModel, LegendaryViewModel legendaryViewModel, Uploader uploader, AuthService authService, PacketDiagnostics? packetDiagnostics = null, IClipboardService? clipboard = null, DiagnosticsReport? diagnosticsReport = null, CraftingViewModel? craftingViewModel = null)
     {
         _playerState = playerState;
         _playerIdentityService = playerIdentityService;
@@ -248,6 +250,7 @@ public partial class MainViewModel : ViewModelBase
         _logsViewModel = logsViewModel;
         _tradesViewModel = tradesViewModel;
         _activityViewModel = activityViewModel;
+        _craftingViewModel = craftingViewModel!;
         _legendaryViewModel = legendaryViewModel;
         _uploader = uploader;
         _authService = authService;
@@ -315,6 +318,7 @@ public partial class MainViewModel : ViewModelBase
     public bool IsDashboardSelected => _selectedPage == MainPage.Dashboard;
     public bool IsActivitySelected => _selectedPage == MainPage.Activity;
     public bool IsLegendarySelected => _selectedPage == MainPage.Legendary;
+    public bool IsCraftingSelected => _selectedPage == MainPage.Crafting;
     public bool IsTradesSelected => _selectedPage == MainPage.Trades;
     public bool IsSettingsSelected => _selectedPage == MainPage.Settings;
     public bool IsLogsSelected => _selectedPage == MainPage.Logs;
@@ -328,6 +332,7 @@ public partial class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(IsActivitySelected));
             OnPropertyChanged(nameof(IsLegendarySelected));
             OnPropertyChanged(nameof(IsTradesSelected));
+            OnPropertyChanged(nameof(IsCraftingSelected));
             OnPropertyChanged(nameof(IsSettingsSelected));
             OnPropertyChanged(nameof(IsLogsSelected));
         }
@@ -338,6 +343,7 @@ public partial class MainViewModel : ViewModelBase
             MainPage.Activity => _activityViewModel,
             MainPage.Legendary => _legendaryViewModel,
             MainPage.Trades => _tradesViewModel,
+            MainPage.Crafting => _craftingViewModel,
             MainPage.Settings => _settingsViewModel,
             MainPage.Logs => _logsViewModel,
             _ => this
@@ -520,6 +526,9 @@ public partial class MainViewModel : ViewModelBase
     {
         NavigateTo(MainPage.Dashboard);
     }
+
+    [RelayCommand]
+    private void ShowCrafting() => NavigateTo(MainPage.Crafting);
 
     [RelayCommand]
     private void ShowActivity()

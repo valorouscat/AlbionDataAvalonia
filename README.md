@@ -309,3 +309,11 @@ The client makes a backup every 24 hours and keeps the three newest, plus ones a
 - [Download statistics](https://tooomm.github.io/github-release-stats/?username=jpcodecraft&repository=AlbionDataAvalonia)
 
 Made by [JP CodeCraft](https://jpcodecraft.com/), the developer behind Albion Free Market. Free and open source; see the [license](LICENSE).
+
+### Crafting calculator
+
+Open **Crafting** in the main window to estimate crafting or refining costs, including stone blocks, other refined resources, equipment, components, food and potions. Search by English/Russian name or item ID and choose the recipe; for example, `блок травертина` or `палаш знаток`. Russian names appear in the results and selected-item card; search ignores letter case, punctuation, extra whitespace and the difference between `е` and `ё`. Alternate recipes and enchanted variants use their actual material quantities and output batch sizes. The catalog comes with the app and works offline.
+
+Choose a server, market city, material purchase mode and output sale mode, then **Refresh prices** to request public Albion Online Data Project prices. Select output quality for equipment. Each price shows its observation age; old or missing community prices are not guaranteed to match current orders. You can edit any material or output price manually. Refresh keeps manual overrides; **Use market prices** clears them. If an API request fails, manual prices still work.
+
+Enter the number of **items** to produce, the return rate and station fee per **craft** shown in game, and your sales tax/order fees. The calculator rounds up complete recipe batches and shows materials needed upfront, expected returns, net cost per item, net sale revenue, expected profit and break-even price. Return rate starts at zero; enter the actual rate with city bonuses/focus. Artifacts marked nonreturnable are not discounted. Missing prices leave profit blank rather than treating inputs as free. Returned materials are credited at the input price, without recrafting them; intermediate materials are bought at the entered prices. Transport, journals, nutrition and focus opportunity costs are excluded. Calculator inputs stay available while switching tabs during this session.
