@@ -11,8 +11,8 @@ namespace AlbionDataAvalonia.ViewModels;
 public enum ActivityMapLayers
 {
     None = 0, Path = 1, Kills = 2, Loot = 4, Gathering = 8, Deaths = 16, Features = 32, Resources = 64, ResourceSpawns = 128,
-    Pois = 256, RoamingBosses = 512, HostileAlert = 1024,
-    All = Path | Kills | Loot | Gathering | Deaths | Features | Resources | ResourceSpawns | Pois | RoamingBosses | HostileAlert
+    Pois = 256, RoamingBosses = 512, HostileAlert = 1024, Wisps = 2048,
+    All = Path | Kills | Loot | Gathering | Deaths | Features | Resources | ResourceSpawns | Pois | RoamingBosses | HostileAlert | Wisps
 }
 
 /// <summary>A zone's danger level, which colors its exits.</summary>
@@ -64,4 +64,5 @@ public sealed record ActivityMapScene(
     double ResourceIconScale = 1,
     double ResourceIconOpacity = 1,
     double ResourceClusterRadius = 16,
-    double ResourceSpawnIconOpacity = 0.5);
+    double ResourceSpawnIconOpacity = 0.5,
+    IReadOnlyList<ActivityWisp>? Wisps = null);

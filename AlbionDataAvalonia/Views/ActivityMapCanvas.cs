@@ -308,6 +308,7 @@ public sealed class ActivityMapCanvas : Control
         }
 
         if (scene.Layers.HasFlag(ActivityMapLayers.RoamingBosses)) DrawRoamingBosses(context, scene, scale);
+        if (scene.IsLive && scene.Layers.HasFlag(ActivityMapLayers.Wisps)) DrawWisps(context, scene, scale);
         if (scene.Layers.HasFlag(ActivityMapLayers.Path)) DrawPath(context, scene, scale);
         DrawMarkers(context, scene, scale);
         DrawPosition(context, scene, scale, shown);
@@ -703,6 +704,30 @@ public sealed class ActivityMapCanvas : Control
                 [$"{(boss.Kind == ActivityLiveActorKind.Boss ? "Roaming boss" : "Roaming miniboss")}, seen {UiFormat.Ago(boss.SeenAtUtc, scene.NowUtc)}",
                     "It moves; the map follows it while it stays in view"],
                 [new ItemRow(boss.MobUniqueName, 1, boss.Name, "", Mob: true)]));
+        }
+    }
+
+    private void DrawWisps(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        if (scene.Wisps is not { Count: > 0 } wisps) return;
+        foreach (var wisp in wisps)
+        {
+            var at = ToScreen(ImagePoint(scene, wisp.X, wisp.Y), scale);
+            const double radius = 9;
+            if (!Visible(at, radius + 4)) continue;
+            var color = wisp.Rarity == ActivityWispRarity.Common
+                ? UiPalette.Color("UiTextColor") : ActivityPalette.Enchantment((int)wisp.Rarity);
+            context.DrawEllipse(UiPalette.Brush("UiMapCountColor"), UiPalette.Pen(color, 2.5), at, radius, radius);
+            var light = UiPalette.Brush(color);
+            if (wisp.Size == ActivityWispSize.Duo)
+            {
+                context.DrawEllipse(light, null, new Point(at.X - 3.5, at.Y), 2.5, 2.5);
+                context.DrawEllipse(light, null, new Point(at.X + 3.5, at.Y), 2.5, 2.5);
+            }
+            else context.DrawEllipse(light, null, at, 3.5, 3.5);
+            hits.Add(new Hit(at, radius + 3, $"{wisp.Rarity} will o' wisp",
+                [wisp.Size == ActivityWispSize.Duo ? "Greater wisp · Duo · 2 players" : "Wisp · Solo · 1 player",
+                    $"Seen {UiFormat.Ago(wisp.SeenAtUtc, scene.NowUtc)} · Currently in view"], []));
         }
     }
 

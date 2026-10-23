@@ -285,6 +285,7 @@ public sealed partial class ActivityTrackerService : IDisposable
                     break;
                 case LeaveEvent leave:
                     ForgetResourceMob(leave.userObjectId);
+                    ForgetWisp(leave.userObjectId);
                     ForgetLiveActor(leave.userObjectId);
                     actors.Leave(leave.userObjectId, at);
                     locations.Leave(leave.userObjectId, at);
@@ -310,6 +311,7 @@ public sealed partial class ActivityTrackerService : IDisposable
                 case TakeSilverEvent silver when CanRecord: Silver(silver, at); break;
                 case DiedEvent death:
                     ForgetResourceMob(death.VictimObjectId);
+                    ForgetWisp(death.VictimObjectId);
                     ForgetLiveActor(death.VictimObjectId);
                     if (CanRecord) Death(death, at);
                     break;

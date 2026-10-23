@@ -96,6 +96,14 @@ python3 scripts/generate-resource-mobs.py /tmp/mobs.json
 
 The first resource mob of each map logs its NewMob parameters at Information level, for checking the packet layout read in `ActivityResourceMobs`.
 
+### Live wisps and event markers
+
+`ActivityWisps` classifies solo/duo portal mobs from the existing mob catalog. Game `mists.xml` difficulty levels 0–4 map to common, uncommon, rare, epic and legendary; their internal suffixes are respectively empty, `_STANDARD`, `_UNCOMMON`, `_RARE` and `_LEGENDARY` (also after `_DUO`). Do not infer displayed rarity from the suffix's English word. The mapping can be checked against [mists.xml](https://github.com/thecatontheflat/ao2d-gamedata/blob/master/mists.xml). Verdant resource wisps and power-crystal mobs are separate game types and aren't classified as solo/duo portals.
+
+The tracker reuses the existing raw NewMob/Move observations; Leave, death and map epoch changes remove sightings. The wisp cache is capped at 256, never written to history, and has no resource audio side effects. `MapShowWisps`, `MapWispRarities` (five bits) and `MapWispSizes` (solo/duo bits) persist the layer and independent multi-select filters. No new packet parser or submodule update is required.
+
+Live Kills, Loot and Gathering markers default off via `MapLiveShowKills`, `MapLiveShowLoot` and `MapLiveShowGathering`; an explicit choice persists. History keeps independent session choices, initially on. These are display preferences and do not disable recording. No database migration is needed.
+
 ### Depths map
 
 AlbionWorld has no minimap or map features for the Depths, so `AlbionDataAvalonia/Maps/DepthsMapData.g.cs` brings each floor from the game's hell dungeon files: its rough ground outline, camp slots, exits and chest, coffer, key and shrine spots. Regenerate it after a patch changes the Depths:

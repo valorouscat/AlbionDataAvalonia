@@ -72,7 +72,7 @@ public sealed record ActivityMapMarker(ActivityMapMarkerKind Kind, string RawMap
 public sealed record ActivityLiveMap(long Version, string RawMapId, string MapName, ActivityPathPoint? Position, double? Heading,
     IReadOnlyList<ActivityPathPoint> Trail, IReadOnlyList<ActivityMapMarker> Markers, string? Layout = null, int? LayoutTurns = null,
     IReadOnlyList<ActivityResourceNode>? Resources = null, IReadOnlyList<ActivityResourceMob>? ResourceMobs = null,
-    IReadOnlyList<ActivityLiveActor>? RoamingBosses = null, IReadOnlyList<ActivityHostileSighting>? Hostiles = null)
+    IReadOnlyList<ActivityLiveActor>? RoamingBosses = null, IReadOnlyList<ActivityHostileSighting>? Hostiles = null, IReadOnlyList<ActivityWisp>? Wisps = null)
 {
     public static ActivityLiveMap Empty { get; } = new(0, "", "", null, null, [], []);
 }
@@ -105,3 +105,9 @@ public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, doub
 
 /// <summary>A player outside the character's party, guild and alliance who came into view; the game gives no position.</summary>
 public sealed record ActivityHostileSighting(DateTime SeenAtUtc, string Name, string Guild, string Alliance);
+
+public enum ActivityWispRarity { Common, Uncommon, Rare, Epic, Legendary }
+public enum ActivityWispSize { Solo, Duo }
+
+/// <summary>A portal wisp currently in view; no sightings survive leaving the map.</summary>
+public sealed record ActivityWisp(long Id, ActivityWispRarity Rarity, ActivityWispSize Size, double X, double Y, DateTime SeenAtUtc);
