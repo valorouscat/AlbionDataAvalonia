@@ -25,7 +25,8 @@
                             <StackPanel Spacing="2" Margin="0,3">
                                 <TextBlock Text="{Binding Name}" Classes="UiLabel" TextWrapping="Wrap" />
                                 <TextBlock Text="{Binding RussianName}" Classes="UiFine" TextWrapping="Wrap" />
-                                <TextBlock Text="{Binding Key}" Classes="UiFine" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding DisplayItemId}" Classes="UiFine" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding VariantSummary}" Classes="UiFine" />
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

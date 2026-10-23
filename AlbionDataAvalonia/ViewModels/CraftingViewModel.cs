@@ -223,7 +223,7 @@ public sealed partial class CraftingViewModel : ViewModelBase
         {
             if (!loads.IsCurrent(ticket)) return;
             Log.Warning(failure, "Could not load crafting market prices");
-            PriceStatus = "Couldn't load AODP prices. Check the connection, refresh, or enter prices manually. Existing prices are retained.";
+            PriceStatus = CraftingPriceService.ErrorText(failure) + " Manual prices are retained.";
         }
         finally
         {
