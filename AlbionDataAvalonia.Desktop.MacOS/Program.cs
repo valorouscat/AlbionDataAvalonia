@@ -1,3 +1,4 @@
+using AlbionDataAvalonia.Logging;
 using Avalonia;
 using Serilog;
 using System;
@@ -13,6 +14,7 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        RuntimeCrashLog.Install();
         try
         {
             BuildAvaloniaApp()
@@ -20,6 +22,7 @@ class Program
         }
         catch (Exception e)
         {
+            RuntimeCrashLog.Record("Main loop", e);
             TryWriteStartupCrashLog(e);
             Log.Fatal(e, "Global Exception Handler.");
         }

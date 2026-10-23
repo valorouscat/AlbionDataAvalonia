@@ -447,7 +447,25 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         else RebuildHistory();
     }
 
+    private bool liveRefreshFailed;
     private void RefreshLive()
+    {
+        try
+        {
+            RefreshLiveCore();
+            liveRefreshFailed = false;
+        }
+        catch (Exception error) when (error is not (OutOfMemoryException or AccessViolationException))
+        {
+            if (!liveRefreshFailed) Log.Error(error, "Could not refresh the live map for {MapId}; the next update will retry", live.RawMapId);
+            liveRefreshFailed = true;
+            liveVersion = -1;
+            Scene = null;
+            Note = "Couldn't refresh the map. Waiting for the next update.";
+        }
+    }
+
+    private void RefreshLiveCore()
     {
         if (disposed || !IsLive) return;
         var version = tracker.LiveMapVersion;

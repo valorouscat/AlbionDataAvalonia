@@ -148,6 +148,7 @@ public static class ClientUpdater
                 }
             };
 
+            Log.Warning("Closing client intentionally to install update {Version}; the installer will restart it. PID {ProcessId}", update.Version, Environment.ProcessId);
             shutdownStarted = true;
             await App.ShutdownAsync().ConfigureAwait(false);
             if (!process.Start())
