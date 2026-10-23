@@ -107,7 +107,7 @@ public sealed record ActivityVisit(string RawMapId, string LocationName, DateTim
     DateTime? EndedAtUtc, string? InstanceId = null, ActivityMapMetadata? Metadata = null);
 
 // Layout is a Mists instance's fixed master layout, which names its minimap.
-// LayoutTurns is how many quarter turns a Mists instance turns its layout, clockwise on a north-up map.
+// LayoutTurns is how many quarter turns a Mists or Depths instance turns its template, clockwise on a north-up map.
 public sealed record ActivityMapMetadata(int? Tier = null, string? ZoneType = null,
     string? Mode = null, string? Faction = null, int? Enchantment = null,
     string? Rarity = null, string? OriginMapId = null, string? Layout = null, int? LayoutTurns = null)
