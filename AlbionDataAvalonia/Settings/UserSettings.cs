@@ -14,7 +14,7 @@ public enum StartupWindowMode
     HiddenToTray
 }
 
-public class UserSettings : INotifyPropertyChanged
+public partial class UserSettings : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
 

@@ -80,6 +80,17 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         selectedScopeIndex = settings.MapPartyEvents ? 1 : 0;
         selectedFadeIndex = Math.Max(0, Array.FindIndex(FadeOptionValues, x => x == settings.MapFadeMinutes));
         if (FadeOptionValues[selectedFadeIndex] != settings.MapFadeMinutes) selectedFadeIndex = 1;
+        liveShowKills = settings.MapLiveShowKills;
+        liveShowLoot = settings.MapLiveShowLoot;
+        liveShowGathering = settings.MapLiveShowGathering;
+        showWisps = settings.MapShowWisps;
+        showWispCommon = (settings.MapWispRarities & 1) != 0;
+        showWispUncommon = (settings.MapWispRarities & 2) != 0;
+        showWispRare = (settings.MapWispRarities & 4) != 0;
+        showWispEpic = (settings.MapWispRarities & 8) != 0;
+        showWispLegendary = (settings.MapWispRarities & 16) != 0;
+        showWispSolo = (settings.MapWispSizes & 1) != 0;
+        showWispDuo = (settings.MapWispSizes & 2) != 0;
         showResources = settings.MapShowResources;
         showResourceMobs = settings.MapShowResourceMobs;
         showResourceSpawns = settings.MapShowResourceSpawns;
@@ -142,9 +153,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private string note = "";
 
     [ObservableProperty] private bool showPath = true;
-    [ObservableProperty] private bool showKills = true;
-    [ObservableProperty] private bool showLoot = true;
-    [ObservableProperty] private bool showGathering = true;
     [ObservableProperty] private bool showDeaths = true;
     [ObservableProperty] private bool showFeatures = true;
     [ObservableProperty]
@@ -216,7 +224,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         | (ShowGathering ? ActivityMapLayers.Gathering : 0) | (ShowDeaths ? ActivityMapLayers.Deaths : 0) | (ShowFeatures ? ActivityMapLayers.Features : 0)
         | (ShowResources ? ActivityMapLayers.Resources : 0) | (ShowResourceSpawns ? ActivityMapLayers.ResourceSpawns : 0)
         | (ShowPois ? ActivityMapLayers.Pois : 0) | (ShowRoamingBosses ? ActivityMapLayers.RoamingBosses : 0)
-        | (ShowHostileAlert ? ActivityMapLayers.HostileAlert : 0);
+        | (ShowHostileAlert ? ActivityMapLayers.HostileAlert : 0) | (IsLive && ShowWisps ? ActivityMapLayers.Wisps : 0);
 
     private double FadeSeconds => FadeOptionValues[Math.Clamp(SelectedFadeIndex, 0, FadeOptionValues.Length - 1)] * 60d;
 
@@ -237,6 +245,10 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedModeIndexChanged(int value)
     {
+        OnPropertyChanged(nameof(ShowKills));
+        OnPropertyChanged(nameof(ShowLoot));
+        OnPropertyChanged(nameof(ShowGathering));
+        OnPropertyChanged(nameof(ShowWispFilters));
         StopReplay();
         if (IsHistory && !runsLoaded) _ = LoadRunsAsync();
         Rebuild();
@@ -263,9 +275,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     private void ToggleLegend() => LegendCollapsed = !LegendCollapsed;
 
     partial void OnShowPathChanged(bool value) => Rebuild();
-    partial void OnShowKillsChanged(bool value) => Rebuild();
-    partial void OnShowLootChanged(bool value) => Rebuild();
-    partial void OnShowGatheringChanged(bool value) => Rebuild();
     partial void OnShowDeathsChanged(bool value) => Rebuild();
     partial void OnShowFeaturesChanged(bool value) => Rebuild();
 
@@ -537,7 +546,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             zone?.Zone?.Rooms, zone?.Zone?.Outline, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
-            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d);
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps());
     }
 
     // No one can attack the character in a blue zone, so a player there is no threat.

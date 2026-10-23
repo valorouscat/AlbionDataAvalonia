@@ -33,11 +33,11 @@ public sealed partial class ActivityTrackerService
             var changed = code switch
             {
                 EventCodes.NewMob => ActivityResourceMobs.ReadNew(packet.Parameters) is { } mob
-                    && (PlaceResourceMob(mob, packet, at) | PlaceRoamingBoss(mob, at)),
+                    && (PlaceResourceMob(mob, packet, at) | PlaceRoamingBoss(mob, at) | PlaceWisp(mob, at)),
                 EventCodes.MobChangeState => ActivityResourceMobs.ReadChange(packet.Parameters) is { } change && EnchantResourceMob(change.Id, change.Enchantment, at),
                 // Roaming bosses move with the same packet.
                 EventCodes.Move => ActivityResourceMobs.ReadMove(packet.Parameters) is { } move
-                    && (MoveResourceMob(move.Id, move.X, move.Y, at) | MoveLiveActor(move.Id, move.X, move.Y, at)),
+                    && (MoveResourceMob(move.Id, move.X, move.Y, at) | MoveLiveActor(move.Id, move.X, move.Y, at) | MoveWisp(move.Id, move.X, move.Y, at)),
                 _ => false
             };
             if (changed) liveMapVersion++;

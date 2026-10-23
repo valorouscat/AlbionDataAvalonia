@@ -163,6 +163,15 @@
                             <TextBlock Text="Points of interest" Margin="2,0,0,0" />
                         </StackPanel>
                     </ToggleButton>
+                    <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowWisps}" IsVisible="{Binding IsLive}"
+                                  ToolTip.Tip="Wandering portal wisps currently in view. The ring shows rarity; one light is solo, two lights are duo. They disappear when they leave view or you change zone.">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Width="10" Height="10" Stroke="{DynamicResource UiMarkerOutlineBrush}" StrokeThickness="1" VerticalAlignment="Center">
+                                <Ellipse.Fill><SolidColorBrush Color="{DynamicResource UiMapPoiWispColor}" /></Ellipse.Fill>
+                            </Ellipse>
+                            <TextBlock Text="Seen wisps" />
+                        </StackPanel>
+                    </ToggleButton>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowRoamingBosses}" IsVisible="{Binding IsLive}"
                                   ToolTip.Tip="Roaming bosses and minibosses the game has shown near you, with their portrait and tier. They follow the bosses as they move and go when the game says they left or died. Read from the game's packets, like the resource nodes.">
                         <StackPanel Orientation="Horizontal" Spacing="6">
@@ -181,6 +190,25 @@
                     </ToggleButton>
                 </WrapPanel>
                             </StackPanel>
+                            <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowWispFilters}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Seen wisps" Classes="UiSectionTitle" />
+                                    <TextBlock Text="Only portal wisps currently in view. Choose which rarities and sizes to show." Classes="UiFine" TextWrapping="Wrap" />
+                                    <TextBlock Text="Rarity" Classes="UiLabel" />
+                                    <WrapPanel>
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Common" IsChecked="{Binding ShowWispCommon}" />
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Uncommon" IsChecked="{Binding ShowWispUncommon}" />
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Rare" IsChecked="{Binding ShowWispRare}" />
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Epic" IsChecked="{Binding ShowWispEpic}" />
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Legendary" IsChecked="{Binding ShowWispLegendary}" />
+                                    </WrapPanel>
+                                    <TextBlock Text="Size" Classes="UiLabel" />
+                                    <WrapPanel>
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Solo · 1 player" IsChecked="{Binding ShowWispSolo}" />
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Duo · 2 players" IsChecked="{Binding ShowWispDuo}" />
+                                    </WrapPanel>
+                                </StackPanel>
+                            </Border>
                             <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowHostileSoundSettings}">
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="Hostile alert sound" Classes="UiSectionTitle" />
