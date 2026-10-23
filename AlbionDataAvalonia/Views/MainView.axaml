@@ -89,6 +89,13 @@
                         </StackPanel>
                     </Button>
 
+                    <Button Classes="UiNav" Classes.Active="{Binding IsMarketSelected}" Command="{Binding ShowMarketCommand}">
+                        <StackPanel Orientation="Horizontal">
+                            <PathIcon Data="M3,17L9,11L13,15L21,5M15,5H21V11" Width="16" Height="16" Margin="0,0,8,0" />
+                            <TextBlock Text="Market prices" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+
 					<Button Classes="UiNav"
 						Classes.Active="{Binding IsSettingsSelected}"
 						Command="{Binding ShowSettingsCommand}">
@@ -285,6 +292,7 @@
 				<DataTemplate DataType="vm:LegendaryViewModel"><views:LegendaryView /></DataTemplate>
 				<DataTemplate DataType="vm:TradesViewModel"><views:TradesView /></DataTemplate>
                 <DataTemplate DataType="vm:CraftingViewModel"><views:CraftingView /></DataTemplate>
+                <DataTemplate DataType="vm:MarketViewModel"><views:MarketView /></DataTemplate>
 				<DataTemplate DataType="vm:SettingsViewModel"><views:SettingsView /></DataTemplate>
 				<DataTemplate DataType="vm:LogsViewModel"><views:LogsView /></DataTemplate>
 			</views:PageHost.DataTemplates>

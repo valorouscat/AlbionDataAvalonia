@@ -13,11 +13,16 @@
         </WrapPanel>
         <TextBlock Grid.Row="1" Classes="UiFine" Text="{Binding PriceStatus}" TextWrapping="Wrap" />
         <Grid Grid.Row="2" ColumnDefinitions="250,*" ColumnSpacing="12">
-            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="8">
                 <TextBox Text="{Binding SearchText}" Watermark="Item name / название / ID…" AutomationProperties.Name="Search crafting recipes" />
                 <ComboBox Grid.Row="1" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" HorizontalAlignment="Stretch" AutomationProperties.Name="Recipe category" />
-                <TextBlock Grid.Row="2" Text="{Binding CatalogStatus}" Classes="UiFine" TextWrapping="Wrap" />
-                <ListBox Grid.Row="3" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Grid.Row="2" Spacing="6">
+                    <controls:FilterField Label="Tier"><ComboBox ItemsSource="{Binding Tiers}" SelectedItem="{Binding SelectedTier}" HorizontalAlignment="Stretch" /></controls:FilterField>
+                    <controls:FilterField Label="Rarity / enchantment"><ComboBox ItemsSource="{Binding Enchantments}" SelectedItem="{Binding SelectedEnchantment}" HorizontalAlignment="Stretch" /></controls:FilterField>
+                    <controls:FilterField Label="Quality"><ComboBox ItemsSource="{Binding SearchQualities}" SelectedItem="{Binding SelectedSearchQuality}" HorizontalAlignment="Stretch" /></controls:FilterField>
+                </StackPanel>
+                <TextBlock Grid.Row="3" Text="{Binding CatalogStatus}" Classes="UiFine" TextWrapping="Wrap" />
+                <ListBox Grid.Row="4" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="craft:CraftableItem">
                             <StackPanel Spacing="2" Margin="0,3">

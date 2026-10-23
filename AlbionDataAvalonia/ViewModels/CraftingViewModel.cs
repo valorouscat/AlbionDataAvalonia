@@ -19,6 +19,7 @@ public sealed partial class CraftingViewModel : ViewModelBase
     private readonly UiDebouncer searchDelay;
     private readonly UiDebouncer priceDelay;
     private readonly LatestLoad loads = new();
+    private bool updatingSearchItems;
     private IReadOnlyList<CraftableItem> allItems = [];
     private CancellationTokenSource? priceCancellation;
     private bool active, initializing, applyingSale, manualSale;
@@ -33,6 +34,12 @@ public sealed partial class CraftingViewModel : ViewModelBase
     public IReadOnlyList<string> Cities { get; } = ["Bridgewatch", "Caerleon", "Fort Sterling", "Lymhurst", "Martlock", "Thetford", "Brecilien"];
     public IReadOnlyList<string> Categories { get; } = ["All recipes", "Refining", "Equipment", "Consumables", "Other crafting"];
     public IReadOnlyList<Option<int>> Qualities { get; } = [new(1, "Normal"), new(2, "Good"), new(3, "Outstanding"), new(4, "Excellent"), new(5, "Masterpiece")];
+    public IReadOnlyList<Option<int>> Tiers => UiOptions.ItemTiers;
+    public IReadOnlyList<Option<int>> Enchantments => UiOptions.ItemEnchantments;
+    public IReadOnlyList<Option<int>> SearchQualities => UiOptions.ItemQualities;
+    [ObservableProperty] private Option<int> selectedTier = new(0, "Any tier");
+    [ObservableProperty] private Option<int> selectedEnchantment = new(-1, "Any enchantment");
+    [ObservableProperty] private Option<int> selectedSearchQuality = new(0, "Any quality");
     public IReadOnlyList<string> BuyModes { get; } = ["Buy instantly", "Buy orders"];
     public IReadOnlyList<string> SellModes { get; } = ["Sell orders", "Sell instantly"];
     public ReplaceableCollection<CraftableItem> Items { get; } = new();
@@ -78,8 +85,10 @@ public sealed partial class CraftingViewModel : ViewModelBase
         try
         {
             allItems = await catalog.LoadAsync();
+            var preferred = allItems.FirstOrDefault(x => x.ItemId == "T4_STONEBLOCK");
+            if (SelectedItem is null && preferred is not null && MatchesSearch(preferred, CraftingSearch.Terms(SearchText))) SelectedItem = preferred;
             FilterItems();
-            if (SelectedItem is null) SelectedItem = allItems.FirstOrDefault(x => x.ItemId == "T4_STONEBLOCK");
+            SelectedItem ??= Items.FirstOrDefault();
         }
         catch (Exception failure) { Log.Warning(failure, "Could not load crafting recipes"); CatalogStatus = "Couldn't load the bundled crafting recipes. Check the application installation."; }
         finally { initializing = false; }
@@ -92,20 +101,42 @@ public sealed partial class CraftingViewModel : ViewModelBase
     private void FilterItems()
     {
         var terms = CraftingSearch.Terms(SearchText);
-        var matches = allItems.Where(x => (SelectedCategory == "All recipes" || x.Category == SelectedCategory)
-            && CraftingSearch.Matches(x, terms)).ToArray();
+        var matches = allItems.Where(x => MatchesSearch(x, terms)).ToArray();
         var selection = SelectedItem;
-        Items.ReplaceAll(matches.Take(150));
-        if (selection is not null && Items.Contains(selection)) SelectedItem = selection;
+        var visible = matches.Take(150).ToList();
+        if (selection is not null && matches.Contains(selection) && !visible.Contains(selection)) visible[^1] = selection;
+        // A ListBox can temporarily clear selection during Reset. Keep dependent inputs until the final selection is known.
+        updatingSearchItems = true;
+        try
+        {
+            if (!Items.SequenceEqual(visible)) Items.ReplaceAll(visible);
+            SelectedItem = selection is not null && visible.Contains(selection) ? selection : null;
+        }
+        finally { updatingSearchItems = false; }
+        if (SelectedItem != selection) OnSelectedItemChanged(SelectedItem);
         CatalogStatus = $"{UiFormat.Whole(matches.Length)} recipes · showing up to 150. Search by English/Russian name or item ID.";
+    }
+    private bool MatchesSearch(CraftableItem item, string[] terms) => (SelectedCategory == "All recipes" || item.Category == SelectedCategory)
+        && CraftingSearch.Matches(item, terms)
+        && (SelectedTier.Value == 0 || item.Tier == SelectedTier.Value)
+        && (SelectedEnchantment.Value < 0 || item.Enchantment == SelectedEnchantment.Value)
+        && (SelectedSearchQuality.Value == 0 || item.MaxQuality >= SelectedSearchQuality.Value);
+    partial void OnSelectedTierChanged(Option<int> value) => FilterItems();
+    partial void OnSelectedEnchantmentChanged(Option<int> value) => FilterItems();
+    partial void OnSelectedSearchQualityChanged(Option<int> value)
+    {
+        FilterItems();
+        if (value.Value > 0) SelectedQuality = UiOptions.Find(Qualities, value.Value);
     }
     partial void OnSearchTextChanged(string value) => searchDelay.Trigger();
     partial void OnSelectedCategoryChanged(string value) => searchDelay.Trigger();
     partial void OnSelectedItemChanged(CraftableItem? value)
     {
+        if (updatingSearchItems) return;
         OnPropertyChanged(nameof(HasSelection)); OnPropertyChanged(nameof(CanChooseQuality));
         Recipes = value?.Recipes ?? []; SelectedRecipe = Recipes.FirstOrDefault();
         if (value?.MaxQuality <= 1) SelectedQuality = Qualities[0];
+        else if (value is not null && SelectedSearchQuality.Value > 0) SelectedQuality = UiOptions.Find(Qualities, SelectedSearchQuality.Value);
     }
     partial void OnSelectedRecipeChanged(CraftingRecipe? value)
     {
@@ -116,7 +147,12 @@ public sealed partial class CraftingViewModel : ViewModelBase
     }
     partial void OnSelectedRegionChanged(string value) => MarketChanged();
     partial void OnSelectedCityChanged(string value) => MarketChanged();
-    partial void OnSelectedQualityChanged(Option<int> value) => MarketChanged();
+    partial void OnSelectedQualityChanged(Option<int> value)
+    {
+        if (SelectedSearchQuality.Value > 0 && SelectedSearchQuality.Value != value.Value)
+            SelectedSearchQuality = UiOptions.Find(SearchQualities, value.Value);
+        MarketChanged();
+    }
     partial void OnSelectedBuyModeChanged(string value) => MarketChanged();
     partial void OnSelectedSellModeChanged(string value) { ResetSale(); Recalculate(); QueuePrices(); }
     private void MarketChanged()

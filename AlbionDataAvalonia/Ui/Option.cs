@@ -20,6 +20,10 @@ public sealed record Option<T>(T Value, string Label) : IOption
 /// <summary>Option lists that more than one screen offers.</summary>
 public static class UiOptions
 {
+    public static IReadOnlyList<Option<int>> ItemTiers { get; } = [new(0, "Any tier"), .. Enumerable.Range(1, 8).Select(x => new Option<int>(x, $"T{x}"))];
+    public static IReadOnlyList<Option<int>> ItemEnchantments { get; } = [new(-1, "Any enchantment"), .. Enumerable.Range(0, 5).Select(x => new Option<int>(x, $".{x}"))];
+    public static IReadOnlyList<Option<int>> ItemQualities { get; } = [new(0, "Any quality"), new(1, "Normal"), new(2, "Good"), new(3, "Outstanding"), new(4, "Excellent"), new(5, "Masterpiece")];
+
     /// <summary>How many trades to load.</summary>
     public static IReadOnlyList<Option<int>> TradeCounts { get; } = Counts(100, 250, 500, 1000, 2000, 5000, 10000);
 
