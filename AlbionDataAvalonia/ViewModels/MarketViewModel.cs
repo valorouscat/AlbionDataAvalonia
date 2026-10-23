@@ -20,6 +20,7 @@ public sealed partial class MarketViewModel : ViewModelBase
     private readonly UiDebouncer searchDelay;
     private readonly UiDebouncer priceDelay;
     private readonly LatestLoad loads = new();
+    private bool updatingSearchItems;
     private IReadOnlyList<MarketFamily> allItems = [];
     private IReadOnlyList<MarketQuote> quotes = [];
     private CancellationTokenSource? priceCancellation;
@@ -34,9 +35,9 @@ public sealed partial class MarketViewModel : ViewModelBase
     public static IReadOnlyList<string> Cities { get; } = ["Bridgewatch", "Caerleon", "Fort Sterling", "Lymhurst", "Martlock", "Thetford", "Brecilien"];
     public IReadOnlyList<Option<MarketAction>> Actions { get; } = [new(MarketAction.BuyInstantly, "Buy instantly"), new(MarketAction.BuyOrder, "Place buy orders"),
         new(MarketAction.SellInstantly, "Sell instantly"), new(MarketAction.SellOrder, "Place sell orders")];
-    public IReadOnlyList<Option<int>> Tiers { get; } = [new(0, "Any tier"), .. Enumerable.Range(1, 8).Select(x => new Option<int>(x, $"T{x}"))];
-    public IReadOnlyList<Option<int>> Enchantments { get; } = [new(-1, "Any enchantment"), .. Enumerable.Range(0, 5).Select(x => new Option<int>(x, $".{x}"))];
-    public IReadOnlyList<Option<int>> Qualities { get; } = [new(0, "Any quality"), .. Enumerable.Range(1, 5).Select(x => new Option<int>(x, MarketRowViewModel.QualityName(x)))];
+    public IReadOnlyList<Option<int>> Tiers => UiOptions.ItemTiers;
+    public IReadOnlyList<Option<int>> Enchantments => UiOptions.ItemEnchantments;
+    public IReadOnlyList<Option<int>> Qualities => UiOptions.ItemQualities;
     public IReadOnlyList<Option<int>> Ages { get; } = [new(1, "1 hour"), new(6, "6 hours"), new(24, "24 hours"), new(72, "3 days"), new(0, "Any age / unknown")];
     public ReplaceableCollection<MarketFamily> Items { get; } = new();
     public ReplaceableCollection<MarketRowViewModel> Results { get; } = new();
@@ -98,8 +99,10 @@ public sealed partial class MarketViewModel : ViewModelBase
     }
     private void InitializeItems()
     {
+        var preferred = allItems.FirstOrDefault(x => x.Key == "MAIN_SWORD");
+        if (SelectedItem is null && preferred is not null && MatchesSearch(preferred, CraftingSearch.Terms(SearchText))) SelectedItem = preferred;
         FilterItems();
-        SelectedItem ??= allItems.FirstOrDefault(x => x.Key == "MAIN_SWORD") ?? allItems.FirstOrDefault();
+        SelectedItem ??= Items.FirstOrDefault();
     }
     public void Deactivate()
     {
@@ -110,22 +113,32 @@ public sealed partial class MarketViewModel : ViewModelBase
     private void FilterItems()
     {
         var terms = CraftingSearch.Terms(SearchText);
-        var found = allItems.Where(x => terms.All(term => x.SearchText.Contains(term, StringComparison.Ordinal))).ToArray();
+        var found = allItems.Where(x => MatchesSearch(x, terms)).ToArray();
         var selected = SelectedItem;
-        Items.ReplaceAll(found.Take(150));
-        if (selected is not null && Items.Contains(selected)) SelectedItem = selected;
+        var visible = found.Take(150).ToList();
+        if (selected is not null && found.Contains(selected) && !visible.Contains(selected)) visible[^1] = selected;
+        // A ListBox can temporarily clear selection during Reset. Keep dependent inputs until the final selection is known.
+        updatingSearchItems = true;
+        try
+        {
+            if (!Items.SequenceEqual(visible)) Items.ReplaceAll(visible);
+            SelectedItem = selected is not null && visible.Contains(selected) ? selected : null;
+        }
+        finally { updatingSearchItems = false; }
+        if (SelectedItem != selected) OnSelectedItemChanged(SelectedItem);
         CatalogStatus = $"{UiFormat.Whole(found.Length)} item families · up to 150 shown. Search in English, Russian or by ID.";
     }
     partial void OnSearchTextChanged(string value) => searchDelay.Trigger();
     partial void OnSelectedItemChanged(MarketFamily? value)
     {
+        if (updatingSearchItems) return;
         OnPropertyChanged(nameof(HasSelection)); OnPropertyChanged(nameof(HasPower)); OnPropertyChanged(nameof(HasQuality)); OnPropertyChanged(nameof(ShowSkillBonus)); OnPropertyChanged(nameof(ShowProfilePicker));
         QueuePrices();
     }
     partial void OnSelectedRegionChanged(Option<string> value) { RefreshProfiles(); QueuePrices(); }
-    partial void OnSelectedTierChanged(Option<int> value) => QueuePrices();
-    partial void OnSelectedEnchantmentChanged(Option<int> value) => QueuePrices();
-    partial void OnSelectedQualityChanged(Option<int> value) => QueuePrices();
+    partial void OnSelectedTierChanged(Option<int> value) { FilterItems(); QueuePrices(); }
+    partial void OnSelectedEnchantmentChanged(Option<int> value) { FilterItems(); QueuePrices(); }
+    partial void OnSelectedQualityChanged(Option<int> value) { FilterItems(); QueuePrices(); }
     partial void OnMinimumPowerChanged(decimal? value) => QueuePrices();
     partial void OnPersonalPowerChanged(bool value) { OnPropertyChanged(nameof(ShowSkillBonus)); OnPropertyChanged(nameof(ShowProfilePicker)); QueuePrices(); }
     partial void OnManualSkillsChanged(bool value) { OnPropertyChanged(nameof(ShowSkillBonus)); OnPropertyChanged(nameof(ShowProfilePicker)); QueuePrices(); }
@@ -164,11 +177,15 @@ public sealed partial class MarketViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(TotalLabel)); OnPropertyChanged(nameof(PriceHint)); Recalculate();
     }
+    private bool MatchesSearch(MarketFamily item, string[] terms) => terms.All(term => item.SearchText.Contains(term, StringComparison.Ordinal))
+        && item.Variants.Any(MatchesSearchFilters);
+    private bool MatchesSearchFilters(MarketItem item) => (SelectedTier.Value == 0 || item.Tier == SelectedTier.Value)
+        && (SelectedEnchantment.Value < 0 || item.Enchantment == SelectedEnchantment.Value)
+        && (SelectedQuality.Value == 0 || item.MaxQuality >= SelectedQuality.Value);
     private MarketCandidate[] Candidates()
     {
         if (SelectedItem is null || !PowerValid()) return [];
-        return SelectedItem.Variants.Where(x => (SelectedTier.Value == 0 || x.Tier == SelectedTier.Value)
-                && (SelectedEnchantment.Value < 0 || x.Enchantment == SelectedEnchantment.Value))
+        return SelectedItem.Variants.Where(MatchesSearchFilters)
             .SelectMany(x => Enumerable.Range(1, x.MaxQuality).Where(q => !HasQuality || SelectedQuality.Value == 0 || q == SelectedQuality.Value)
                 .Select(q => new MarketCandidate(x, q, HasPower ? ItemPower(x, q) : null)))
             .Where(x => !HasPower || x.ItemPower >= MinimumPower).ToArray();

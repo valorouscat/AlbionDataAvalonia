@@ -11,10 +11,15 @@
         </WrapPanel>
         <TextBlock Grid.Row="1" Text="{Binding PriceStatus}" Classes="UiFine" TextWrapping="Wrap" />
         <Grid Grid.Row="2" ColumnDefinitions="230,*" ColumnSpacing="12">
-            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+            <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="8">
                 <TextBox Text="{Binding SearchText}" Watermark="Item / название / ID…" AutomationProperties.Name="Search market items" />
-                <TextBlock Grid.Row="1" Text="{Binding CatalogStatus}" Classes="UiFine" TextWrapping="Wrap" />
-                <ListBox Grid.Row="2" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Grid.Row="1" Spacing="6">
+                    <controls:FilterField Label="Tier"><ComboBox ItemsSource="{Binding Tiers}" SelectedItem="{Binding SelectedTier}" HorizontalAlignment="Stretch" /></controls:FilterField>
+                    <controls:FilterField Label="Rarity / enchantment"><ComboBox ItemsSource="{Binding Enchantments}" SelectedItem="{Binding SelectedEnchantment}" HorizontalAlignment="Stretch" /></controls:FilterField>
+                    <controls:FilterField Label="Quality"><ComboBox ItemsSource="{Binding Qualities}" SelectedItem="{Binding SelectedQuality}" HorizontalAlignment="Stretch" /></controls:FilterField>
+                </StackPanel>
+                <TextBlock Grid.Row="2" Text="{Binding CatalogStatus}" Classes="UiFine" TextWrapping="Wrap" />
+                <ListBox Grid.Row="3" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="market:MarketFamily">
                             <StackPanel Spacing="2" Margin="0,3">
@@ -33,9 +38,6 @@
                         <TextBlock Text="{Binding SelectedItem.Name}" Classes="UiSectionTitle" />
                         <WrapPanel>
                             <controls:FilterField Label="Quantity"><NumericUpDown Width="125" Minimum="1" Maximum="1000000" Increment="1" FormatString="0" Value="{Binding Quantity}" /></controls:FilterField>
-                            <controls:FilterField Label="Tier"><ComboBox Width="105" ItemsSource="{Binding Tiers}" SelectedItem="{Binding SelectedTier}" /></controls:FilterField>
-                            <controls:FilterField Label="Enchantment / rarity"><ComboBox Width="160" ItemsSource="{Binding Enchantments}" SelectedItem="{Binding SelectedEnchantment}" /></controls:FilterField>
-                            <controls:FilterField Label="Quality"><ComboBox Width="145" ItemsSource="{Binding Qualities}" SelectedItem="{Binding SelectedQuality}" IsEnabled="{Binding HasQuality}" /></controls:FilterField>
                         </WrapPanel>
                         <WrapPanel IsVisible="{Binding HasPower}">
                             <controls:FilterField Label="Minimum item power"><NumericUpDown Width="160" Minimum="0" Maximum="5000" FormatString="0" Value="{Binding MinimumPower}" /></controls:FilterField>
