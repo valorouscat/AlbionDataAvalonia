@@ -294,14 +294,14 @@ public sealed partial class ActivityTrackerService : IDisposable
                     locations.Leave(leave.userObjectId, at);
                     // A local Leave may be a map transition, never a confirmed logout/death.
                     break;
-                case HealthUpdateEvent health when CanRecord && health.IsValid:
-                    Health(health.SourceObjectId, health.AffectedObjectId, health.HealthChange,
+                case HealthUpdateEvent health when health.IsValid:
+                    ObserveHealth(health.SourceObjectId, health.AffectedObjectId, health.HealthChange,
                         health.NewHealthState, health.ResultingHealth, health.SpellIndex,
                         health.GameTimeMilliseconds, at, Origin(packet, "Health", 0));
                     break;
-                case HealthUpdatesEvent health when CanRecord:
+                case HealthUpdatesEvent health:
                     foreach (var entry in health.HealthUpdates.Where(x => x.IsValid))
-                        Health(entry.SourceObjectId, entry.AffectedObjectId, entry.HealthChange,
+                        ObserveHealth(entry.SourceObjectId, entry.AffectedObjectId, entry.HealthChange,
                             entry.NewHealthState, entry.ResultingHealth, entry.SpellIndex,
                             entry.GameTimeMilliseconds, at, Origin(packet, "Health", entry.EntryIndex));
                     break;
@@ -624,6 +624,25 @@ public sealed partial class ActivityTrackerService : IDisposable
         headersDirty = true;
     }
 
+    private static bool IsTerminalHealth(double delta, PacketFieldState healthState, double? resultingHealth) =>
+        healthState == PacketFieldState.Valid && resultingHealth == 0
+        || delta < 0 && healthState == PacketFieldState.Missing;
+
+    private void ObserveHealth(long? sourceId, long targetId, double delta, PacketFieldState healthState,
+        double? resultingHealth, int? spell, long? gameTime, DateTime at, string? origin)
+    {
+        if (!double.IsFinite(delta) || targetId <= 0) return;
+        // Mob deaths can arrive as health updates without Died. Live memory must
+        // remove them even when activity recording is disabled or storage is paused.
+        if (IsTerminalHealth(delta, healthState, resultingHealth))
+        {
+            ForgetResourceMob(targetId);
+            ForgetLiveActor(targetId);
+            ForgetWisp(targetId);
+        }
+        if (CanRecord) Health(sourceId, targetId, delta, healthState, resultingHealth, spell, gameTime, at, origin);
+    }
+
     private void Health(long? sourceId, long targetId, double delta, PacketFieldState healthState,
         double? resultingHealth, int? spell, long? gameTime, DateTime at, string? origin)
     {
@@ -634,8 +653,7 @@ public sealed partial class ActivityTrackerService : IDisposable
         var source = actors.Resolve(sourceId);
         var target = actors.Resolve(targetId);
         var relevant = delta != 0 && (Tracked(source) || Tracked(target));
-        var terminal = healthState == PacketFieldState.Valid && resultingHealth == 0
-            || delta < 0 && healthState == PacketFieldState.Missing;
+        var terminal = IsTerminalHealth(delta, healthState, resultingHealth);
         if (!relevant && !(terminal && mobParticipation.ContainsKey(targetId))) return;
         if (relevant)
         {
