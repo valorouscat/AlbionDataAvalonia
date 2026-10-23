@@ -8,10 +8,9 @@ using System.Linq;
 namespace AlbionDataAvalonia.Activity;
 
 // Dynamic POIs share the old roaming-boss settings and scene slot for backward compatibility.
-// Mob positions are remembered for one map visit; stationary entrances leave with visibility.
+// Observations survive visibility changes and map revisits in process-local Live memory.
 public sealed partial class ActivityTrackerService
 {
-    private const int MaxLiveActors = 500;
     private readonly Dictionary<long, ActivityLiveActor> roamingBosses = new();
     private long liveActorsEpoch = -1;
 
@@ -28,12 +27,14 @@ public sealed partial class ActivityTrackerService
 
     private void PlaceDungeonEntrance(NewRandomDungeonExitEvent entrance, DateTime at)
     {
+        if (at < liveMemoryClearedAt) return;
         SyncLiveActors();
         if (entrance.ObjectId is not { } id || entrance.SourceExitPosition is not { } position
             || string.IsNullOrWhiteSpace(entrance.UniqueName)
             || !double.IsFinite(position.X) || !double.IsFinite(position.Y)) return;
         // Portal wisps have a separate layer and rarity/size filters.
         if (entrance.UniqueName.StartsWith("MISTS_", StringComparison.OrdinalIgnoreCase)) return;
+        observedThisVisit.Add(id);
         var metadata = ActivityInstanceMetadata.FromEntrance(entrance.UniqueName, entrance.DungeonType,
             entrance.Level, entrance.IsAlreadyEntered);
         var seasonal = ActivityLiveActors.IsSeasonal(entrance.UniqueName) || ActivityLiveActors.IsSeasonal(entrance.DungeonType);
@@ -45,8 +46,6 @@ public sealed partial class ActivityTrackerService
 
     private void Keep(ActivityLiveActor actor)
     {
-        if (roamingBosses.Count >= MaxLiveActors && !roamingBosses.ContainsKey(actor.Id))
-            roamingBosses.Remove(roamingBosses.Values.MinBy(x => x.SeenAtUtc)!.Id);
         roamingBosses[actor.Id] = actor;
     }
 
@@ -64,7 +63,6 @@ public sealed partial class ActivityTrackerService
     {
         SyncLiveActors();
         if (!roamingBosses.TryGetValue(id, out var actor)) return;
-        if (!actor.IsMob) { ForgetLiveActor(id); return; }
         if (!actor.IsInView) return;
         roamingBosses[id] = actor with { IsInView = false };
         liveMapVersion++;

@@ -1,4 +1,6 @@
 using AlbionDataAvalonia.Activity.Models;
+using AlbionDataAvalonia.Ui;
+using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.Generic;
 using System.Linq;
@@ -63,16 +65,19 @@ public sealed partial class ActivityMapViewModel
         Rebuild();
     }
 
-    [ObservableProperty] private bool showWispCommon;
-    partial void OnShowWispCommonChanged(bool value) => SaveWispFilters();
-    [ObservableProperty] private bool showWispUncommon;
-    partial void OnShowWispUncommonChanged(bool value) => SaveWispFilters();
-    [ObservableProperty] private bool showWispRare;
-    partial void OnShowWispRareChanged(bool value) => SaveWispFilters();
-    [ObservableProperty] private bool showWispEpic;
-    partial void OnShowWispEpicChanged(bool value) => SaveWispFilters();
-    [ObservableProperty] private bool showWispLegendary;
-    partial void OnShowWispLegendaryChanged(bool value) => SaveWispFilters();
+    public IReadOnlyList<Option<ActivityWispRarity>> WispRarityOptions { get; } =
+        [new(ActivityWispRarity.Common, "Common+"), new(ActivityWispRarity.Uncommon, "Uncommon+"),
+         new(ActivityWispRarity.Rare, "Rare+"), new(ActivityWispRarity.Epic, "Epic+"), new(ActivityWispRarity.Legendary, "Legendary")];
+    [ObservableProperty] private Option<ActivityWispRarity> selectedWispRarity;
+    partial void OnSelectedWispRarityChanged(Option<ActivityWispRarity> value) => SaveWispFilters();
+
+    [RelayCommand]
+    private void ClearLiveMap()
+    {
+        tracker.ClearLiveMap();
+        RefreshLive();
+    }
+
     [ObservableProperty] private bool showWispSolo;
     partial void OnShowWispSoloChanged(bool value) => SaveWispFilters();
     [ObservableProperty] private bool showWispDuo;
@@ -80,14 +85,13 @@ public sealed partial class ActivityMapViewModel
 
     private void SaveWispFilters()
     {
-        settings.MapWispRarities = (ShowWispCommon ? 1 : 0) | (ShowWispUncommon ? 2 : 0) | (ShowWispRare ? 4 : 0)
-            | (ShowWispEpic ? 8 : 0) | (ShowWispLegendary ? 16 : 0);
+        settings.MapWispRarities = 31 & ~((1 << (int)SelectedWispRarity.Value) - 1);
         settings.MapWispSizes = (ShowWispSolo ? 1 : 0) | (ShowWispDuo ? 2 : 0);
         Rebuild();
     }
 
     private IReadOnlyList<ActivityWisp> ShownWisps() => !IsLive || !ShowWisps ? [] : (live.Wisps ?? [])
-        .Where(x => (settings.MapWispRarities & (1 << (int)x.Rarity)) != 0
+        .Where(x => x.Rarity >= SelectedWispRarity.Value
             && (settings.MapWispSizes & (1 << (int)x.Size)) != 0)
         .OrderBy(x => x.Rarity).ToArray();
 }

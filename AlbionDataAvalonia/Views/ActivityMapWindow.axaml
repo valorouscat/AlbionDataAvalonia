@@ -63,15 +63,19 @@
                 <TextBlock Text="{Binding Note}" TextWrapping="Wrap" FontSize="{DynamicResource UiFontSizeSmall}" />
             </Border>
 
-            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" IsVisible="{Binding ShowFollow}">
-                <Border Classes="UiOverlay" IsVisible="{Binding Follow}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Ellipse Classes="UiStatusDot Busy" />
-                        <TextBlock Text="Following you" FontSize="{DynamicResource UiFontSizeSmall}" />
-                    </StackPanel>
-                </Border>
-                <Button Content="Follow me" Command="{Binding FollowMeCommand}" IsVisible="{Binding !Follow}" FontSize="{DynamicResource UiFontSizeSmall}"
-                        Background="{DynamicResource UiOverlayBrush}" ToolTip.Tip="Keep your character in the middle of the map" />
+            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" IsVisible="{Binding IsLive}">
+                <StackPanel Spacing="6" IsVisible="{Binding ShowFollow}">
+                    <Border Classes="UiOverlay" IsVisible="{Binding Follow}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Classes="UiStatusDot Busy" />
+                            <TextBlock Text="Following you" FontSize="{DynamicResource UiFontSizeSmall}" />
+                        </StackPanel>
+                    </Border>
+                    <Button Content="Follow me" Command="{Binding FollowMeCommand}" IsVisible="{Binding !Follow}"
+                            ToolTip.Tip="Keep your character in the middle of the map" />
+                </StackPanel>
+                <Button Content="Clear live map" Command="{Binding ClearLiveMapCommand}"
+                        ToolTip.Tip="Clear remembered Live data for every location and character. Recorded History and filters are kept." />
             </StackPanel>
 
             <Border Classes="UiOverlay" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12" MaxWidth="420" MaxHeight="480" Padding="12">
@@ -137,7 +141,7 @@
                         </StackPanel>
                     </ToggleButton>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResources}" IsVisible="{Binding IsLive}"
-                                  ToolTip.Tip="Resource nodes the game has shown near you on this map, with their tier and the units left under each. A colored ring marks an enchanted node. Empty nodes disappear immediately. Resource mobs remain at their last known position after leaving view (faded) until confirmed death or a zone change.">
+                                  ToolTip.Tip="Resource nodes the game has shown near you on this map, with their tier and the units left under each. A colored ring marks an enchanted node. Empty nodes disappear immediately. Resource mobs remain at their last known position after leaving view (faded) until confirmed death, clearing or app closure.">
                         <StackPanel Orientation="Horizontal" Spacing="2">
                             <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceWoodBrush}" VerticalAlignment="Center" />
                             <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceOreBrush}" VerticalAlignment="Center" />
@@ -164,7 +168,7 @@
                         </StackPanel>
                     </ToggleButton>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowWisps}" IsVisible="{Binding IsLive}"
-                                  ToolTip.Tip="Wandering portal wisps currently in view. The ring shows rarity; one light is solo, two lights are duo. They disappear when they leave view or you change zone.">
+                                  ToolTip.Tip="Observed wandering portal wisps. The ring shows rarity; one light is solo, two lights are duo. Last known positions remain until cleared or the app closes.">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="10" Height="10" Stroke="{DynamicResource UiMarkerOutlineBrush}" StrokeThickness="1" VerticalAlignment="Center">
                                 <Ellipse.Fill><SolidColorBrush Color="{DynamicResource UiMapPoiWispColor}" /></Ellipse.Fill>
@@ -173,7 +177,7 @@
                         </StackPanel>
                     </ToggleButton>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowRoamingBosses}" IsVisible="{Binding IsLive}"
-                                  ToolTip.Tip="Observed bosses, dungeon entrances and event objects. Mob positions are remembered after leaving view until confirmed death or a zone change. Faded icons show last known positions; entrances disappear when they leave view.">
+                                  ToolTip.Tip="Observed bosses, dungeon entrances and event objects. Mob positions are remembered after leaving view until confirmed death, clearing or app closure. Faded icons show last known positions, including entrances outside view.">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="10" Height="10" Stroke="{DynamicResource UiMapPoiBossBrush}" StrokeThickness="2" VerticalAlignment="Center" />
                             <TextBlock Text="Dynamic POI" />
@@ -193,15 +197,10 @@
                             <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowWispFilters}">
                                 <StackPanel Spacing="8">
                                     <TextBlock Text="Seen wisps" Classes="UiSectionTitle" />
-                                    <TextBlock Text="Only portal wisps currently in view. Choose which rarities and sizes to show." Classes="UiFine" TextWrapping="Wrap" />
-                                    <TextBlock Text="Rarity" Classes="UiLabel" />
-                                    <WrapPanel>
-                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Common" IsChecked="{Binding ShowWispCommon}" />
-                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Uncommon" IsChecked="{Binding ShowWispUncommon}" />
-                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Rare" IsChecked="{Binding ShowWispRare}" />
-                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Epic" IsChecked="{Binding ShowWispEpic}" />
-                                        <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Legendary" IsChecked="{Binding ShowWispLegendary}" />
-                                    </WrapPanel>
+                                    <TextBlock Text="Observed portal wisps, including remembered positions. Show the selected rarity and higher; choose solo, duo or both." Classes="UiFine" TextWrapping="Wrap" />
+                                    <TextBlock Text="Minimum rarity" Classes="UiLabel" />
+                                    <controls:OptionSlider ItemsSource="{Binding WispRarityOptions}" SelectedItem="{Binding SelectedWispRarity}"
+                                                           AutomationProperties.Name="Minimum wisp rarity" />
                                     <TextBlock Text="Size" Classes="UiLabel" />
                                     <WrapPanel>
                                         <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Solo · 1 player" IsChecked="{Binding ShowWispSolo}" />
@@ -218,7 +217,7 @@
                                         <TextBlock Text="Volume" Classes="UiLabel" />
                                         <TextBlock Grid.Column="1" Text="{Binding HostileSoundVolumeText}" Classes="UiValue" />
                                     </Grid>
-                                    <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                                    <controls:ScrollSafeSlider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
                                             Value="{Binding HostileSoundVolume}" AutomationProperties.Name="Hostile alert volume" />
                                     <TextBlock Text="{Binding HostileSoundFileName}" Classes="UiLabel" TextWrapping="Wrap"
                                                ToolTip.Tip="{Binding HostileSoundFile}" />
@@ -273,13 +272,13 @@
                                     <TextBlock Text="Seen resources" Classes="UiSectionTitle" />
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Minimum seen tier" Classes="UiLabel" />
-                                <ComboBox ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceTier}"
+                                <controls:OptionSlider ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceTier}"
                                           HorizontalAlignment="Stretch" AutomationProperties.Name="Minimum seen tier" ToolTip.Tip="Show seen resources of this tier and higher" />
                             </StackPanel>
                                     <TextBlock Text="Include resources below this tier" Classes="UiMuted" TextWrapping="Wrap" />
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="Lower tiers" Classes="UiLabel" />
-                                        <ComboBox ItemsSource="{Binding LowerTierOptions}" SelectedItem="{Binding SelectedLowerTiers}"
+                                        <controls:OptionSlider ItemsSource="{Binding LowerTierOptions}" SelectedItem="{Binding SelectedLowerTiers}"
                                                   HorizontalAlignment="Stretch" AutomationProperties.Name="Lower tiers"
                                                   ToolTip.Tip="Choose how many tiers below the target can appear, then set enchantment separately for each" />
                                     </StackPanel>
@@ -289,7 +288,7 @@
                                             <DataTemplate x:DataType="vm:ActivityMapResourceTierFilterViewModel">
                                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="0,0,0,6">
                                                     <TextBlock Text="{Binding Label}" Classes="UiLabel" VerticalAlignment="Center" />
-                                                    <ComboBox Grid.Column="1" ItemsSource="{Binding EnchantmentOptions}"
+                                                    <controls:OptionSlider Grid.Column="1" ItemsSource="{Binding EnchantmentOptions}"
                                                               SelectedItem="{Binding SelectedEnchantment}" MinWidth="112"
                                                               AutomationProperties.Name="{Binding Label}"
                                                               ToolTip.Tip="Show this enchantment and higher for this tier. Applies to seen nodes and resource mobs." />
@@ -306,11 +305,11 @@
                     </ToggleButton>
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="Seen resource opacity" Classes="UiLabel" />
-                                        <ComboBox ItemsSource="{Binding IconOpacityOptions}" SelectedItem="{Binding SelectedIconOpacity}"
+                                        <controls:OptionSlider ItemsSource="{Binding IconOpacityOptions}" SelectedItem="{Binding SelectedIconOpacity}"
                                                   HorizontalAlignment="Stretch" AutomationProperties.Name="Seen resource opacity"
                                                   ToolTip.Tip="Opacity of seen resource nodes, resource mobs and their labels" />
                                     </StackPanel>
-                                    <TextBlock Text="Empty nodes are hidden. Sightings last only for this visit." Classes="UiFine" TextWrapping="Wrap" />
+                                    <TextBlock Text="Empty nodes are hidden. Last known sightings remain until cleared or the app closes." Classes="UiFine" TextWrapping="Wrap" />
                                 </StackPanel>
                             </Border>
                             <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowResourceSoundSettings}">
@@ -322,7 +321,7 @@
                                         <TextBlock Text="Volume" Classes="UiLabel" />
                                         <TextBlock Grid.Column="1" Text="{Binding ResourceSoundVolumeText}" Classes="UiValue" />
                                     </Grid>
-                                    <Slider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                                    <controls:ScrollSafeSlider Minimum="0" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
                                             Value="{Binding ResourceSoundVolume}" AutomationProperties.Name="Resource alert volume" />
                                     <TextBlock Text="{Binding ResourceSoundFileName}" Classes="UiLabel" TextWrapping="Wrap"
                                                ToolTip.Tip="{Binding ResourceSoundFile}" />
@@ -340,12 +339,12 @@
                                     <TextBlock Text="Possible spawn spots" Classes="UiSectionTitle" />
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Minimum spawn tier" Classes="UiLabel" />
-                                <ComboBox ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceSpawnTier}"
+                                <controls:OptionSlider ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceSpawnTier}"
                                           HorizontalAlignment="Stretch" AutomationProperties.Name="Minimum spawn tier" ToolTip.Tip="Independent of the seen-resource tier and enchantment filters" />
                             </StackPanel>
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="Spawn spot opacity" Classes="UiLabel" />
-                                        <ComboBox ItemsSource="{Binding IconOpacityOptions}" SelectedItem="{Binding SelectedSpawnIconOpacity}"
+                                        <controls:OptionSlider ItemsSource="{Binding IconOpacityOptions}" SelectedItem="{Binding SelectedSpawnIconOpacity}"
                                                   HorizontalAlignment="Stretch" AutomationProperties.Name="Spawn spot opacity"
                                                   ToolTip.Tip="Opacity of possible node and resource-mob spawn spots and their labels; independent of seen resources" />
                                     </StackPanel>
@@ -357,12 +356,12 @@
                                     <TextBlock Text="Applies to seen resources and possible spawn spots." Classes="UiFine" TextWrapping="Wrap" />
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Icon size" Classes="UiLabel" />
-                                <ComboBox ItemsSource="{Binding IconSizeOptions}" SelectedItem="{Binding SelectedIconSize}"
+                                <controls:OptionSlider ItemsSource="{Binding IconSizeOptions}" SelectedItem="{Binding SelectedIconSize}"
                                           HorizontalAlignment="Stretch" AutomationProperties.Name="Icon size" ToolTip.Tip="Scale resource markers, labels and hover areas" />
                             </StackPanel>
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Grouping radius" Classes="UiLabel" />
-                                <ComboBox ItemsSource="{Binding ClusterRadiusOptions}" SelectedItem="{Binding SelectedClusterRadius}"
+                                <controls:OptionSlider ItemsSource="{Binding ClusterRadiusOptions}" SelectedItem="{Binding SelectedClusterRadius}"
                                           HorizontalAlignment="Stretch" AutomationProperties.Name="Grouping radius" ToolTip.Tip="Screen pixels between grouped nodes or spawn spots; Off shows each separately" />
                             </StackPanel>
                                 </StackPanel>
@@ -387,7 +386,7 @@
                 <TextBlock Grid.Column="1" Text="{Binding TimelineStartText}" Classes="UiLabel" VerticalAlignment="Center" />
                 <Grid Grid.Column="2" VerticalAlignment="Center">
                     <views:ActivityMapTimelineTicks Ticks="{Binding Ticks}" Height="14" VerticalAlignment="Center" Opacity="0.85" />
-                    <Slider Minimum="0" Maximum="{Binding TimelineMaximum}" Value="{Binding TimelineValue}" VerticalAlignment="Center"
+                    <controls:ScrollSafeSlider Minimum="0" Maximum="{Binding TimelineMaximum}" Value="{Binding TimelineValue}" VerticalAlignment="Center"
                             ToolTip.Tip="{Binding TimelineNowText}" AutomationProperties.Name="Replay position" />
                 </Grid>
                 <TextBlock Grid.Column="3" Text="{Binding TimelineEndText}" Classes="UiLabel" VerticalAlignment="Center" />

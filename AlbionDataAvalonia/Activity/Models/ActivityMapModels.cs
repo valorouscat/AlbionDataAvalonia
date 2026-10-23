@@ -86,7 +86,7 @@ public sealed record ActivityRunMap(ActivitySession Run, IReadOnlyList<ActivityP
 /// ItemUniqueName is the raw resource it yields, for its icon. Empty nodes are removed immediately.
 /// </summary>
 public sealed record ActivityResourceNode(long Id, string Family, int Tier, int Enchantment, double X, double Y, int Charges,
-    DateTime SeenAtUtc, string ItemUniqueName);
+    DateTime SeenAtUtc, string ItemUniqueName, bool IsInView = true);
 
 /// <summary>
 /// A mob near the character that yields a gathering resource: a hide animal, or a wood, stone, fiber or ore critter,
@@ -98,8 +98,7 @@ public sealed record ActivityResourceMob(long Id, string Family, int Tier, int E
 
 public enum ActivityLiveActorKind { Boss, Miniboss, Dungeon, EventDungeon, Chest, EventMob }
 
-/// <summary>An observed dynamic POI. Mobs retain their last observed position outside visibility during this map visit;
-/// stationary dungeon entrances are only shown while visible. The legacy scene/settings slot is preserved.</summary>
+/// <summary>An observed dynamic POI. Mobs retain their last observed position outside visibility and across map revisits until clearing or app closure. The legacy scene/settings slot is preserved.</summary>
 public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, double X, double Y, DateTime SeenAtUtc, string Name,
     string MobUniqueName = "", int Tier = 0, bool IsInView = true, int? Enchantment = null)
 {
@@ -121,5 +120,5 @@ public sealed record ActivityHostileSighting(DateTime SeenAtUtc, string Name, st
 public enum ActivityWispRarity { Common, Uncommon, Rare, Epic, Legendary }
 public enum ActivityWispSize { Solo, Duo }
 
-/// <summary>A portal wisp currently in view; no sightings survive leaving the map.</summary>
-public sealed record ActivityWisp(long Id, ActivityWispRarity Rarity, ActivityWispSize Size, double X, double Y, DateTime SeenAtUtc);
+/// <summary>An observed portal wisp, retained at its last known position until clearing or app closure.</summary>
+public sealed record ActivityWisp(long Id, ActivityWispRarity Rarity, ActivityWispSize Size, double X, double Y, DateTime SeenAtUtc, bool IsInView = true);

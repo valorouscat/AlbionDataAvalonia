@@ -235,6 +235,7 @@ public sealed partial class ActivityTrackerService : IDisposable
         captureGap = false;
         captureSuspended = true;
         awaitingContext = true;
+        SaveLiveMemory();
         actors.Suspend();
         ForgetPosition();
         map = null;
@@ -286,7 +287,8 @@ public sealed partial class ActivityTrackerService : IDisposable
                     break;
                 case LeaveEvent leave:
                     LeaveResourceMob(leave.userObjectId);
-                    ForgetWisp(leave.userObjectId);
+                    LeaveWisp(leave.userObjectId);
+                    LeaveResourceNode(leave.userObjectId);
                     LeaveLiveActor(leave.userObjectId);
                     actors.Leave(leave.userObjectId, at);
                     locations.Leave(leave.userObjectId, at);
@@ -433,6 +435,7 @@ public sealed partial class ActivityTrackerService : IDisposable
             actors.CharacterId, actors.CharacterName) : null;
         OpenPlaySessionFor(confirmedOwner, at);
         map = next;
+        RestoreLiveMemory();
         mapMetadata = nextMetadata;
         locationObservation = null;
         if (sameCharacter) RestoreLocationMetadata();

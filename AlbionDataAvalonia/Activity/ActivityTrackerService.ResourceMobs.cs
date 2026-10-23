@@ -10,10 +10,9 @@ namespace AlbionDataAvalonia.Activity;
 
 // The game tells the client about the mobs around the character. The live map shows the ones that yield gathering
 // resources (hide animals and the wood, stone, fiber and ore critters) at their last observed positions.
-// Leaving visibility retains the sighting for this map visit; confirmed death removes it.
+// Leaving visibility retains the sighting until clearing or app closure; confirmed death removes it.
 public sealed partial class ActivityTrackerService
 {
-    private const int MaxResourceMobs = 1000;
     private readonly Dictionary<long, ActivityResourceMob> resourceMobs = new();
     private long resourceMobsEpoch = -1;
     // The first resource mob of each map logs its packet, so the layout can be checked in game.
@@ -26,7 +25,7 @@ public sealed partial class ActivityTrackerService
         {
             if (disposed || map is null || captureSuspended) return;
             var at = Utc(packet.CapturedAt);
-            if (at < mapEnteredAt || !SameConnection(packet.ConnectionId, packet.MessageIdentity)) return;
+            if (at < mapEnteredAt || at < liveMemoryClearedAt || !SameConnection(packet.ConnectionId, packet.MessageIdentity)) return;
             SyncResourceMobs();
             var changed = code switch
             {
@@ -34,10 +33,11 @@ public sealed partial class ActivityTrackerService
                     && (PlaceResourceMob(mob, packet, at) | PlaceRoamingBoss(mob, at) | PlaceWisp(mob, at)),
                 EventCodes.MobChangeState => ActivityResourceMobs.ReadChange(packet.Parameters) is { } change && EnchantResourceMob(change.Id, change.Enchantment, at),
                 // Dynamic mob POIs and portal wisps move with the same packet.
-                EventCodes.Move => ActivityResourceMobs.ReadMove(packet.Parameters) is { } move
+                EventCodes.Move => ActivityResourceMobs.ReadMove(packet.Parameters) is { } move && observedThisVisit.Contains(move.Id)
                     && (MoveResourceMob(move.Id, move.X, move.Y, at) | MoveLiveActor(move.Id, move.X, move.Y, at) | MoveWisp(move.Id, move.X, move.Y, at)),
                 _ => false
             };
+            if (code == EventCodes.NewMob && ActivityResourceMobs.ReadNew(packet.Parameters) is { } seen) observedThisVisit.Add(seen.Id);
             if (changed) liveMapVersion++;
         }
     }
@@ -54,8 +54,6 @@ public sealed partial class ActivityTrackerService
         }
 
         resourceMobs.TryGetValue(sighting.Id, out var previous);
-        if (resourceMobs.Count >= MaxResourceMobs && !resourceMobs.ContainsKey(sighting.Id))
-            resourceMobs.Remove(resourceMobs.Values.MinBy(x => x.SeenAtUtc)!.Id);
         resourceMobs[sighting.Id] = new ActivityResourceMob(sighting.Id, resource.Family, resource.Tier, sighting.Enchantment, sighting.X,
             sighting.Y, at, descriptor!.UniqueName ?? "", descriptor.DisplayName,
             ActivityResourceNodePackets.ItemUniqueName(resource.Family, resource.Tier, sighting.Enchantment));
