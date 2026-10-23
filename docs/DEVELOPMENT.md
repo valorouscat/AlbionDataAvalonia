@@ -114,7 +114,11 @@ git -C /tmp/ao-bin-dumps sparse-checkout set --no-cone /helldungeons.xml /helldu
 python3 scripts/generate-depths-map-data.py /tmp/ao-bin-dumps
 ```
 
-Joining the Depths names no layout (the map id is only `@HELLDUNGEON@<guid>`), so the tracker counts floors: a map entered from outside the Depths is floor 1, and each Depths map entered from another one floor deeper, remembered per map id so a rejoin keeps its floor. A layout the client does get (a `helldungeons.xml` map id such as `DUO_ORANGE_HELL_DUNGEON_02`, or a master name) wins. When nothing names a floor, the map logs `No Depths floor for map …` at Information level.
+Joining the Depths can name no layout (the map id is only `@HELLDUNGEON@<guid>`). Floor counting remains a fallback label; fixed landmarks determine the actual floor and orientation. `DepthsMapData.Recognize` compares upward, downward and soul exits, resurrection shrines and demon altars against all three masters at all four quarter turns. It requires two distinct matching template points and an unambiguous lead over other placements. Slave-section objects are ignored as outliers. Coordinates remain in the template frame; the old hard-coded half turn has been removed.
+
+`ActivityPacketSubscriptions` reuses the shared world-object envelope decoder (`MistsLandmarkEvent`, key 0 object id and key 1 position) for the five corresponding object-spawn events. This does not change Photon decoding or the pinned shared core. Observations are limited by connection identity, capture time and map binding, including a short pre-Join window on a new connection. Recognized placements are kept per server, character and exact map id until app exit, and re-evaluated when more landmarks arrive. Live and History use the existing `Layout`/`LayoutTurns` metadata; no migration is needed.
+
+Until orientation is confirmed, the UI shows the world-space path and observations on a grid, with a waiting message. Static rooms, outline and possible POIs stay hidden. Once confirmed, rooms, outline and POIs all rotate together; observed player and entity positions never rotate. Old History visits without a confirmed Depths turn remain on the grid rather than assuming 180 degrees. Validate the object envelopes against a live Windows capture after protocol changes; the offline fixture only verifies decoded synthetic packets and template geometry.
 
 
 ## Hostile alert audio

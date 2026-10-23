@@ -12,7 +12,8 @@ https://github.com/ao-data/ao-bin-dumps:
   a minimap. The camp slots are drawn as rooms of their section's size on top of it.
 - Points of interest. The master places the loot chest and coffer spots, key spawns, resurrection shrines and the
   exits up, down and out, and the demon altars (the room nodes the in-game map marks) that spawn its monsters. The game
-  turns each floor half a turn from its template, so every position is turned the same way. A camp section is picked when the instance opens and fills its slot, so a slot shows as one
+  may turn each floor; positions stay in template coordinates and observed landmarks determine the instance's turn.
+  A camp section is picked when the instance opens and fills its slot, so a slot shows as one
   camp spot, with the chance of a boss the floor's template pool gives that slot size.
 
 Rerun after a game patch changes the Depths:
@@ -38,10 +39,9 @@ NOT_FLOOR = ("LIGHT", "ATMOSPHERE", "WATER", "RIVER", "ROOF", "BACKDROP", "SPAWN
 
 
 def ground(pos: str) -> tuple[float, float]:
-    """A template position is "x height z"; the map uses x and z. The game turns a Depths floor half a turn from its
-    template (seen in game on level 1: the floor's altars match the in-game map only so), so both are negated."""
+    """A template position is "x height z"; the map uses x and z. Instance rotation is determined at runtime."""
     x, _, z = (float(value) for value in pos.split())
-    return round(-x, 1) + 0.0, round(-z, 1) + 0.0
+    return round(x, 1) + 0.0, round(z, 1) + 0.0
 
 
 def pair(value: str) -> tuple[float, float]:

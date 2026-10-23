@@ -523,6 +523,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var geometry = zone?.Geometry ?? LiveFallbackGeometry();
         Note = live.Position is null ? "Waiting for your position. Take a few steps in game."
             : zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
+            : WaitingForDepthsOrientation(live.RawMapId, live.LayoutTurns)
+                ? "Finding this Depths floor's orientation. Move near exits or shrines; your path and observed objects still show."
             : zone is { Zone: null } && live.Layout is null && AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.Mists
                 ? "Finding this Mists layout. The map shows once a wisp or exit comes into view."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
@@ -535,12 +537,13 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             return;
         }
 
+        zone = WithDepthsOrientation(zone, live.RawMapId, live.LayoutTurns);
         var turns = LayoutTurns(zone, live.Layout, live.LayoutTurns);
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
             SpawnSpots(zone, live.RawMapId, live.Layout, live.LayoutTurns), ShownPois(Turned(zone?.Pois ?? [], turns)),
-            zone?.Zone?.Rooms, zone?.Zone?.Outline, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
+            Turned(zone?.Zone?.Rooms ?? [], turns), Turned(zone?.Zone?.Outline ?? [], turns), ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
             ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps());
@@ -687,6 +690,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var geometry = zone?.Geometry ?? (points.Length == 0 ? null
             : FallbackGeometry((points.Min(x => x.X), points.Min(x => x.Y), points.Max(x => x.X), points.Max(x => x.Y))));
         Note = zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
+            : WaitingForDepthsOrientation(option.RawMapId, option.LayoutTurns)
+                ? "This visit has no confirmed Depths orientation. Showing the recorded path and observations."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
             : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing available map layers on a coordinate grid."
@@ -697,16 +702,25 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             return;
         }
 
+        zone = WithDepthsOrientation(zone, option.RawMapId, option.LayoutTurns);
         var turns = LayoutTurns(zone, option.Layout, option.LayoutTurns);
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
             Layers, turns, ResourceSpawns: SpawnSpots(zone, option.RawMapId, option.Layout, option.LayoutTurns),
-            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: zone?.Zone?.Rooms, Outline: zone?.Zone?.Outline, ResourceIconScale: SelectedIconSize.Value / 100d,
+            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: Turned(zone?.Zone?.Rooms ?? [], turns), Outline: Turned(zone?.Zone?.Outline ?? [], turns), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
             ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d);
     }
 
-    // Only a minimap found by its layout follows the instance's turn.
+    private static bool WaitingForDepthsOrientation(string rawMapId, int? turns) =>
+        turns is null && AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.AbyssalDepths;
+
+    private static ZoneView? WithDepthsOrientation(ZoneView? zone, string rawMapId, int? turns) =>
+        zone?.Zone is { } map && WaitingForDepthsOrientation(rawMapId, turns)
+            ? zone with { Zone = map with { Rooms = [], Outline = [] }, Image = null, Exits = [], Icons = [], Pois = [], ResourceSpawns = [] }
+            : zone;
+
+    // Template features follow the instance's turn; observed world positions never turn.
     private static int LayoutTurns(ZoneView? zone, string? layout, int? turns) =>
         zone?.Zone is { } shown && string.Equals(shown.Id, layout, StringComparison.OrdinalIgnoreCase) ? turns ?? 0 : 0;
 
@@ -722,6 +736,14 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
     private static IReadOnlyList<MapPoi> Turned(IReadOnlyList<MapPoi> chests, int turns) =>
         turns % 4 == 0 ? chests : chests.Select(chest => chest with { Position = Turn(chest.Position, turns) }).ToArray();
+
+    private static IReadOnlyList<MapRect> Turned(IReadOnlyList<MapRect> rectangles, int turns) =>
+        turns % 4 == 0 ? rectangles : rectangles.Select(rectangle =>
+        {
+            var a = Turn(rectangle.Min, turns);
+            var b = Turn(rectangle.Max, turns);
+            return new MapRect(new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y)), new(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y)));
+        }).ToArray();
 
     private static MapPoint Turn(MapPoint point, int turns)
     {

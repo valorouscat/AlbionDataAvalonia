@@ -1,5 +1,6 @@
 using Albion.Network;
 using AlbionDataAvalonia.Activity;
+using AlbionDataAvalonia.Maps;
 using AlbionDataAvalonia.Network.Events;
 using AlbionDataAvalonia.Network.Models;
 using AlbionDataAvalonia.Network.Requests;
@@ -71,6 +72,12 @@ internal static class ActivityPacketSubscriptions
         // Wisp spawns and border exits stand at fixed points of a Mists layout and place it.
         builder.SubscribeEvent<MistsLandmarkEvent>((int)EventCodes.NewMistsWispSpawn, packet => { activity.ObserveMistsLandmark(packet); return Task.CompletedTask; });
         builder.SubscribeEvent<MistsLandmarkEvent>((int)EventCodes.NewMistsBorderExit, packet => { activity.ObserveMistsLandmark(packet); return Task.CompletedTask; });
+        // Reuse the shared world-object envelope (0 object id, 1 position), without another Photon parser.
+        DepthsLandmark(builder, EventCodes.NewHellDungeonUpwardExit, DepthsLandmarkKind.Up, activity);
+        DepthsLandmark(builder, EventCodes.NewHellDungeonDownwardExit, DepthsLandmarkKind.Down, activity);
+        DepthsLandmark(builder, EventCodes.NewHellDungeonSoulExit, DepthsLandmarkKind.SoulExit, activity);
+        DepthsLandmark(builder, EventCodes.NewResurrectionShrine, DepthsLandmarkKind.ResurrectionShrine, activity);
+        DepthsLandmark(builder, EventCodes.NewHellDungeonRoomShrineObject, DepthsLandmarkKind.Altar, activity);
         // Resource nodes for the live map. The shared packet models don't cover them yet, so they are read from raw parameters.
         ResourceNodes(builder, EventCodes.NewHarvestableObject, activity);
         ResourceNodes(builder, EventCodes.NewSimpleHarvestableObjectList, activity);
@@ -81,6 +88,9 @@ internal static class ActivityPacketSubscriptions
         ResourceMobs(builder, EventCodes.Move, activity);
         builder.AddHandler(new AcquisitionIntentHandler(activity));
     }
+
+    private static void DepthsLandmark(ReceiverBuilder builder, EventCodes code, DepthsLandmarkKind kind, ActivityTrackerService activity)
+        => builder.SubscribeEvent<MistsLandmarkEvent>((int)code, packet => { activity.ObserveDepthsLandmark(packet, kind); return Task.CompletedTask; });
 
     private static void ResourceNodes(ReceiverBuilder builder, EventCodes code, ActivityTrackerService activity)
         => builder.SubscribeEvent<DebugEventProbeEvent>((int)code, packet => { activity.ObserveResourceNodes(packet, code); return Task.CompletedTask; });

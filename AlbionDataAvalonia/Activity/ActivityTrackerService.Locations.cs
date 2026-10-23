@@ -38,8 +38,8 @@ public sealed partial class ActivityTrackerService
     {
         locations.Observe(packet, at);
         if (packet.ReturnCode != 0 || map is null || packet.Destination != map.RawLocationId) return;
-        ApplyMapMetadata(mapMetadata.Merge(ActivityLocationCollector.FromCore(
-            ActivityInstanceMetadata.FromTransition(map.Kind, packet.LayoutId, packet.DungeonInformation))));
+        ApplyMapMetadata(WithDepthsPlacement(mapMetadata.Merge(ActivityLocationCollector.FromCore(
+            ActivityInstanceMetadata.FromTransition(map.Kind, packet.LayoutId, packet.DungeonInformation)))));
     }
 
     public void ObserveMistsLandmark(MistsLandmarkEvent packet)
