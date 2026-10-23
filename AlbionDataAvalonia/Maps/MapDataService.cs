@@ -74,7 +74,13 @@ public sealed class MapDataService : IDisposable
     public async Task<MapZone?> FindZoneAsync(string rawMapId, string? layout = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(rawMapId)) return null;
-        var zones = await GetCatalogAsync(cancellationToken).ConfigureAwait(false);
+        IReadOnlyDictionary<string, MapZone> zones;
+        try { zones = await GetCatalogAsync(cancellationToken).ConfigureAwait(false); }
+        catch (Exception error) when (error is HttpRequestException or IOException or JsonException or TaskCanceledException)
+        {
+            if (MistsResourceData.Zone(layout) is { } local) return local;
+            throw;
+        }
         foreach (var candidate in Candidates(rawMapId))
             if (zones.TryGetValue(candidate, out var zone)) return zone;
         if (AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.AbyssalDepths)
@@ -86,7 +92,7 @@ public sealed class MapDataService : IDisposable
         }
 
         if (string.IsNullOrWhiteSpace(layout)) return null;
-        return zones.TryGetValue(layout, out var layoutZone) ? layoutZone : MistsMapData.DungeonZone(layout);
+        return zones.TryGetValue(layout, out var layoutZone) ? layoutZone : MistsMapData.DungeonZone(layout) ?? MistsResourceData.Zone(layout);
     }
 
     public async Task<string?> ZoneNameAsync(string id, CancellationToken cancellationToken = default) =>

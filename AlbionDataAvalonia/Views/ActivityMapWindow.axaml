@@ -337,6 +337,7 @@
                             <Border Classes="UiCard Subtle" Padding="10" IsVisible="{Binding ShowResourceSpawns}">
                                 <StackPanel Spacing="10">
                                     <TextBlock Text="Possible spawn spots" Classes="UiSectionTitle" />
+                                    <TextBlock Text="Mists: ? means multiple possible tiers. Dashed areas are possible resource patches; their selected contents are unknown. Spots appear after the layout and its turn are identified." Classes="UiFine" TextWrapping="Wrap" />
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Minimum spawn tier" Classes="UiLabel" />
                                 <controls:OptionSlider ItemsSource="{Binding ResourceTierOptions}" SelectedItem="{Binding SelectedResourceSpawnTier}"
@@ -346,7 +347,7 @@
                                         <TextBlock Text="Spawn spot opacity" Classes="UiLabel" />
                                         <controls:OptionSlider ItemsSource="{Binding IconOpacityOptions}" SelectedItem="{Binding SelectedSpawnIconOpacity}"
                                                   HorizontalAlignment="Stretch" AutomationProperties.Name="Spawn spot opacity"
-                                                  ToolTip.Tip="Opacity of possible node and resource-mob spawn spots and their labels; independent of seen resources" />
+                                                  ToolTip.Tip="Opacity of possible node and resource-mob spawn spots, Mists patch areas and their labels; independent of seen resources" />
                                     </StackPanel>
                                 </StackPanel>
                             </Border>

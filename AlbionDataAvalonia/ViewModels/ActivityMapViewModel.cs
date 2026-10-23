@@ -527,7 +527,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
                 ? "Finding this Mists layout. The map shows once a wisp or exit comes into view."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
             : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
-            : zone is { Image: null } ? "No map image for this zone. Showing your path only."
+            : zone is { Image: null } ? "No map image for this zone. Showing available map layers on a coordinate grid."
             : "";
         if (geometry is null)
         {
@@ -539,7 +539,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
-            ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)), ShownPois(Turned(zone?.Pois ?? [], turns)),
+            SpawnSpots(zone, live.RawMapId, live.Layout, live.LayoutTurns), ShownPois(Turned(zone?.Pois ?? [], turns)),
             zone?.Zone?.Rooms, zone?.Zone?.Outline, ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
@@ -689,7 +689,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Note = zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
             : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
-            : zone is { Image: null } ? "No map image for this zone. Showing your path only."
+            : zone is { Image: null } ? "No map image for this zone. Showing available map layers on a coordinate grid."
             : "";
         if (geometry is null)
         {
@@ -700,7 +700,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         var turns = LayoutTurns(zone, option.Layout, option.LayoutTurns);
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
-            Layers, turns, ResourceSpawns: ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], turns)),
+            Layers, turns, ResourceSpawns: SpawnSpots(zone, option.RawMapId, option.Layout, option.LayoutTurns),
             Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: zone?.Zone?.Rooms, Outline: zone?.Zone?.Outline, ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
             ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d);
@@ -798,9 +798,21 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             .Where(x => ShowsSeenTier(x.Tier, x.Enchantment) && ShowsFamily(x.Family))
             .OrderBy(x => x.Tier).ThenBy(x => x.Enchantment).ToArray();
 
+    private IReadOnlyList<MapResourceSpawn> SpawnSpots(ZoneView? zone, string rawMapId, string? layout, int? turns)
+    {
+        if (MistsResourceData.HasLayout(layout))
+        {
+            // Landmarks must establish orientation too; otherwise even a correct master would put dots on the wrong side.
+            if (turns is null || !ShowResourceSpawns) return [];
+            var remote = zone is { Zone: { } shown } && shown.Id == layout ? zone.ResourceSpawns : [];
+            return ShownResourceSpawns(Turned(MistsResourceData.Merge(layout!, rawMapId, remote), turns.Value));
+        }
+        return ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], LayoutTurns(zone, layout, turns)));
+    }
+
     private IReadOnlyList<MapResourceSpawn> ShownResourceSpawns(IReadOnlyList<MapResourceSpawn> spawns) =>
         !ShowResourceSpawns || spawns.Count == 0 ? [] : spawns
-            .Where(x => x.Tier >= SelectedResourceSpawnTier.Value && ShowsFamily(x.Family))
+            .Where(x => x.MatchesMinimumTier(SelectedResourceSpawnTier.Value) && ShowsFamily(x.Family))
             .OrderBy(x => x.Tier).ThenBy(x => x.Mob).ToArray();
 
     // Points of interest follow only their own switch. Wisps and camp spots, the most numerous, are drawn first and

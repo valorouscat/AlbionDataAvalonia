@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace AlbionDataAvalonia.Maps;
 
@@ -21,7 +22,15 @@ public sealed record MapZoneIcon(string? MarkerType, string Label, MapPoint Posi
 /// Candidate is one of the many spots the game picks a zone's ordinary nodes from; the rest are nodes the layout places
 /// itself. It says what can stand there, not what stands there now; the game picks the enchantment when the node spawns.
 /// </summary>
-public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false, bool Candidate = false);
+public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false, bool Candidate = false,
+    int PossibleTiers = 0, double AreaHalfSize = 0)
+{
+    // Tier remains the highest possible tier for icon ordering. The mask describes candidates whose actual tier is unknown.
+    public int TierMask => PossibleTiers != 0 ? PossibleTiers : 1 << Tier;
+    public bool HasMultipleTiers => (TierMask & (TierMask - 1)) != 0;
+    public string TierLabel => string.Join(" / ", Enumerable.Range(1, 8).Where(t => (TierMask & (1 << t)) != 0).Select(t => $"T{t}"));
+    public bool MatchesMinimumTier(int minimum) => (TierMask & (0x1FE & ~((1 << minimum) - 1))) != 0;
+}
 
 /// <summary>The kinds of point of interest the map shows in one layer, each drawn its own way.</summary>
 public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown }
