@@ -649,7 +649,7 @@ public static class ServiceCollectionExtensions
 
         collection.AddSingleton<AlbionDataAvalonia.Crafting.CraftingCatalog>();
         collection.AddSingleton(_ => new AlbionDataAvalonia.Crafting.CraftingPriceService(
-            new System.Net.Http.HttpClient { Timeout = TimeSpan.FromSeconds(20) }));
+            AlbionDataAvalonia.Crafting.CraftingPriceService.CreateHttpClient()));
         collection.AddSingleton<CraftingViewModel>();
         collection.AddSingleton<AlbionDataAvalonia.Market.MarketCatalog>();
         collection.AddSingleton<AlbionDataAvalonia.Market.CharacterMasteryService>();

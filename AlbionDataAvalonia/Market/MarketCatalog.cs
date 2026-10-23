@@ -17,8 +17,9 @@ public sealed record MarketItem(string ItemId, string Name, string RussianName, 
     public string Label => $"{Name} · T{Tier}.{Enchantment}";
 }
 
-public sealed record MarketFamily(string Key, string Name, string RussianName, string SearchText, IReadOnlyList<MarketItem> Variants)
+public sealed record MarketFamily(string Key, string Name, string RussianName, string SearchText, IReadOnlyList<MarketItem> Variants, string DisplayItemId = "")
 {
+    public string VariantSummary => Variants.Count == 1 ? "1 matching variant" : $"{Variants.Count} matching variants";
     public bool HasPower => Variants.Any(x => x.BasePower.HasValue);
     public bool HasQuality => Variants.Any(x => x.MaxQuality > 1);
 }
@@ -72,8 +73,16 @@ public sealed class MarketCatalog
             var representative = all.FirstOrDefault(x => x.Tier == 4 && x.Enchantment == 0) ?? all[0];
             var name = group.Key switch
             {
-                "WOOD" => "Logs", "ROCK" => "Stone", "ORE" => "Ore", "FIBER" => "Fiber", "HIDE" => "Hide",
-                "PLANKS" => "Planks", "STONEBLOCK" => "Stone blocks", "METALBAR" => "Metal bars", "CLOTH" => "Cloth", "LEATHER" => "Leather",
+                "WOOD" => "Logs",
+                "ROCK" => "Stone",
+                "ORE" => "Ore",
+                "FIBER" => "Fiber",
+                "HIDE" => "Hide",
+                "PLANKS" => "Planks",
+                "STONEBLOCK" => "Stone blocks",
+                "METALBAR" => "Metal bars",
+                "CLOTH" => "Cloth",
+                "LEATHER" => "Leather",
                 _ => representative.Name
             };
             foreach (var rank in new[] { "Beginner's ", "Novice's ", "Journeyman's ", "Adept's ", "Expert's ", "Master's ", "Grandmaster's ", "Elder's " })

@@ -113,8 +113,19 @@ public sealed partial class MarketViewModel : ViewModelBase
     private void FilterItems()
     {
         var terms = CraftingSearch.Terms(SearchText);
-        var found = allItems.Where(x => MatchesSearch(x, terms)).ToArray();
-        var selected = SelectedItem;
+        var previous = Items.ToDictionary(x => x.Key, StringComparer.Ordinal);
+        var found = allItems.Select(family =>
+        {
+            var variants = MatchingVariants(family, terms);
+            if (variants.Length == 0) return null;
+            var representative = variants.FirstOrDefault(x => x.Tier == 4 && x.Enchantment == 0) ?? variants[0];
+            var name = variants.Length == 1 ? representative.Label : family.Name;
+            var row = family with { Name = name, RussianName = representative.RussianName, Variants = variants, DisplayItemId = representative.ItemId };
+            return previous.TryGetValue(family.Key, out var old) && old.Name == row.Name && old.RussianName == row.RussianName
+                && old.DisplayItemId == row.DisplayItemId && old.Variants.SequenceEqual(variants) ? old : row;
+        }).OfType<MarketFamily>().ToArray();
+        var before = SelectedItem;
+        var selected = found.FirstOrDefault(x => x.Key == before?.Key);
         var visible = found.Take(150).ToList();
         if (selected is not null && found.Contains(selected) && !visible.Contains(selected)) visible[^1] = selected;
         // A ListBox can temporarily clear selection during Reset. Keep dependent inputs until the final selection is known.
@@ -125,7 +136,7 @@ public sealed partial class MarketViewModel : ViewModelBase
             SelectedItem = selected is not null && visible.Contains(selected) ? selected : null;
         }
         finally { updatingSearchItems = false; }
-        if (SelectedItem != selected) OnSelectedItemChanged(SelectedItem);
+        if (SelectedItem != before) OnSelectedItemChanged(SelectedItem);
         CatalogStatus = $"{UiFormat.Whole(found.Length)} item families · up to 150 shown. Search in English, Russian or by ID.";
     }
     partial void OnSearchTextChanged(string value) => searchDelay.Trigger();
@@ -177,8 +188,14 @@ public sealed partial class MarketViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(TotalLabel)); OnPropertyChanged(nameof(PriceHint)); Recalculate();
     }
-    private bool MatchesSearch(MarketFamily item, string[] terms) => terms.All(term => item.SearchText.Contains(term, StringComparison.Ordinal))
-        && item.Variants.Any(MatchesSearchFilters);
+    private MarketItem[] MatchingVariants(MarketFamily family, string[] terms) => family.Variants.Where(item =>
+    {
+        if (!MatchesSearchFilters(item)) return false;
+        if (terms.Length == 0) return true;
+        var text = CraftingSearch.Normalize($"{item.Name} {item.RussianName} {item.ItemId} T{item.Tier}.{item.Enchantment} {family.Key} {family.Name}");
+        return terms.All(term => text.Contains(term, StringComparison.Ordinal));
+    }).ToArray();
+    private bool MatchesSearch(MarketFamily item, string[] terms) => MatchingVariants(item, terms).Length > 0;
     private bool MatchesSearchFilters(MarketItem item) => (SelectedTier.Value == 0 || item.Tier == SelectedTier.Value)
         && (SelectedEnchantment.Value < 0 || item.Enchantment == SelectedEnchantment.Value)
         && (SelectedQuality.Value == 0 || item.MaxQuality >= SelectedQuality.Value);
@@ -221,7 +238,8 @@ public sealed partial class MarketViewModel : ViewModelBase
             if (!loads.IsCurrent(ticket)) return;
             quotes = []; Recalculate();
             Log.Warning(failure, "Could not compare city market prices");
-            PriceStatus = "Couldn't load AODP prices. Check your connection and refresh. No prices are estimated from missing data.";
+            PriceStatus = CraftingPriceService.ErrorText(failure);
+            CalculationStatus = "Market data could not be loaded; price comparisons are unavailable.";
         }
         finally
         {
