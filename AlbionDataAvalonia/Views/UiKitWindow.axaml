@@ -118,6 +118,8 @@
                         <controls:SegmentedSelector ItemsSource="{Binding Choices}" SelectedIndex="1" />
                     </controls:SettingsRow>
                 </controls:SettingsGroup>
+                <controls:OptionSlider ItemsSource="{Binding Choices}" SelectedItem="{Binding Choices[1], Mode=OneWay}" Width="240"
+                                       AutomationProperties.Name="Discrete slider example" />
                 <WrapPanel>
                     <controls:StatTile Classes="Card" Label="StatTile Card" Value="23.3k" Detail="84.0M / hour" Width="220" Margin="0,0,8,8" />
                     <controls:StatTile Classes="Card Accent Large" Label="Accent Large" Value="1.2M" Width="220" Margin="0,0,8,8" />

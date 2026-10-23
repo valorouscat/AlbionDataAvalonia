@@ -1,0 +1,9 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:AlbionDataAvalonia.Views.Controls"
+             x:Class="AlbionDataAvalonia.Views.Controls.OptionSlider">
+    <StackPanel Spacing="2">
+        <TextBlock x:Name="ChoiceLabel" Classes="UiLabel" HorizontalAlignment="Right" />
+        <controls:ScrollSafeSlider x:Name="ChoiceSlider" Minimum="0" TickFrequency="1" IsSnapToTickEnabled="True" />
+    </StackPanel>
+</UserControl>

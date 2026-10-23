@@ -67,7 +67,7 @@ public sealed record ActivityMapMarker(ActivityMapMarkerKind Kind, string RawMap
 }
 
 /// <summary>The current map as the live map window shows it: where the character is, where it walked, what it did, and the
-/// resource nodes, resource mobs and roaming bosses the client has seen there, and the hostile players who came into view
+/// resource nodes, resource mobs and dynamic POIs the client has seen there, and the hostile players who came into view
 /// lately.</summary>
 public sealed record ActivityLiveMap(long Version, string RawMapId, string MapName, ActivityPathPoint? Position, double? Heading,
     IReadOnlyList<ActivityPathPoint> Trail, IReadOnlyList<ActivityMapMarker> Markers, string? Layout = null, int? LayoutTurns = null,
@@ -86,7 +86,7 @@ public sealed record ActivityRunMap(ActivitySession Run, IReadOnlyList<ActivityP
 /// ItemUniqueName is the raw resource it yields, for its icon. Empty nodes are removed immediately.
 /// </summary>
 public sealed record ActivityResourceNode(long Id, string Family, int Tier, int Enchantment, double X, double Y, int Charges,
-    DateTime SeenAtUtc, string ItemUniqueName);
+    DateTime SeenAtUtc, string ItemUniqueName, bool IsInView = true);
 
 /// <summary>
 /// A mob near the character that yields a gathering resource: a hide animal, or a wood, stone, fiber or ore critter,
@@ -94,14 +94,25 @@ public sealed record ActivityResourceNode(long Id, string Family, int Tier, int 
 /// icon, and MobUniqueName and MobName name the mob. X and Y are where it was last seen moving.
 /// </summary>
 public sealed record ActivityResourceMob(long Id, string Family, int Tier, int Enchantment, double X, double Y, DateTime SeenAtUtc,
-    string MobUniqueName, string MobName, string ItemUniqueName);
+    string MobUniqueName, string MobName, string ItemUniqueName, bool IsInView = true);
 
-public enum ActivityLiveActorKind { Boss, Miniboss }
+public enum ActivityLiveActorKind { Boss, Miniboss, Dungeon, EventDungeon, Chest, EventMob }
 
-/// <summary>A roaming boss near the character, where it was last seen moving, with its mob's unique name (for its
-/// portrait) and tier.</summary>
+/// <summary>An observed dynamic POI. Mobs retain their last observed position outside visibility and across map revisits until clearing or app closure. The legacy scene/settings slot is preserved.</summary>
 public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, double X, double Y, DateTime SeenAtUtc, string Name,
-    string MobUniqueName = "", int Tier = 0);
+    string MobUniqueName = "", int Tier = 0, bool IsInView = true, int? Enchantment = null)
+{
+    public bool IsMob => !string.IsNullOrEmpty(MobUniqueName);
+    public string KindLabel => Kind switch
+    {
+        ActivityLiveActorKind.Boss => "Boss",
+        ActivityLiveActorKind.Miniboss => "Miniboss",
+        ActivityLiveActorKind.Dungeon => "Dungeon entrance",
+        ActivityLiveActorKind.EventDungeon => "Event dungeon entrance",
+        ActivityLiveActorKind.Chest => "Chest",
+        _ => "Event mob"
+    };
+}
 
 /// <summary>A player outside the character's party, guild and alliance who came into view; the game gives no position.</summary>
 public sealed record ActivityHostileSighting(DateTime SeenAtUtc, string Name, string Guild, string Alliance);
@@ -109,5 +120,5 @@ public sealed record ActivityHostileSighting(DateTime SeenAtUtc, string Name, st
 public enum ActivityWispRarity { Common, Uncommon, Rare, Epic, Legendary }
 public enum ActivityWispSize { Solo, Duo }
 
-/// <summary>A portal wisp currently in view; no sightings survive leaving the map.</summary>
-public sealed record ActivityWisp(long Id, ActivityWispRarity Rarity, ActivityWispSize Size, double X, double Y, DateTime SeenAtUtc);
+/// <summary>An observed portal wisp, retained at its last known position until clearing or app closure.</summary>
+public sealed record ActivityWisp(long Id, ActivityWispRarity Rarity, ActivityWispSize Size, double X, double Y, DateTime SeenAtUtc, bool IsInView = true);

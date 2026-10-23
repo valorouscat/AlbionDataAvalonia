@@ -456,7 +456,7 @@ public sealed class ActivityMapCanvas : Control
             var best = group.Nodes[0];
             var count = group.Nodes.Count;
             var radius = count > 1 ? 8.5 : 7.5;
-            using var opacity = context.PushOpacity(scene.ResourceIconOpacity);
+            using var opacity = context.PushOpacity(scene.ResourceIconOpacity * (group.Nodes.Any(x => x.IsInView) ? 1 : 0.55));
             using var transform = context.PushTransform(ResourceIconTransform(group.At, scene.ResourceIconScale));
             var edge = best.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(best.Enchantment), 2.4) : OutlinePen;
             context.DrawEllipse(UiPalette.Brush(ActivityPalette.Resource(best.Family)), edge, group.At, radius, radius);
@@ -490,7 +490,7 @@ public sealed class ActivityMapCanvas : Control
         {
             var at = ToScreen(ImagePoint(scene, mob.X, mob.Y), scale);
             if (!Visible(at, radius * scene.ResourceIconScale)) continue;
-            using var opacity = context.PushOpacity(scene.ResourceIconOpacity);
+            using var opacity = context.PushOpacity(scene.ResourceIconOpacity * (mob.IsInView ? 1 : 0.55));
             using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
             var edge = mob.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(mob.Enchantment), 2.4) : OutlinePen;
             var shape = new StreamGeometry();
@@ -507,7 +507,8 @@ public sealed class ActivityMapCanvas : Control
             var tier = ChartDrawing.Text(mob.Tier.ToString(CultureInfo.CurrentCulture), 9, UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
             tier.Draw(context, new Point(at.X - tier.Width / 2, at.Y - tier.Height / 2));
             hits.Add(new Hit(at, 9 * scene.ResourceIconScale, $"{ResourceLabel(mob.Family, mob.Tier, mob.Enchantment)} mob",
-                [$"Seen {UiFormat.Ago(mob.SeenAtUtc, scene.NowUtc)}", "Kill it, then gather from it"],
+                [$"Seen {UiFormat.Ago(mob.SeenAtUtc, scene.NowUtc)}",
+                    mob.IsInView ? "In view · Kill it, then gather from it" : "Out of view · Last known position, remembered until cleared or the app closes"],
                 [new ItemRow(mob.MobUniqueName, 1, mob.MobName, "", Mob: true), new ItemRow(mob.ItemUniqueName, 1, ResourceLabel(mob.Family, mob.Tier, mob.Enchantment), "")]));
         }
     }
@@ -686,11 +687,19 @@ public sealed class ActivityMapCanvas : Control
             var at = ToScreen(ImagePoint(scene, boss.X, boss.Y), scale);
             var radius = boss.Kind == ActivityLiveActorKind.Boss ? 12 : 9.5;
             if (!Visible(at, radius + 4)) continue;
+            using var opacity = context.PushOpacity(boss.IsInView ? 1 : 0.55);
             var rect = new Rect(at.X - radius, at.Y - radius, radius * 2, radius * 2);
             context.DrawEllipse(UiPalette.Brush("UiMapDeathFillColor"), null, at, radius, radius);
-            if (LazyMobImage.ForDrawing(boss.MobUniqueName, InvalidateVisual) is { } portrait)
+            if (boss.IsMob && LazyMobImage.ForDrawing(boss.MobUniqueName, InvalidateVisual) is { } portrait)
                 using (context.PushGeometryClip(new EllipseGeometry(rect)))
                     context.DrawImage(portrait, new Rect(portrait.Size), rect);
+            if (!boss.IsMob)
+            {
+                var entranceColor = boss.Kind == ActivityLiveActorKind.EventDungeon
+                    ? "UiMapChestColor" : "UiMapPoiShrineColor";
+                var portalPen = UiPalette.Pen(UiPalette.Color(entranceColor), 2.5);
+                context.DrawEllipse(null, portalPen, at, radius * 0.55, radius * 0.75);
+            }
             context.DrawEllipse(null, ring, at, radius, radius);
             if (boss.Tier > 0)
             {
@@ -701,9 +710,10 @@ public sealed class ActivityMapCanvas : Control
             }
 
             hits.Add(new Hit(at, radius + 2, boss.Name,
-                [$"{(boss.Kind == ActivityLiveActorKind.Boss ? "Roaming boss" : "Roaming miniboss")}, seen {UiFormat.Ago(boss.SeenAtUtc, scene.NowUtc)}",
-                    "It moves; the map follows it while it stays in view"],
-                [new ItemRow(boss.MobUniqueName, 1, boss.Name, "", Mob: true)]));
+                [$"{boss.KindLabel}, seen {UiFormat.Ago(boss.SeenAtUtc, scene.NowUtc)}",
+                    boss.IsInView ? "In view" : "Out of view · Last known position, remembered until cleared or the app closes",
+                    boss.Enchantment is { } enchantment ? $"Enchantment: .{enchantment}" : ""],
+                boss.IsMob ? [new ItemRow(boss.MobUniqueName, 1, boss.Name, "", Mob: true)] : []));
         }
     }
 
@@ -715,6 +725,7 @@ public sealed class ActivityMapCanvas : Control
             var at = ToScreen(ImagePoint(scene, wisp.X, wisp.Y), scale);
             const double radius = 9;
             if (!Visible(at, radius + 4)) continue;
+            using var opacity = context.PushOpacity(wisp.IsInView ? 1 : 0.55);
             var color = wisp.Rarity == ActivityWispRarity.Common
                 ? UiPalette.Color("UiTextColor") : ActivityPalette.Enchantment((int)wisp.Rarity);
             context.DrawEllipse(UiPalette.Brush("UiMapCountColor"), UiPalette.Pen(color, 2.5), at, radius, radius);
@@ -727,7 +738,7 @@ public sealed class ActivityMapCanvas : Control
             else context.DrawEllipse(light, null, at, 3.5, 3.5);
             hits.Add(new Hit(at, radius + 3, $"{wisp.Rarity} will o' wisp",
                 [wisp.Size == ActivityWispSize.Duo ? "Greater wisp · Duo · 2 players" : "Wisp · Solo · 1 player",
-                    $"Seen {UiFormat.Ago(wisp.SeenAtUtc, scene.NowUtc)} · Currently in view"], []));
+                    $"Seen {UiFormat.Ago(wisp.SeenAtUtc, scene.NowUtc)} · {(wisp.IsInView ? "In view" : "Last known position")}"], []));
         }
     }
 
@@ -818,7 +829,7 @@ public sealed class ActivityMapCanvas : Control
 
     private static Hit ResourceHit(Point at, ActivityResourceNode node, ActivityMapScene scene)
     {
-        return new(at, 9, ResourceLabel(node), [$"Seen {UiFormat.Ago(node.SeenAtUtc, scene.NowUtc)}"],
+        return new(at, 9, ResourceLabel(node), [$"Seen {UiFormat.Ago(node.SeenAtUtc, scene.NowUtc)}", node.IsInView ? "In view" : "Last known position"],
             [new ItemRow(node.ItemUniqueName, 1, $"{UiFormat.Whole(node.Charges)} left", "")]);
     }
 
@@ -896,7 +907,7 @@ public sealed class ActivityMapCanvas : Control
                 var from = points[index - 1];
                 var to = points[index];
                 if (to.CapturedAtUtc > endUtc && !live) break;
-                if (Math.Sqrt(Math.Pow(to.X - from.X, 2) + Math.Pow(to.Y - from.Y, 2)) > PathBreakDistance) continue;
+                if (to.BreakBefore || Math.Sqrt(Math.Pow(to.X - from.X, 2) + Math.Pow(to.Y - from.Y, 2)) > PathBreakDistance) continue;
                 int bucket;
                 if (live)
                 {

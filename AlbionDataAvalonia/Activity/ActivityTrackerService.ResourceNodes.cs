@@ -9,10 +9,9 @@ using System.Linq;
 namespace AlbionDataAvalonia.Activity;
 
 // The game tells the client about the resource nodes around the character. The live map keeps the ones seen on the
-// current map, so a node passed a while ago still shows, until it is gathered out or the character leaves the map.
+// current map, with map revisits restored from process memory until cleared or the node is gathered out.
 public sealed partial class ActivityTrackerService
 {
-    private const int MaxResourceNodes = 4000;
     private readonly Dictionary<long, ActivityResourceNode> resourceNodes = new();
     private long resourceNodesEpoch = -1;
     // One note per map when a harvest shows a node's packet was read wrongly.
@@ -25,7 +24,7 @@ public sealed partial class ActivityTrackerService
         {
             if (disposed || map is null || captureSuspended) return;
             var at = Utc(packet.CapturedAt);
-            if (at < mapEnteredAt || !SameConnection(packet.ConnectionId, packet.MessageIdentity)) return;
+            if (at < mapEnteredAt || at < liveMemoryClearedAt || !SameConnection(packet.ConnectionId, packet.MessageIdentity)) return;
             SyncResourceNodes();
             var changed = false;
             switch (code)
@@ -76,9 +75,8 @@ public sealed partial class ActivityTrackerService
     {
         // Empty sightings can arrive in both full and simple node packets. Remove a previous sighting too.
         if (node.Charges <= 0) return resourceNodes.Remove(node.Id);
+        observedThisVisit.Add(node.Id);
         resourceNodes.TryGetValue(node.Id, out var previous);
-        if (resourceNodes.Count >= MaxResourceNodes && !resourceNodes.ContainsKey(node.Id))
-            resourceNodes.Remove(resourceNodes.Values.MinBy(x => x.SeenAtUtc)!.Id);
         resourceNodes[node.Id] = new ActivityResourceNode(node.Id, node.Family, node.Tier, node.Enchantment, node.X, node.Y,
             node.Charges, at, ActivityResourceNodePackets.ItemUniqueName(node.Family, node.Tier, node.Enchantment));
         NotifyResourceAppearance(at, new(node.Family, node.Tier, node.Enchantment, false),
@@ -99,6 +97,7 @@ public sealed partial class ActivityTrackerService
             Charges = change.Charges,
             Enchantment = enchantment,
             SeenAtUtc = at,
+            IsInView = true,
             ItemUniqueName = ActivityResourceNodePackets.ItemUniqueName(node.Family, node.Tier, enchantment)
         };
         NotifyResourceAppearance(at, new(node.Family, node.Tier, enchantment, false),
@@ -106,7 +105,15 @@ public sealed partial class ActivityTrackerService
         return true;
     }
 
-    // Object ids belong to one map, so a new map starts with none.
+    private void LeaveResourceNode(long id)
+    {
+        SyncResourceNodes();
+        if (!resourceNodes.TryGetValue(id, out var node) || !node.IsInView) return;
+        resourceNodes[id] = node with { IsInView = false };
+        liveMapVersion++;
+    }
+
+    // Epoch sync also covers trackers used before a confirmed join.
     private void SyncResourceNodes()
     {
         if (resourceNodesEpoch == mapEpoch) return;

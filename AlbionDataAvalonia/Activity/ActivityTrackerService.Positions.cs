@@ -15,11 +15,8 @@ public sealed partial class ActivityTrackerService
     private const double PathSampleDistance = 1;
     private static readonly TimeSpan PathSegmentLength = TimeSpan.FromMinutes(1);
     private const int MaxPathSegmentPoints = 64;
-    // The live map keeps its trail in memory, for the current map only, at twice the stored detail.
+    // The live map keeps its trail in process memory per map, at twice the stored detail.
     private static readonly TimeSpan LiveTrailInterval = TimeSpan.FromMilliseconds(250);
-    private static readonly TimeSpan LiveTrailAge = TimeSpan.FromHours(2);
-    private const int MaxLiveTrailPoints = 8000;
-    private const int MaxLiveMarkers = 600;
 
     private readonly List<ActivityPathPoint> pathPoints = new();
     private ActivityWorldPosition? position;
@@ -123,11 +120,12 @@ public sealed partial class ActivityTrackerService
 
     private void TrackLive(DateTime at, ActivityWorldPosition point)
     {
-        liveHead = new ActivityPathPoint(at, point.X, point.Y);
+        if (at < liveMemoryClearedAt) return;
+        liveHead = new ActivityPathPoint(at, point.X, point.Y, liveTrailNeedsBreak);
         liveMapVersion++;
         // The arrow follows every step; the trail keeps one when it is far enough from the last one kept.
         // Comparing with the previous step instead never keeps any while walking, as each is under the distance.
-        if (liveTrail.Count > 0)
+        if (!liveTrailNeedsBreak && liveTrail.Count > 0)
         {
             var last = liveTrail[^1];
             if (at - last.CapturedAtUtc < LiveTrailInterval
@@ -135,16 +133,14 @@ public sealed partial class ActivityTrackerService
         }
 
         liveTrail.Add(liveHead.Value);
-        var expired = 0;
-        while (expired < liveTrail.Count && (liveTrail.Count - expired > MaxLiveTrailPoints || at - liveTrail[expired].CapturedAtUtc > LiveTrailAge)) expired++;
-        if (expired > 0) liveTrail.RemoveRange(0, expired);
+        liveTrailNeedsBreak = false;
     }
 
     // Called for every saved or amended event; placed events of the character and its party on this map are
     // kept. An amended pickup (now confirmed, priced or named) replaces its marker, or drops it when it no longer counts.
     private void TrackLiveMarker(ActivityEvent value)
     {
-        if (value.MapEpoch != mapEpoch) return;
+        if (value.MapEpoch != mapEpoch || value.CapturedAtUtc < liveMemoryClearedAt) return;
         var marker = ActivityMapMarker.From(value);
         var index = liveMarkers.FindIndex(x => x.EventId == value.Id);
         if (index >= 0)
@@ -156,7 +152,6 @@ public sealed partial class ActivityTrackerService
         }
         if (marker is null) return;
         liveMarkers.Add(marker);
-        if (liveMarkers.Count > MaxLiveMarkers) liveMarkers.RemoveRange(0, liveMarkers.Count - MaxLiveMarkers);
         liveMapVersion++;
     }
 
@@ -207,6 +202,7 @@ public sealed partial class ActivityTrackerService
     // Positions belong to one map; a new map or character starts without one.
     private void ForgetPosition()
     {
+        SaveLiveMemory();
         FlushPath();
         position = null;
         positionEpoch = -1;

@@ -9,13 +9,10 @@ using System.Linq;
 namespace AlbionDataAvalonia.Activity;
 
 // The game tells the client about the mobs around the character. The live map shows the ones that yield gathering
-// resources (hide animals and the wood, stone, fiber and ore critters) where they stand now: they follow Move packets,
-// and go when the game says they left or died. Mobs roam and respawn elsewhere, so none are remembered between visits.
+// resources (hide animals and the wood, stone, fiber and ore critters) at their last observed positions.
+// Leaving visibility retains the sighting until clearing or app closure; confirmed death removes it.
 public sealed partial class ActivityTrackerService
 {
-    private const int MaxResourceMobs = 1000;
-    // A mob's move shorter than this doesn't redraw the map.
-    private const double ResourceMobStep = 0.5;
     private readonly Dictionary<long, ActivityResourceMob> resourceMobs = new();
     private long resourceMobsEpoch = -1;
     // The first resource mob of each map logs its packet, so the layout can be checked in game.
@@ -28,18 +25,19 @@ public sealed partial class ActivityTrackerService
         {
             if (disposed || map is null || captureSuspended) return;
             var at = Utc(packet.CapturedAt);
-            if (at < mapEnteredAt || !SameConnection(packet.ConnectionId, packet.MessageIdentity)) return;
+            if (at < mapEnteredAt || at < liveMemoryClearedAt || !SameConnection(packet.ConnectionId, packet.MessageIdentity)) return;
             SyncResourceMobs();
             var changed = code switch
             {
                 EventCodes.NewMob => ActivityResourceMobs.ReadNew(packet.Parameters) is { } mob
                     && (PlaceResourceMob(mob, packet, at) | PlaceRoamingBoss(mob, at) | PlaceWisp(mob, at)),
                 EventCodes.MobChangeState => ActivityResourceMobs.ReadChange(packet.Parameters) is { } change && EnchantResourceMob(change.Id, change.Enchantment, at),
-                // Roaming bosses move with the same packet.
-                EventCodes.Move => ActivityResourceMobs.ReadMove(packet.Parameters) is { } move
+                // Dynamic mob POIs and portal wisps move with the same packet.
+                EventCodes.Move => ActivityResourceMobs.ReadMove(packet.Parameters) is { } move && observedThisVisit.Contains(move.Id)
                     && (MoveResourceMob(move.Id, move.X, move.Y, at) | MoveLiveActor(move.Id, move.X, move.Y, at) | MoveWisp(move.Id, move.X, move.Y, at)),
                 _ => false
             };
+            if (code == EventCodes.NewMob && ActivityResourceMobs.ReadNew(packet.Parameters) is { } seen) observedThisVisit.Add(seen.Id);
             if (changed) liveMapVersion++;
         }
     }
@@ -56,8 +54,6 @@ public sealed partial class ActivityTrackerService
         }
 
         resourceMobs.TryGetValue(sighting.Id, out var previous);
-        if (resourceMobs.Count >= MaxResourceMobs && !resourceMobs.ContainsKey(sighting.Id))
-            resourceMobs.Remove(resourceMobs.Values.MinBy(x => x.SeenAtUtc)!.Id);
         resourceMobs[sighting.Id] = new ActivityResourceMob(sighting.Id, resource.Family, resource.Tier, sighting.Enchantment, sighting.X,
             sighting.Y, at, descriptor!.UniqueName ?? "", descriptor.DisplayName,
             ActivityResourceNodePackets.ItemUniqueName(resource.Family, resource.Tier, sighting.Enchantment));
@@ -82,12 +78,20 @@ public sealed partial class ActivityTrackerService
     private bool MoveResourceMob(long id, double x, double y, DateTime at)
     {
         if (!resourceMobs.TryGetValue(id, out var mob)) return false;
-        var far = Math.Abs(mob.X - x) >= ResourceMobStep || Math.Abs(mob.Y - y) >= ResourceMobStep;
-        resourceMobs[id] = far ? mob with { X = x, Y = y, SeenAtUtc = at } : mob with { SeenAtUtc = at };
-        return far;
+        var moved = mob.X != x || mob.Y != y;
+        resourceMobs[id] = mob with { X = x, Y = y, SeenAtUtc = at, IsInView = true };
+        return moved || !mob.IsInView;
     }
 
-    // A mob that left the character's view or died; a killed hide animal comes back as a harvestable node to skin.
+    private void LeaveResourceMob(long id)
+    {
+        SyncResourceMobs();
+        if (!resourceMobs.TryGetValue(id, out var mob) || !mob.IsInView) return;
+        resourceMobs[id] = mob with { IsInView = false };
+        liveMapVersion++;
+    }
+
+    // Confirmed death; a killed hide animal comes back as a harvestable node to skin.
     private void ForgetResourceMob(long? id)
     {
         SyncResourceMobs();

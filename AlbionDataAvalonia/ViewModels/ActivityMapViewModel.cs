@@ -83,12 +83,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         liveShowKills = settings.MapLiveShowKills;
         liveShowLoot = settings.MapLiveShowLoot;
         liveShowGathering = settings.MapLiveShowGathering;
-        showWisps = settings.MapShowWisps;
-        showWispCommon = (settings.MapWispRarities & 1) != 0;
-        showWispUncommon = (settings.MapWispRarities & 2) != 0;
-        showWispRare = (settings.MapWispRarities & 4) != 0;
-        showWispEpic = (settings.MapWispRarities & 8) != 0;
-        showWispLegendary = (settings.MapWispRarities & 16) != 0;
+        showWisps = settings.MapShowWisps && settings.MapWispRarities != 0;
+        selectedWispRarity = settings.MapWispRarities == 0 ? WispRarityOptions[0]
+            : WispRarityOptions.First(x => (settings.MapWispRarities & (1 << (int)x.Value)) != 0);
         showWispSolo = (settings.MapWispSizes & 1) != 0;
         showWispDuo = (settings.MapWispSizes & 2) != 0;
         showResources = settings.MapShowResources;

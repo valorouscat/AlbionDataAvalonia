@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace AlbionDataAvalonia.Activity.Models;
 
-public readonly record struct ActivityPathPoint(DateTime CapturedAtUtc, double X, double Y);
+public readonly record struct ActivityPathPoint(DateTime CapturedAtUtc, double X, double Y, bool BreakBefore = false);
 
 // A stretch of the local character's path on one map during a run, about a minute long.
 // Points are packed to keep a long session small: per point, the milliseconds since

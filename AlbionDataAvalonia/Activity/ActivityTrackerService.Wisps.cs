@@ -7,7 +7,7 @@ namespace AlbionDataAvalonia.Activity;
 
 public sealed partial class ActivityTrackerService
 {
-    private const int MaxWisps = 256;
+    private const double WispMoveStep = 0.5;
     private readonly Dictionary<long, ActivityWisp> wisps = new();
     private long wispsEpoch = -1;
 
@@ -16,8 +16,6 @@ public sealed partial class ActivityTrackerService
         SyncWisps();
         if (ActivityWisps.Describe(actors.DescribeMob(sighting.MobIndex)?.UniqueName) is not { } kind)
             return wisps.Remove(sighting.Id);
-        if (wisps.Count >= MaxWisps && !wisps.ContainsKey(sighting.Id))
-            wisps.Remove(wisps.Values.MinBy(x => x.SeenAtUtc)!.Id);
         wisps[sighting.Id] = new(sighting.Id, kind.Rarity, kind.Size, sighting.X, sighting.Y, at);
         return true;
     }
@@ -26,9 +24,17 @@ public sealed partial class ActivityTrackerService
     {
         SyncWisps();
         if (!wisps.TryGetValue(id, out var wisp)) return false;
-        var far = Math.Abs(wisp.X - x) >= ResourceMobStep || Math.Abs(wisp.Y - y) >= ResourceMobStep;
-        wisps[id] = far ? wisp with { X = x, Y = y, SeenAtUtc = at } : wisp with { SeenAtUtc = at };
-        return far;
+        var far = Math.Abs(wisp.X - x) >= WispMoveStep || Math.Abs(wisp.Y - y) >= WispMoveStep;
+        wisps[id] = wisp with { X = x, Y = y, SeenAtUtc = at, IsInView = true };
+        return far || !wisp.IsInView;
+    }
+
+    private void LeaveWisp(long id)
+    {
+        SyncWisps();
+        if (!wisps.TryGetValue(id, out var wisp) || !wisp.IsInView) return;
+        wisps[id] = wisp with { IsInView = false };
+        liveMapVersion++;
     }
 
     private void ForgetWisp(long? id)
