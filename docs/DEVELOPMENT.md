@@ -168,3 +168,14 @@ Both Crafting and Market prices expose shared tier, rarity/enchantment and quali
 AODP HTTP clients must negotiate compression: the upstream [non-gzip throttle](https://github.com/ao-data/albiondata-server-rails/blob/main/config/initializers/rack_attack.rb) allows only one uncompressed API request per five minutes. `CraftingPriceService.CreateHttpClient` enables automatic gzip/deflate/Brotli decompression and identifies the client. On HTTP 429, the shared service respects `Retry-After` / `RateLimit-Reset`, pauses new requests for that region (including Refresh), and shows the reset time. Valid cached quotes remain available. No automatic retry loop is used. Numeric strings in price/quality JSON fields are accepted; HTTP status, timeout and invalid-JSON errors have distinct UI messages.
 
 Market search projects each family onto variants matching the current tier/enchantment/quality and text query. Single-variant results display that variant's localized name, full market ID and tier/enchantment, rather than a fixed T4 representative. Multiple variants have an explicit count, and selection is preserved by family key. Tier-specific text cannot match a hidden variant excluded by the numeric filters.
+
+### Dynamic POI catalog and position memory
+
+The live map keeps the existing `MapShowRoamingBosses` preference and scene slot for compatibility, with the visible label **Dynamic POI**. `ActivityDynamicPoiCatalog.g.cs` uses explicit `boss`, `miniboss` and `chest` game categories, plus Halloween combat mobs (excluding resource collectibles). Regenerate with:
+
+```sh
+curl -fsSLo /tmp/mobs.json https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/mobs.json
+python3 scripts/generate-dynamic-pois.py /tmp/mobs.json
+```
+
+Dungeon entrances use the shared decoded `NewRandomDungeonExitEvent` coordinates and metadata; Mists entrances stay on the dedicated wisp layer. No speculative coordinates are assigned to packets without a decoded position. Resource mobs and Dynamic POI mobs retain their last observed position on `Leave`, marked `IsInView = false`. Movement or a new sighting restores visibility; confirmed `Died` removes the marker. This is a cache for the current map visit, cleared on map epoch changes, never persisted to disk or history. It retains the existing limits of 1,000 resource mobs and 500 dynamic POIs (oldest sightings are evicted). Ordinary resource nodes still disappear immediately when depleted.

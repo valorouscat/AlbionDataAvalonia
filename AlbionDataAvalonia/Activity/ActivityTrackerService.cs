@@ -268,6 +268,7 @@ public sealed partial class ActivityTrackerService : IDisposable
             {
                 case NewRandomDungeonExitEvent entrance when HasConfirmedContext:
                     locations.Observe(entrance, map!.RawLocationId, at);
+                    PlaceDungeonEntrance(entrance, at);
                     break;
                 case NewCharacterEvent character:
                     actors.Character(character);
@@ -284,9 +285,9 @@ public sealed partial class ActivityTrackerService : IDisposable
                     ResolvePendingTerminals(mob.ObjectId.Value, at);
                     break;
                 case LeaveEvent leave:
-                    ForgetResourceMob(leave.userObjectId);
+                    LeaveResourceMob(leave.userObjectId);
                     ForgetWisp(leave.userObjectId);
-                    ForgetLiveActor(leave.userObjectId);
+                    LeaveLiveActor(leave.userObjectId);
                     actors.Leave(leave.userObjectId, at);
                     locations.Leave(leave.userObjectId, at);
                     // A local Leave may be a map transition, never a confirmed logout/death.

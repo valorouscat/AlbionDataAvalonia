@@ -137,7 +137,7 @@
                         </StackPanel>
                     </ToggleButton>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResources}" IsVisible="{Binding IsLive}"
-                                  ToolTip.Tip="Resource nodes the game has shown near you on this map, with their tier and the units left under each. A colored ring marks an enchanted node. Empty nodes disappear immediately; sightings are cleared when you change zone.">
+                                  ToolTip.Tip="Resource nodes the game has shown near you on this map, with their tier and the units left under each. A colored ring marks an enchanted node. Empty nodes disappear immediately. Resource mobs remain at their last known position after leaving view (faded) until confirmed death or a zone change.">
                         <StackPanel Orientation="Horizontal" Spacing="2">
                             <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceWoodBrush}" VerticalAlignment="Center" />
                             <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceOreBrush}" VerticalAlignment="Center" />
@@ -173,10 +173,10 @@
                         </StackPanel>
                     </ToggleButton>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowRoamingBosses}" IsVisible="{Binding IsLive}"
-                                  ToolTip.Tip="Roaming bosses and minibosses the game has shown near you, with their portrait and tier. They follow the bosses as they move and go when the game says they left or died. Read from the game's packets, like the resource nodes.">
+                                  ToolTip.Tip="Observed bosses, dungeon entrances and event objects. Mob positions are remembered after leaving view until confirmed death or a zone change. Faded icons show last known positions; entrances disappear when they leave view.">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Ellipse Width="10" Height="10" Stroke="{DynamicResource UiMapPoiBossBrush}" StrokeThickness="2" VerticalAlignment="Center" />
-                            <TextBlock Text="Roaming bosses" />
+                            <TextBlock Text="Dynamic POI" />
                         </StackPanel>
                     </ToggleButton>
                     <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowHostileAlert}" IsVisible="{Binding IsLive}"

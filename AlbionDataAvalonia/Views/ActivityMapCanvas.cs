@@ -490,7 +490,7 @@ public sealed class ActivityMapCanvas : Control
         {
             var at = ToScreen(ImagePoint(scene, mob.X, mob.Y), scale);
             if (!Visible(at, radius * scene.ResourceIconScale)) continue;
-            using var opacity = context.PushOpacity(scene.ResourceIconOpacity);
+            using var opacity = context.PushOpacity(scene.ResourceIconOpacity * (mob.IsInView ? 1 : 0.55));
             using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
             var edge = mob.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(mob.Enchantment), 2.4) : OutlinePen;
             var shape = new StreamGeometry();
@@ -507,7 +507,8 @@ public sealed class ActivityMapCanvas : Control
             var tier = ChartDrawing.Text(mob.Tier.ToString(CultureInfo.CurrentCulture), 9, UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
             tier.Draw(context, new Point(at.X - tier.Width / 2, at.Y - tier.Height / 2));
             hits.Add(new Hit(at, 9 * scene.ResourceIconScale, $"{ResourceLabel(mob.Family, mob.Tier, mob.Enchantment)} mob",
-                [$"Seen {UiFormat.Ago(mob.SeenAtUtc, scene.NowUtc)}", "Kill it, then gather from it"],
+                [$"Seen {UiFormat.Ago(mob.SeenAtUtc, scene.NowUtc)}",
+                    mob.IsInView ? "In view · Kill it, then gather from it" : "Out of view · Last known position, remembered for this zone visit"],
                 [new ItemRow(mob.MobUniqueName, 1, mob.MobName, "", Mob: true), new ItemRow(mob.ItemUniqueName, 1, ResourceLabel(mob.Family, mob.Tier, mob.Enchantment), "")]));
         }
     }
@@ -686,11 +687,19 @@ public sealed class ActivityMapCanvas : Control
             var at = ToScreen(ImagePoint(scene, boss.X, boss.Y), scale);
             var radius = boss.Kind == ActivityLiveActorKind.Boss ? 12 : 9.5;
             if (!Visible(at, radius + 4)) continue;
+            using var opacity = context.PushOpacity(boss.IsInView ? 1 : 0.55);
             var rect = new Rect(at.X - radius, at.Y - radius, radius * 2, radius * 2);
             context.DrawEllipse(UiPalette.Brush("UiMapDeathFillColor"), null, at, radius, radius);
-            if (LazyMobImage.ForDrawing(boss.MobUniqueName, InvalidateVisual) is { } portrait)
+            if (boss.IsMob && LazyMobImage.ForDrawing(boss.MobUniqueName, InvalidateVisual) is { } portrait)
                 using (context.PushGeometryClip(new EllipseGeometry(rect)))
                     context.DrawImage(portrait, new Rect(portrait.Size), rect);
+            if (!boss.IsMob)
+            {
+                var entranceColor = boss.Kind == ActivityLiveActorKind.EventDungeon
+                    ? "UiMapChestColor" : "UiMapPoiShrineColor";
+                var portalPen = UiPalette.Pen(UiPalette.Color(entranceColor), 2.5);
+                context.DrawEllipse(null, portalPen, at, radius * 0.55, radius * 0.75);
+            }
             context.DrawEllipse(null, ring, at, radius, radius);
             if (boss.Tier > 0)
             {
@@ -701,9 +710,10 @@ public sealed class ActivityMapCanvas : Control
             }
 
             hits.Add(new Hit(at, radius + 2, boss.Name,
-                [$"{(boss.Kind == ActivityLiveActorKind.Boss ? "Roaming boss" : "Roaming miniboss")}, seen {UiFormat.Ago(boss.SeenAtUtc, scene.NowUtc)}",
-                    "It moves; the map follows it while it stays in view"],
-                [new ItemRow(boss.MobUniqueName, 1, boss.Name, "", Mob: true)]));
+                [$"{boss.KindLabel}, seen {UiFormat.Ago(boss.SeenAtUtc, scene.NowUtc)}",
+                    boss.IsInView ? "In view" : "Out of view · Last known position, remembered for this zone visit",
+                    boss.Enchantment is { } enchantment ? $"Enchantment: .{enchantment}" : ""],
+                boss.IsMob ? [new ItemRow(boss.MobUniqueName, 1, boss.Name, "", Mob: true)] : []));
         }
     }
 

@@ -1,13 +1,19 @@
+using AlbionDataAvalonia.Activity.Models;
+using System;
+
 namespace AlbionDataAvalonia.Activity;
 
-/// <summary>The roaming bosses near the character, for the live map. The generated catalog names them by mobs.json.</summary>
+/// <summary>Dynamic mob POIs for the live map. The generated catalog names them by mobs.json.</summary>
 internal static partial class ActivityLiveActors
 {
-    /// <summary>Whether a mob is a roaming boss, and if so whether it is a miniboss; null for any other mob.</summary>
-    public static bool? RoamingBoss(string? uniqueName) =>
-        !string.IsNullOrWhiteSpace(uniqueName) && RoamingBosses.TryGetValue(uniqueName, out var miniboss) ? miniboss : null;
+    public static ActivityLiveActorKind? MobKind(string? name) =>
+        name is not null && DynamicMobs.TryGetValue(name, out var kind) ? kind : null;
 
-    /// <summary>The tier a mob's unique name starts with ("T8_MOB_…"), or 0.</summary>
+    public static bool IsSeasonal(string? name) => name is not null
+        && (name.Contains("HALLOWEEN", StringComparison.OrdinalIgnoreCase)
+            || name.Contains("EVENT", StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The tier prefix of a game unique name, or zero if absent.</summary>
     public static int Tier(string? uniqueName) =>
         uniqueName is { Length: > 2 } && uniqueName[0] is 'T' or 't' && uniqueName[1] is >= '1' and <= '8' ? uniqueName[1] - '0' : 0;
 }

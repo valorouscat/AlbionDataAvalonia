@@ -8,6 +8,7 @@ namespace AlbionDataAvalonia.Activity;
 public sealed partial class ActivityTrackerService
 {
     private const int MaxWisps = 256;
+    private const double WispMoveStep = 0.5;
     private readonly Dictionary<long, ActivityWisp> wisps = new();
     private long wispsEpoch = -1;
 
@@ -26,7 +27,7 @@ public sealed partial class ActivityTrackerService
     {
         SyncWisps();
         if (!wisps.TryGetValue(id, out var wisp)) return false;
-        var far = Math.Abs(wisp.X - x) >= ResourceMobStep || Math.Abs(wisp.Y - y) >= ResourceMobStep;
+        var far = Math.Abs(wisp.X - x) >= WispMoveStep || Math.Abs(wisp.Y - y) >= WispMoveStep;
         wisps[id] = far ? wisp with { X = x, Y = y, SeenAtUtc = at } : wisp with { SeenAtUtc = at };
         return far;
     }
