@@ -1,0 +1,97 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:AlbionDataAvalonia.ViewModels" xmlns:market="clr-namespace:AlbionDataAvalonia.Market"
+             xmlns:controls="using:AlbionDataAvalonia.Views.Controls"
+             x:Class="AlbionDataAvalonia.Views.MarketView" x:DataType="vm:MarketViewModel" Classes="AppPage">
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10">
+        <WrapPanel>
+            <controls:FilterField Label="Server"><ComboBox Width="130" ItemsSource="{Binding Regions}" SelectedItem="{Binding SelectedRegion}" /></controls:FilterField>
+            <controls:FilterField Label="Transaction"><ComboBox Width="180" ItemsSource="{Binding Actions}" SelectedItem="{Binding SelectedAction}" /></controls:FilterField>
+            <controls:FilterField Label="Maximum price age"><ComboBox Width="175" ItemsSource="{Binding Ages}" SelectedItem="{Binding SelectedAge}" /></controls:FilterField>
+            <Button Classes="UiAction" Margin="0,18,0,0" Content="Refresh prices" Command="{Binding RefreshPricesCommand}" IsEnabled="{Binding !IsLoadingPrices}" />
+        </WrapPanel>
+        <TextBlock Grid.Row="1" Text="{Binding PriceStatus}" Classes="UiFine" TextWrapping="Wrap" />
+        <Grid Grid.Row="2" ColumnDefinitions="230,*" ColumnSpacing="12">
+            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                <TextBox Text="{Binding SearchText}" Watermark="Item / название / ID…" AutomationProperties.Name="Search market items" />
+                <TextBlock Grid.Row="1" Text="{Binding CatalogStatus}" Classes="UiFine" TextWrapping="Wrap" />
+                <ListBox Grid.Row="2" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="market:MarketFamily">
+                            <StackPanel Spacing="2" Margin="0,3">
+                                <TextBlock Text="{Binding Name}" Classes="UiLabel" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding RussianName}" Classes="UiFine" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Key}" Classes="UiFine" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Grid>
+            <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="10">
+                <Border Classes="UiCard Subtle" Padding="12" IsVisible="{Binding HasSelection}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{Binding SelectedItem.Name}" Classes="UiSectionTitle" />
+                        <WrapPanel>
+                            <controls:FilterField Label="Quantity"><NumericUpDown Width="125" Minimum="1" Maximum="1000000" Increment="1" FormatString="0" Value="{Binding Quantity}" /></controls:FilterField>
+                            <controls:FilterField Label="Tier"><ComboBox Width="105" ItemsSource="{Binding Tiers}" SelectedItem="{Binding SelectedTier}" /></controls:FilterField>
+                            <controls:FilterField Label="Enchantment / rarity"><ComboBox Width="160" ItemsSource="{Binding Enchantments}" SelectedItem="{Binding SelectedEnchantment}" /></controls:FilterField>
+                            <controls:FilterField Label="Quality"><ComboBox Width="145" ItemsSource="{Binding Qualities}" SelectedItem="{Binding SelectedQuality}" IsEnabled="{Binding HasQuality}" /></controls:FilterField>
+                        </WrapPanel>
+                        <WrapPanel IsVisible="{Binding HasPower}">
+                            <controls:FilterField Label="Minimum item power"><NumericUpDown Width="160" Minimum="0" Maximum="5000" FormatString="0" Value="{Binding MinimumPower}" /></controls:FilterField>
+                            <ToggleSwitch Content="Character IP" IsChecked="{Binding PersonalPower}" Margin="4,18,12,0" />
+                            <ToggleSwitch Content="Manual bonus" IsChecked="{Binding ManualSkills}" IsVisible="{Binding PersonalPower}" Margin="4,18,12,0" />
+                            <controls:FilterField Label="Captured character" IsVisible="{Binding ShowProfilePicker}">
+                                <ComboBox Width="175" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}" />
+                            </controls:FilterField>
+                            <controls:FilterField Label="Skill bonus before tier modifier" IsVisible="{Binding ShowSkillBonus}">
+                                <NumericUpDown Width="190" Minimum="0" Maximum="5000" FormatString="0.##" Value="{Binding SkillBonus}" />
+                            </controls:FilterField>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding ProfileStatus}" Classes="UiFine" TextWrapping="Wrap" IsVisible="{Binding ShowProfilePicker}" />
+                        <TextBlock Text="Base IP includes enchantment and quality. Character mode uses captured Destiny Board levels, including bonuses from other specializations, with the item's tier mastery modifier applied. Overcharge and awakened bonuses are excluded." Classes="UiFine" TextWrapping="Wrap" IsVisible="{Binding HasPower}" />
+                        <WrapPanel>
+                            <controls:FilterField Label="Sales tax %"><NumericUpDown Width="130" Minimum="0" Maximum="95" Increment="0.1" FormatString="0.##" Value="{Binding SalesTax}" /></controls:FilterField>
+                            <controls:FilterField Label="Order setup fee %"><NumericUpDown Width="150" Minimum="0" Maximum="95" Increment="0.1" FormatString="0.##" Value="{Binding SetupFee}" /></controls:FilterField>
+                        </WrapPanel>
+                        <TextBlock Text="{Binding PriceHint}" Classes="UiFine" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Classes="UiCard Bordered" Padding="12">
+                    <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding TotalLabel}" Classes="UiLabel" />
+                            <TextBlock Grid.Column="1" Text="{Binding BestCity}" Classes="UiAccent" />
+                        </Grid>
+                        <TextBlock Text="{Binding BestTotal}" Classes="UiValueLarge" />
+                        <TextBlock Text="{Binding BestItem}" Classes="UiFine" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <TextBlock Text="{Binding CalculationStatus}" Classes="UiFine" TextWrapping="Wrap" />
+                <TextBlock Text="Totals are estimates: unit snapshot × quantity, including applicable fees. AODP has no available-volume data; check the orders in game. Transport costs and risks are not included." Classes="UiMuted" TextWrapping="Wrap" />
+                <DataGrid Height="340" Classes="Compact" ItemsSource="{Binding Results}" AutoGenerateColumns="False" IsReadOnly="True" CanUserSortColumns="False">
+                    <DataGrid.Columns>
+                        <DataGridTemplateColumn Header="City" Width="125">
+                            <DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:MarketRowViewModel">
+                                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding City}" Classes="UiLabel" />
+                                    <TextBlock Text="★" Classes="UiAccent" IsVisible="{Binding IsBest}" ToolTip.Tip="Best total among matching snapshots" />
+                                </StackPanel>
+                            </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTemplateColumn Header="Best eligible variant" Width="*" MinWidth="220">
+                            <DataGridTemplateColumn.CellTemplate><DataTemplate x:DataType="vm:MarketRowViewModel">
+                                <controls:ItemCell Classes="Compact" IconSize="28" ItemUniqueName="{Binding ItemId}" ImageQuality="{Binding Quality}" Title="{Binding ItemName}" Subtitle="{Binding QualityText}" />
+                            </DataTemplate></DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="IP" Binding="{Binding PowerText}" Width="65" />
+                        <DataGridTextColumn Header="Net / item" Binding="{Binding UnitText}" Width="105" />
+                        <DataGridTextColumn Header="Total silver" Binding="{Binding TotalText}" Width="120" />
+                        <DataGridTextColumn Header="Snapshot age" Binding="{Binding SnapshotText}" Width="115" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

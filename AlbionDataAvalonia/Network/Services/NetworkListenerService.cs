@@ -73,6 +73,7 @@ namespace AlbionDataAvalonia.Network.Services
         private readonly PlayerIdentityService _playerIdentityService;
         private readonly LegendaryItemTrackerService _legendaryTracker;
         private readonly DesktopClientCore _clientCore;
+        private readonly AlbionDataAvalonia.Market.CharacterMasteryService _characterMastery;
         private readonly PacketDiagnostics _packetDiagnostics;
 
         private CancellationTokenSource? _lifecycleCancellation;
@@ -88,7 +89,7 @@ namespace AlbionDataAvalonia.Network.Services
         public bool IsMacOSCapturePermissionSetupRequired { get; private set; }
         public bool IsMacOSCapturePermissionSetupOutdated { get; private set; }
 
-        public NetworkListenerService(PlayerState playerState, SettingsManager settingsManager, MailService mailService, TradeService tradeService, ItemEstimatedMarketValueService itemEstimatedMarketValues, ActivityTrackerService activityTracker, PartyTrackerService partyTracker, PlayerIdentityService playerIdentityService, LegendaryItemTrackerService legendaryTracker, DesktopClientCore clientCore, PacketDiagnostics packetDiagnostics)
+        public NetworkListenerService(PlayerState playerState, SettingsManager settingsManager, MailService mailService, TradeService tradeService, ItemEstimatedMarketValueService itemEstimatedMarketValues, ActivityTrackerService activityTracker, PartyTrackerService partyTracker, PlayerIdentityService playerIdentityService, LegendaryItemTrackerService legendaryTracker, DesktopClientCore clientCore, PacketDiagnostics packetDiagnostics, AlbionDataAvalonia.Market.CharacterMasteryService characterMastery)
         {
             _playerState = playerState;
             _settingsManager = settingsManager;
@@ -99,6 +100,7 @@ namespace AlbionDataAvalonia.Network.Services
             _playerIdentityService = playerIdentityService;
             _legendaryTracker = legendaryTracker;
             _clientCore = clientCore;
+            _characterMastery = characterMastery;
             _packetDiagnostics = packetDiagnostics;
             _activityTracker.DiagnosticNote += _packetDiagnostics.Note;
 
@@ -372,6 +374,17 @@ namespace AlbionDataAvalonia.Network.Services
                 builder.AddRequestHandler(new AuctionSellSpecificItemRequestRequestHandler(_playerState, _tradeService));
 
                 ActivityPacketSubscriptions.Register(builder, _activityTracker);
+                // Reuse the shared decoded Destiny Board snapshot, also sent to the AFM profile by Specs.
+                builder.SubscribeEvent<AlbionDataAvalonia.Network.Events.FullAchievementInfoEvent>((int)AlbionDataAvalonia.Shared.EventCodes.FullAchievementInfo, async packet =>
+                {
+                    var session = _clientCore.Core.Session;
+                    if (session.IsJoining || session.AlbionServer is not { } server || string.IsNullOrWhiteSpace(session.PlayerName)) return;
+                    var character = session.PlayerName;
+                    var characterId = session.CharacterId;
+                    await _clientCore.Core.InitializeAsync().ConfigureAwait(false);
+                    if (session.IsJoining || session.CharacterId != characterId || session.PlayerName != character || session.AlbionServer != server) return;
+                    await _characterMastery.ObserveAsync(packet, server.Name, character, _clientCore.Core.Achievements).ConfigureAwait(false);
+                });
                 builder.ObserveHandledPackets(_packetDiagnostics.Write, () => _packetDiagnostics.IsEnabled);
 
                 var localReceiver = builder.Build();
