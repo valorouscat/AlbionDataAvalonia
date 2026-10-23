@@ -513,11 +513,44 @@ public sealed class ActivityMapCanvas : Control
         }
     }
 
+    // Slave sections are chosen per instance. Show only the square that could hold a resource patch, never guessed nodes.
+    private void DrawResourceAreas(DrawingContext context, ActivityMapScene scene, double scale, IReadOnlyList<MapResourceSpawn> spawns)
+    {
+        foreach (var group in spawns.Where(x => x.AreaHalfSize > 0).GroupBy(x => (x.Position, x.AreaHalfSize)))
+        {
+            var (position, half) = group.Key;
+            var at = ToScreen(ImagePoint(scene, position.X, position.Y), scale);
+            var corners = new[] { new MapPoint(position.X - half, position.Y - half), new MapPoint(position.X + half, position.Y - half),
+                new MapPoint(position.X + half, position.Y + half), new MapPoint(position.X - half, position.Y + half) }
+                .Select(p => ToScreen(ImagePoint(scene, p.X, p.Y), scale)).ToArray();
+            if (!Visible(at, corners.Max(p => Distance(p, at)))) continue;
+            var color = group.Count() == 1 ? ActivityPalette.Resource(group.First().Family) : UiPalette.Color("UiMapPoiCampColor");
+            var shape = Polygon(corners);
+            using (context.PushOpacity(scene.ResourceSpawnIconOpacity))
+            {
+                using (context.PushOpacity(0.08)) context.DrawGeometry(UiPalette.Brush(color), null, shape);
+                context.DrawGeometry(null, new ImmutablePen(UiPalette.Brush(color), 1.5, new ImmutableDashStyle([4, 3], 0)), shape);
+                using (context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale)))
+                {
+                    context.DrawEllipse(UiPalette.Brush("UiMapCountColor"), UiPalette.Pen(color, 1.5), at, 8, 8);
+                    var label = ChartDrawing.Text("?", 10, color, FontWeight.Bold);
+                    label.Draw(context, new Point(at.X - label.Width / 2, at.Y - label.Height / 2));
+                }
+            }
+            hits.Add(new Hit(at, 11 * scene.ResourceIconScale, "Possible Mists resource patch",
+                ["A replaceable section slot; its exact resource layout is selected per instance",
+                 "The selected section is unknown; the dashed area is not a set of confirmed resource nodes",
+                 "Tier and resource filters describe what is possible, not what has spawned"],
+                group.Select(x => new ItemRow(SpawnItem(x), 1, SpawnLabel(x), "Possible")).ToArray()));
+        }
+    }
+
     // A spawn spot is a square, or a hollow diamond for a resource mob's spot, so it reads apart from the round nodes
     // in view. Spots close together on screen merge into the best of them; the tooltip counts what the group holds.
     private void DrawResourceSpawns(DrawingContext context, ActivityMapScene scene, double scale)
     {
         if (scene.ResourceSpawns is not { Count: > 0 } spawns) return;
+        DrawResourceAreas(context, scene, scale, spawns);
         var clusterRadius = scene.ResourceClusterRadius;
         var cellSize = Math.Max(1, clusterRadius);
         var groups = new List<SpawnGroup>();
@@ -526,6 +559,7 @@ public sealed class ActivityMapCanvas : Control
         for (var index = spawns.Count - 1; index >= 0; index--)
         {
             var spawn = spawns[index];
+            if (spawn.AreaHalfSize > 0) continue;
             var at = ToScreen(ImagePoint(scene, spawn.Position.X, spawn.Position.Y), scale);
             if (!Visible(at, Math.Max(clusterRadius, 10 * scene.ResourceIconScale))) continue;
             var cellX = (int)Math.Floor(at.X / cellSize);
@@ -570,7 +604,7 @@ public sealed class ActivityMapCanvas : Control
                 }
                 else context.DrawRectangle(UiPalette.Brush(color), OutlinePen, new Rect(group.At.X - half, group.At.Y - half, half * 2, half * 2), 2, 2);
 
-                var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 8,
+                var tier = ChartDrawing.Text(best.HasMultipleTiers ? "?" : best.Tier.ToString(CultureInfo.CurrentCulture), 8,
                     best.Mob ? color : UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
                 tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
             }
@@ -796,7 +830,7 @@ public sealed class ActivityMapCanvas : Control
         _ => "wisp spawn"
     };
 
-    private static string SpawnLabel(MapResourceSpawn spawn) => $"T{spawn.Tier} {spawn.Family}{(spawn.Mob ? " mob" : "")}";
+    private static string SpawnLabel(MapResourceSpawn spawn) => $"{spawn.TierLabel} {spawn.Family}{(spawn.Mob ? " mob" : "")}";
 
     private static string SpawnItem(MapResourceSpawn spawn) => ActivityResourceNodePackets.ItemUniqueName(spawn.Family, spawn.Tier, 0);
 
@@ -809,11 +843,12 @@ public sealed class ActivityMapCanvas : Control
                 [spawn.Mob ? "A spot where this mob can appear, from the game files"
                     : spawn.Candidate ? "One of the spots the game picks this zone's nodes from, from the game files"
                     : "A node this part of the zone places, from the game files",
-                    "Not what stands there now; any enchantment is picked when it spawns"],
+                    "Not what stands there now; any enchantment is picked when it spawns",
+                    spawn.HasMultipleTiers ? "? marks a candidate whose tier is selected per instance; all possible tiers are listed" : ""],
                 [new ItemRow(SpawnItem(spawn), 1, SpawnLabel(spawn), "")]);
         }
 
-        var kinds = spawns.GroupBy(x => (x.Family, x.Tier, x.Mob)).OrderByDescending(x => x.Key.Tier).ThenBy(x => x.Key.Mob).ToArray();
+        var kinds = spawns.GroupBy(x => (x.Family, x.Tier, x.Mob, x.PossibleTiers)).OrderByDescending(x => x.Key.Tier).ThenBy(x => x.Key.Mob).ToArray();
         var rows = kinds.Take(GroupLinesShown).Select(x => new ItemRow(SpawnItem(x.First()), 1, SpawnLabel(x.First()),
             UiFormat.Count(x.Count(), "spot"))).ToArray();
         var lines = new List<string>();
