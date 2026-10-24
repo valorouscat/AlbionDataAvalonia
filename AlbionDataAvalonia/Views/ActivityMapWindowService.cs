@@ -4,7 +4,9 @@ using AlbionDataAvalonia.Ui.Services;
 using AlbionDataAvalonia.Maps;
 using AlbionDataAvalonia.Settings;
 using AlbionDataAvalonia.ViewModels;
+using AlbionDataAvalonia.Ui;
 using System;
+using System.ComponentModel;
 
 namespace AlbionDataAvalonia.Views;
 
@@ -17,29 +19,47 @@ public sealed class ActivityMapWindowService
         IFileDialogService files, HostileAlertSoundService sound, ResourceAlertSoundService resourceSound)
     {
         var user = settings.UserSettings;
-        host = new(() => new ActivityMapViewModel(tracker, persistence, maps, user, files, sound, resourceSound), model => model.Start(), new WindowMemory(
+        host = new(() =>
+        {
+            var model = new ActivityMapViewModel(tracker, persistence, maps, user, files, sound, resourceSound);
+            model.PropertyChanged += ModelChanged;
+            return model;
+        }, model => model.Start(), new WindowMemory(
             () => user.MapWindowOpen, open => user.MapWindowOpen = open,
-            () => user.MapWindowPlacement, placement => user.MapWindowPlacement = placement), restoreSize: true);
+            () => user.MapOverlayEnabled ? user.MapOverlayWindowPlacement : user.MapWindowPlacement,
+            placement => { if (user.MapOverlayEnabled) user.MapOverlayWindowPlacement = placement; else user.MapWindowPlacement = placement; }), restoreSize: true);
+        host.IsOpenChanged += (_, _) => IsOpenChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public bool IsOpen => host.IsOpen;
-    public string ButtonText => IsOpen ? "Close map" : "Open map";
+    public string ButtonText => host.ViewModel?.IsOverlayHidden == true ? "Show map" : IsOpen ? "Close map" : "Open map";
 
-    public event EventHandler? IsOpenChanged
+    public event EventHandler? IsOpenChanged;
+
+    private void ModelChanged(object? sender, PropertyChangedEventArgs e)
     {
-        add => host.IsOpenChanged += value;
-        remove => host.IsOpenChanged -= value;
+        if (UiDispatch.Repost(() => ModelChanged(sender, e))) return;
+        if (e.PropertyName == nameof(ActivityMapViewModel.IsOverlayHidden)) IsOpenChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void RestoreIfOpen() => host.RestoreIfOpen();
 
-    public void Toggle() => host.Toggle();
+    public void Toggle()
+    {
+        if (host.ViewModel?.IsOverlayHidden == true) host.ViewModel.RevealMapCommand.Execute(null);
+        else host.Toggle();
+    }
 
-    public void Show() => host.Show();
+    public void Show()
+    {
+        host.ViewModel?.RevealMapCommand.Execute(null);
+        host.Show();
+    }
 
     public void ShowRun(Guid runId)
     {
-        host.Show();
+        Show();
+        host.ViewModel?.ExitOverlayCommand.Execute(null);
         host.ViewModel?.ShowRun(runId);
     }
 }

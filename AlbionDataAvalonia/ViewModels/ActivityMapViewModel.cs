@@ -111,6 +111,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         UpdateResourceTierFilters();
         liveTimer.Tick += (_, _) => RefreshLive();
         replayTimer.Tick += (_, _) => AdvanceReplay();
+        InitializeOverlay();
     }
 
     private static readonly int[] FadeOptionValues = [1, 5, 15, 0];
