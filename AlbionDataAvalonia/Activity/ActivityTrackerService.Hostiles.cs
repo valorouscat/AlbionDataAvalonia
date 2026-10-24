@@ -23,11 +23,14 @@ public sealed partial class ActivityTrackerService
     {
         SyncHostiles();
         if (!actors.Hostile(packet.ObjectId)) return;
-        hostileSightings.RemoveAll(x => at - x.SeenAtUtc >= HostileAlertLength);
-        hostileSightings.Add(new(at, packet.Name, packet.GuildName ?? "", packet.AllianceName ?? ""));
+        // Capture timestamps can drift from the application clock during a long capture.
+        // Transient warnings start when observed; journal timestamps still use capture time.
+        var observedAt = LiveAlertObservedAt(at);
+        hostileSightings.RemoveAll(x => observedAt - x.SeenAtUtc >= HostileAlertLength);
+        hostileSightings.Add(new(observedAt, packet.Name, packet.GuildName ?? "", packet.AllianceName ?? ""));
         liveMapVersion++;
         if (HasConfirmedContext && !captureSuspended && map is { } current)
-            HostileSpotted?.Invoke(new(mapEpoch, current.RawLocationId, at,
+            HostileSpotted?.Invoke(new(mapEpoch, current.RawLocationId, observedAt,
                 current.IsHub || string.Equals(current.ZoneType, "Blue", StringComparison.OrdinalIgnoreCase)));
     }
 

@@ -18,7 +18,7 @@ public sealed class HostileAlertSoundService : IAsyncDisposable
     private readonly object sync = new();
     private ActivityTrackerService? tracker;
     private long lastEpoch = -1;
-    private DateTime lastAlert;
+    private long lastAlert;
     private bool disposed;
 
     public HostileAlertSoundService(UserSettings settings, IAlertSoundPlayer player, TimeProvider? time = null)
@@ -56,8 +56,8 @@ public sealed class HostileAlertSoundService : IAsyncDisposable
         if (!CanAlert(arrival)) return;
         lock (sync)
         {
-            var now = time.GetUtcNow().UtcDateTime;
-            if (disposed || lastEpoch == arrival.MapEpoch && now - lastAlert < ActivityTrackerService.HostileAlertLength) return;
+            var now = time.GetTimestamp();
+            if (disposed || lastEpoch == arrival.MapEpoch && time.GetElapsedTime(lastAlert, now) < ActivityTrackerService.HostileAlertLength) return;
             lastEpoch = arrival.MapEpoch;
             lastAlert = now;
         }

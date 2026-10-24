@@ -48,7 +48,11 @@ public sealed class AlertSoundPlayer(string defaultSoundResource = "Audio.hostil
             cancellationToken.ThrowIfCancellationRequested();
             player.Play();
             device.Start();
-            await finished.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+            // A lost device/callback must not leave automatic alerts permanently busy.
+            // Allow the complete custom track plus device startup/teardown slack.
+            var duration = player.Duration;
+            var timeout = TimeSpan.FromSeconds(double.IsFinite(duration) && duration > 0 ? duration + 5 : 30);
+            await finished.Task.WaitAsync(timeout, cancellationToken).ConfigureAwait(false);
         }
         finally
         {
