@@ -200,6 +200,8 @@ Loot and gathered items are valued with AFM's estimated market value (EMV). Sign
 
 Click **Open map** on the Activity page to open the map in its own window.
 
+For a compact transparent map, open **Map filters › Overlay** and enable **Overlay mode**. It keeps the selected layers and filters. Adjust **Window opacity** and **Always on top**; drag the overlay header to move it and its lower-right corner to resize it. **Settings** temporarily restores the controls; **Done editing overlay** hides them again. On Windows, **Pass clicks through** lets the game receive mouse input underneath the map once editing ends. **Ctrl+Alt+M** completely hides or restores the window; **Ctrl+Alt+O** returns to the normal interactive window, even while hidden or passing clicks. If either global shortcut is unavailable, click-through stays off and an explanation appears. A hidden map can also be restored with **Show map** in Activity. Opacity, pinning, click-through preference and separate normal/overlay placements are remembered; hidden state is temporary. On other desktops, opacity requires a compositor, pinning depends on the window manager, and these keyboard shortcuts only work while the map has focus; global shortcuts and click-through currently require Windows.
+
 ![The map replaying a run in Wyre Forest](docs/screenshots/activity-map.png)
 
 - **Live** follows you through the zone and draws your path, kills, loot, gathering, deaths, zone exits and map icons. Choose whether they fade after 1, 5 or 15 minutes, or never.

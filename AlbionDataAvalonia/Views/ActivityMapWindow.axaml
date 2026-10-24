@@ -17,8 +17,8 @@
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto,*,Auto">
-        <Border BorderBrush="{DynamicResource UiDividerBrush}" BorderThickness="0,0,0,1" Padding="12,8,12,4">
+    <Grid x:Name="MapContents" RowDefinitions="Auto,*,Auto">
+        <Border IsVisible="{Binding !IsOverlay}" BorderBrush="{DynamicResource UiDividerBrush}" BorderThickness="0,0,0,1" Padding="12,8,12,4">
             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                 <controls:SegmentedSelector ItemsSource="{Binding ModeOptions}" SelectedIndex="{Binding SelectedModeIndex}"
                                                  AutomationProperties.Name="Map mode" VerticalAlignment="Center" />
@@ -59,6 +59,8 @@
         <Grid Grid.Row="1">
             <views:ActivityMapCanvas x:Name="MapCanvas" Scene="{Binding Scene}" Follow="{Binding Follow, Mode=TwoWay}" />
 
+            <Panel IsVisible="{Binding ShowMapControls}">
+
             <Border Classes="UiOverlay" IsVisible="{Binding HasNote}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="12" MaxWidth="460">
                 <TextBlock Text="{Binding Note}" TextWrapping="Wrap" FontSize="{DynamicResource UiFontSizeSmall}" />
             </Border>
@@ -93,6 +95,27 @@
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                                   IsVisible="{Binding !LegendCollapsed}">
                         <StackPanel Spacing="12">
+                            <Border Classes="UiCard Subtle" Padding="10">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="Overlay" Classes="UiSectionTitle" />
+                                    <WrapPanel>
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" IsChecked="{Binding IsOverlay}" Content="Overlay mode" Margin="0,0,6,6" />
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" IsChecked="{Binding OverlayPinned}" Content="Always on top" Margin="0,0,6,6" />
+                                        <ToggleButton Theme="{StaticResource UiToggleChip}" IsChecked="{Binding OverlayClickThrough}" Content="Pass clicks through"
+                                                      IsEnabled="{Binding SupportsOverlayClickThrough}" Margin="0,0,6,6" />
+                                    </WrapPanel>
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="Window opacity" Classes="UiLabel" />
+                                        <TextBlock Grid.Column="1" Text="{Binding OverlayOpacityText}" Classes="UiValue" />
+                                    </Grid>
+                                    <controls:ScrollSafeSlider Minimum="20" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True"
+                                                              Value="{Binding OverlayOpacity}" AutomationProperties.Name="Overlay window opacity" />
+                                    <TextBlock Text="{Binding OverlayShortcutHelp}" Classes="UiFine" TextWrapping="Wrap" />
+                                    <TextBlock Text="Move and resize before locking. Pass-through starts when you finish editing. All selected layers and filters stay active." Classes="UiFine" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding OverlayError}" Classes="UiError" IsVisible="{Binding HasOverlayError}" TextWrapping="Wrap" />
+                                    <Button Content="Done editing overlay" Command="{Binding ToggleOverlayControlsCommand}" IsVisible="{Binding IsOverlay}" />
+                                </StackPanel>
+                            </Border>
                             <StackPanel Spacing="4">
                                 <TextBlock Text="Layers" Classes="UiLabel" />
                 <WrapPanel MaxWidth="380">
@@ -377,9 +400,28 @@
                 <Button Classes="UiIcon MapTool" Content="−" Click="ZoomOut_Click" ToolTip.Tip="Zoom out" AutomationProperties.Name="Zoom out" />
                 <Button Classes="UiIcon MapTool" Content="⤢" FontSize="{DynamicResource UiFontSizeCompact}" Click="Fit_Click" ToolTip.Tip="Fit to view" AutomationProperties.Name="Fit to view" />
             </StackPanel>
+            </Panel>
+            <Border Classes="UiOverlay" IsVisible="{Binding ShowOverlayBar}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" MaxWidth="440">
+                <StackPanel Spacing="4">
+                    <WrapPanel>
+                        <Border Background="{DynamicResource UiOverlayBrush}" Padding="8,4" Cursor="SizeAll" PointerPressed="OverlayDrag_PointerPressed">
+                            <TextBlock Text="Map overlay" Classes="UiLabel" />
+                        </Border>
+                        <Button Content="Settings" Classes="UiGhost" Command="{Binding ToggleOverlayControlsCommand}" />
+                        <Button Content="Hide" Classes="UiGhost" Command="{Binding ToggleOverlayVisibilityCommand}" ToolTip.Tip="Ctrl+Alt+M on Windows" />
+                        <Button Content="Exit overlay" Classes="UiGhost" Command="{Binding ExitOverlayCommand}" />
+                    </WrapPanel>
+                    <TextBlock Text="{Binding OverlayError}" Classes="UiError" TextWrapping="Wrap" IsVisible="{Binding HasOverlayError}" />
+                </StackPanel>
+            </Border>
+            <Border Classes="UiOverlay" IsVisible="{Binding ShowOverlayBar}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"
+                    Padding="6" PointerPressed="OverlayResize_PointerPressed" ToolTip.Tip="Drag to resize overlay" AutomationProperties.Name="Resize overlay">
+                <TextBlock Text="↘" Classes="UiLabel" />
+            </Border>
         </Grid>
 
-        <Border Grid.Row="2" IsVisible="{Binding IsHistory}" BorderBrush="{DynamicResource UiDividerBrush}" BorderThickness="0,1,0,0" Padding="12,8">
+        <Panel Grid.Row="2" IsVisible="{Binding !IsOverlay}">
+        <Border IsVisible="{Binding IsHistory}" BorderBrush="{DynamicResource UiDividerBrush}" BorderThickness="0,1,0,0" Padding="12,8">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="10">
                 <Button Content="{Binding PlayButtonText}" Command="{Binding TogglePlayCommand}" Width="34" Height="34" CornerRadius="17"
                         HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTip.Tip="Replay this run"
@@ -394,5 +436,6 @@
                 <TextBlock Grid.Column="4" Text="{Binding RunSummaryText}" Classes="UiLabel" VerticalAlignment="Center" />
             </Grid>
         </Border>
+        </Panel>
     </Grid>
 </Window>
