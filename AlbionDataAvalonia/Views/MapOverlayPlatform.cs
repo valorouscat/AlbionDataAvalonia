@@ -11,20 +11,20 @@ internal sealed class MapOverlayPlatform : IDisposable
     private const int ExtendedStyle = -20;
     private const long Layered = 0x80000, Transparent = 0x20, NoActivate = 0x8000000;
     private const long OwnedStyles = Layered | Transparent | NoActivate;
-    private const int VisibilityKey = 0xAF01, NormalWindowKey = 0xAF02;
+    private const int VisibilityKey = 0xAF01, ModeKey = 0xAF02;
     private const uint Hotkey = 0x0312, Modifiers = 0x0001 | 0x0002 | 0x4000; // Alt, Control, no repeat.
     private readonly Window window;
     private readonly Action toggleVisibility;
-    private readonly Action exitOverlay;
+    private readonly Action toggleOverlay;
     private nint handle;
     private long originalStyles;
     private bool capturedStyles, registered;
 
-    public MapOverlayPlatform(Window window, Action toggleVisibility, Action exitOverlay)
+    public MapOverlayPlatform(Window window, Action toggleVisibility, Action toggleOverlay)
     {
         this.window = window;
         this.toggleVisibility = toggleVisibility;
-        this.exitOverlay = exitOverlay;
+        this.toggleOverlay = toggleOverlay;
         if (OperatingSystem.IsWindows()) Win32Properties.AddWndProcHookCallback(window, WindowProc);
     }
 
@@ -43,19 +43,19 @@ internal sealed class MapOverlayPlatform : IDisposable
             originalStyles = ReadStyles(handle) & OwnedStyles;
             capturedStyles = true;
         }
-        if (overlay && !registered)
+        // Keep the mode shortcut registered in the normal window too, so it can enter overlay mode.
+        if (!registered)
         {
             var visibility = RegisterHotKey(handle, VisibilityKey, Modifiers, 'M');
-            var normal = RegisterHotKey(handle, NormalWindowKey, Modifiers, 'O');
+            var normal = RegisterHotKey(handle, ModeKey, Modifiers, 'O');
             registered = visibility && normal;
             if (!registered)
             {
                 if (visibility) UnregisterHotKey(handle, VisibilityKey);
-                if (normal) UnregisterHotKey(handle, NormalWindowKey);
+                if (normal) UnregisterHotKey(handle, ModeKey);
                 error = "Couldn't register Ctrl+Alt+M and Ctrl+Alt+O. Another app may use them. Click-through stays off; the map remains interactive.";
             }
         }
-        else if (!overlay) UnregisterShortcuts();
 
         var pass = overlay && clickThrough && registered;
         var styles = (ReadStyles(handle) & ~OwnedStyles) | originalStyles;
@@ -75,11 +75,11 @@ internal sealed class MapOverlayPlatform : IDisposable
 
     private nint WindowProc(nint hwnd, uint message, nint wParam, nint lParam, ref bool handled)
     {
-        if (message == Hotkey && registered && (wParam == VisibilityKey || wParam == NormalWindowKey))
+        if (message == Hotkey && registered && (wParam == VisibilityKey || wParam == ModeKey))
         {
             handled = true;
             // Changing window visibility/styles from inside its native WndProc can re-enter Avalonia.
-            Dispatcher.UIThread.Post(wParam == VisibilityKey ? toggleVisibility : exitOverlay);
+            Dispatcher.UIThread.Post(wParam == VisibilityKey ? toggleVisibility : toggleOverlay);
         }
         return 0;
     }
@@ -88,7 +88,7 @@ internal sealed class MapOverlayPlatform : IDisposable
     {
         if (!registered) return;
         UnregisterHotKey(handle, VisibilityKey);
-        UnregisterHotKey(handle, NormalWindowKey);
+        UnregisterHotKey(handle, ModeKey);
         registered = false;
     }
 

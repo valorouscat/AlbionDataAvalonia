@@ -35,10 +35,10 @@ public sealed partial class ActivityMapViewModel
     public string OverlayOpacityText => $"{OverlayOpacity}%";
     public bool HasOverlayError => OverlayError.Length > 0;
     public string OverlayShortcutHelp => !OperatingSystem.IsWindows()
-        ? "Ctrl+Alt+M hides the overlay; Ctrl+Alt+O returns to the normal window while the map has focus. Global shortcuts and click-through require Windows. A hidden map can be restored from Activity › Show map."
+        ? "Ctrl+Alt+M hides the overlay; Ctrl+Alt+O toggles overlay mode while the map has focus. Global shortcuts and click-through require Windows. A hidden map can be restored from Activity › Show map."
         : OverlayShortcutsAvailable
-            ? "Ctrl+Alt+M: hide / show. Ctrl+Alt+O: return to the normal window, including when locked. These shortcuts work while the game has focus."
-            : "In overlay mode: Ctrl+Alt+M hides / shows the map; Ctrl+Alt+O returns to the normal window. Click-through requires both global shortcuts to be available.";
+            ? "Ctrl+Alt+M: hide / show overlay. Ctrl+Alt+O: toggle overlay mode, including when locked. These shortcuts work while the game has focus and the map window is open."
+            : "With the map window open: Ctrl+Alt+O toggles overlay mode; Ctrl+Alt+M hides / shows the overlay. Click-through requires both global shortcuts to be available.";
 
     private void InitializeOverlay()
     {

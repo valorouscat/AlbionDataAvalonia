@@ -66,9 +66,11 @@ public sealed partial class ActivityMapViewModel
     }
 
     public IReadOnlyList<Option<ActivityWispRarity>> WispRarityOptions { get; } =
-        [new(ActivityWispRarity.Common, "Common+"), new(ActivityWispRarity.Uncommon, "Uncommon+"),
-         new(ActivityWispRarity.Rare, "Rare+"), new(ActivityWispRarity.Epic, "Epic+"), new(ActivityWispRarity.Legendary, "Legendary")];
+        [new(ActivityWispRarity.Common, "Common"), new(ActivityWispRarity.Uncommon, "Uncommon"),
+         new(ActivityWispRarity.Rare, "Rare"), new(ActivityWispRarity.Epic, "Epic"), new(ActivityWispRarity.Legendary, "Legendary")];
     [ObservableProperty] private Option<ActivityWispRarity> selectedWispRarity;
+    [ObservableProperty] private bool exactWispRarity;
+    partial void OnExactWispRarityChanged(bool value) => SaveWispFilters();
     partial void OnSelectedWispRarityChanged(Option<ActivityWispRarity> value) => SaveWispFilters();
 
     [RelayCommand]
@@ -85,13 +87,14 @@ public sealed partial class ActivityMapViewModel
 
     private void SaveWispFilters()
     {
-        settings.MapWispRarities = 31 & ~((1 << (int)SelectedWispRarity.Value) - 1);
+        settings.MapWispExactRarity = ExactWispRarity;
+        settings.MapWispRarities = ExactWispRarity ? 1 << (int)SelectedWispRarity.Value : 31 & ~((1 << (int)SelectedWispRarity.Value) - 1);
         settings.MapWispSizes = (ShowWispSolo ? 1 : 0) | (ShowWispDuo ? 2 : 0);
         Rebuild();
     }
 
     private IReadOnlyList<ActivityWisp> ShownWisps() => !IsLive || !ShowWisps ? [] : (live.Wisps ?? [])
-        .Where(x => x.Rarity >= SelectedWispRarity.Value
+        .Where(x => (ExactWispRarity ? x.Rarity == SelectedWispRarity.Value : x.Rarity >= SelectedWispRarity.Value)
             && (settings.MapWispSizes & (1 << (int)x.Size)) != 0)
         .OrderBy(x => x.Rarity).ToArray();
 }
