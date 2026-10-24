@@ -44,7 +44,7 @@ public partial class ActivityMapWindow : Window
     {
         base.OnOpened(e);
         opened = true;
-        overlayPlatform ??= new(this, () => model?.ToggleOverlayVisibilityCommand.Execute(null), () => model?.ExitOverlayCommand.Execute(null));
+        overlayPlatform ??= new(this, () => model?.ToggleOverlayVisibilityCommand.Execute(null), () => model?.ToggleOverlayCommand.Execute(null));
         ApplyOverlay();
     }
 
@@ -133,7 +133,7 @@ public partial class ActivityMapWindow : Window
         if (e.Handled || model is null || model.OverlayShortcutsAvailable
             || e.KeyModifiers != (KeyModifiers.Control | KeyModifiers.Alt)) return;
         if (e.Key == Key.M && model.IsOverlay) model.ToggleOverlayVisibilityCommand.Execute(null);
-        else if (e.Key == Key.O && model.IsOverlay) model.ExitOverlayCommand.Execute(null);
+        else if (e.Key == Key.O) model.ToggleOverlayCommand.Execute(null);
         else return;
         e.Handled = true;
     }
