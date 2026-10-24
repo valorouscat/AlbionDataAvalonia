@@ -46,8 +46,7 @@ public sealed class ResourceAlertSoundService : IAsyncDisposable
 
     private bool Matches(ResourceAlertTarget target) => settings.MapShowResources
         && (!target.IsMob || settings.MapShowResourceMobs)
-        && ActivityResourceFilter.ShowsTier(settings, target.Tier, target.Enchantment)
-        && ActivityResourceFilter.ShowsFamily(settings, target.Family);
+        && ActivityResourceFilter.ShowsSeen(settings, target.Family, target.Tier, target.Enchantment);
 
     private bool CanAlert(ResourceAlertArrival arrival)
     {

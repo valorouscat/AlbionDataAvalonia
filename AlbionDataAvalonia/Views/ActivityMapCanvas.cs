@@ -844,7 +844,8 @@ public sealed class ActivityMapCanvas : Control
                     : spawn.Candidate ? "One of the spots the game picks this zone's nodes from, from the game files"
                     : "A node this part of the zone places, from the game files",
                     "Not what stands there now; any enchantment is picked when it spawns",
-                    spawn.HasMultipleTiers ? "? marks a candidate whose tier is selected per instance; all possible tiers are listed" : ""],
+                    spawn.HasMultipleTiers ? "? marks a candidate whose tier is selected per instance; all possible tiers are listed" : "",
+                    spawn.FilterDescription ?? ""],
                 [new ItemRow(SpawnItem(spawn), 1, SpawnLabel(spawn), "")]);
         }
 

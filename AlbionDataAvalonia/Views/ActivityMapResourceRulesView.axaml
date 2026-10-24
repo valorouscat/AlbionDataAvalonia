@@ -1,0 +1,50 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AlbionDataAvalonia.ViewModels" xmlns:controls="using:AlbionDataAvalonia.Views.Controls"
+             x:Class="AlbionDataAvalonia.Views.ActivityMapResourceRulesView" x:DataType="vm:ActivityMapResourceFamilyViewModel">
+    <StackPanel Spacing="8">
+        <TextBlock Text="{Binding Label}" Classes="UiSectionTitle" />
+        <WrapPanel>
+            <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Custom rules" IsChecked="{Binding UseCustomRules}" Margin="0,0,6,6" />
+            <ToggleButton Theme="{StaticResource UiToggleChip}" Content="Enabled" IsChecked="{Binding Enabled}" IsVisible="{Binding UseCustomRules}" Margin="0,0,6,6" />
+        </WrapPanel>
+        <TextBlock Text="{Binding InheritanceText}" Classes="UiFine" TextWrapping="Wrap" IsVisible="{Binding !UseCustomRules}" />
+        <StackPanel Spacing="8" IsVisible="{Binding UseCustomRules}">
+            <TextBlock Text="Expand a rule to edit it. Any matching rule is shown." Classes="UiFine" TextWrapping="Wrap" />
+            <ListBox ItemsSource="{Binding Rules}" MaxHeight="320" MinHeight="60" IsVisible="{Binding !HasNoRules}"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.Styles>
+                    <!-- Rule controls need the full width of each virtualized row. -->
+                    <Style Selector="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    </Style>
+                </ListBox.Styles>
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ActivityMapResourceRuleViewModel">
+                        <Border Classes="UiCard Subtle" Padding="8" Margin="0,0,0,6">
+                            <Expander IsExpanded="{Binding IsExpanded}">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <TextBlock Text="{Binding Summary}" Classes="UiLabel" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                        <Button Grid.Column="1" Classes="UiGhost" Content="×" Command="{Binding RemoveCommand}" AutomationProperties.Name="Remove resource rule" />
+                                    </Grid>
+                                </Expander.Header>
+                                <StackPanel Spacing="6">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <controls:OptionSlider ItemsSource="{x:Static vm:ActivityMapResourceRuleViewModel.Tiers}" SelectedItem="{Binding SelectedTier}" AutomationProperties.Name="Rule tier" />
+                                        <ToggleButton Grid.Column="1" Theme="{StaticResource UiToggleChip}" Content="or higher" IsChecked="{Binding HigherTiers}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <controls:OptionSlider ItemsSource="{x:Static vm:ActivityMapResourceRuleViewModel.Enchantments}" SelectedItem="{Binding SelectedEnchantment}" AutomationProperties.Name="Rule enchantment" />
+                                        <ToggleButton Grid.Column="1" Theme="{StaticResource UiToggleChip}" Content="or higher" IsChecked="{Binding HigherEnchantments}" IsEnabled="{Binding HasEnchantment}" />
+                                    </Grid>
+                                </StackPanel>
+                            </Expander>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="No rules: this resource is hidden in this layer." Classes="UiFine" IsVisible="{Binding HasNoRules}" />
+            <Button Content="Add rule" Command="{Binding AddRuleCommand}" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

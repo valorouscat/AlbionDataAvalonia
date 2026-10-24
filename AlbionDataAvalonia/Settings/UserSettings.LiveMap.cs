@@ -3,6 +3,12 @@ namespace AlbionDataAvalonia.Settings;
 // Live sightings and recorded event markers have independent preferences.
 public partial class UserSettings
 {
+    private bool mapWispExactRarity;
+    public bool MapWispExactRarity
+    {
+        get => mapWispExactRarity;
+        set { if (mapWispExactRarity == value) return; mapWispExactRarity = value; OnPropertyChanged(nameof(MapWispExactRarity)); }
+    }
     private bool mapLiveShowKills = false;
     public bool MapLiveShowKills
     {

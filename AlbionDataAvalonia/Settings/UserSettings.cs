@@ -497,7 +497,7 @@ public partial class UserSettings : INotifyPropertyChanged
                 foreach (var (offset, filter) in value)
                 {
                     if (offset is < 1 or > 7 || filter is null) continue;
-                    normalized[offset] = new(Math.Clamp(filter.Minimum, 0, 4));
+                    normalized[offset] = new(Math.Clamp(filter.Minimum, 0, 4), filter.Exact);
                 }
             }
             mapResourceLowerTierEnchantments = new ReadOnlyDictionary<int, MapResourceEnchantmentFilter>(normalized);

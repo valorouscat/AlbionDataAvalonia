@@ -23,7 +23,7 @@ public sealed record MapZoneIcon(string? MarkerType, string Label, MapPoint Posi
 /// itself. It says what can stand there, not what stands there now; the game picks the enchantment when the node spawns.
 /// </summary>
 public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position, bool Mob = false, bool Candidate = false,
-    int PossibleTiers = 0, double AreaHalfSize = 0)
+    int PossibleTiers = 0, double AreaHalfSize = 0, string? FilterDescription = null)
 {
     // Tier remains the highest possible tier for icon ordering. The mask describes candidates whose actual tier is unknown.
     public int TierMask => PossibleTiers != 0 ? PossibleTiers : 1 << Tier;

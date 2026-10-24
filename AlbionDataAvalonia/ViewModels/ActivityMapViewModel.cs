@@ -87,6 +87,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         selectedWispRarity = settings.MapWispRarities == 0 ? WispRarityOptions[0]
             : WispRarityOptions.First(x => (settings.MapWispRarities & (1 << (int)x.Value)) != 0);
         showWispSolo = (settings.MapWispSizes & 1) != 0;
+        exactWispRarity = settings.MapWispExactRarity;
         showWispDuo = (settings.MapWispSizes & 2) != 0;
         showResources = settings.MapShowResources;
         showResourceMobs = settings.MapShowResourceMobs;
@@ -112,6 +113,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         liveTimer.Tick += (_, _) => RefreshLive();
         replayTimer.Tick += (_, _) => AdvanceReplay();
         InitializeOverlay();
+        InitializeResourceRules();
     }
 
     private static readonly int[] FadeOptionValues = [1, 5, 15, 0];
@@ -125,7 +127,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         [new(0, "Off"), new(1, "1 tier below"), new(2, "2 tiers below"), new(3, "3 tiers below"),
          new(4, "4 tiers below"), new(5, "5 tiers below"), new(6, "6 tiers below"), new(7, "7 tiers below")];
     public IReadOnlyList<Option<MapResourceEnchantmentFilter>> EnchantmentOptions { get; } =
-        [new(new(0), ".0+"), new(new(1), ".1+"), new(new(2), ".2+"), new(new(3), ".3+"), new(new(4), ".4+")];
+        [new(new(0), ".0+"), new(new(0, true), ".0 only"), new(new(1), ".1+"), new(new(1, true), ".1 only"),
+         new(new(2), ".2+"), new(new(2, true), ".2 only"), new(new(3), ".3+"), new(new(3, true), ".3 only"), new(new(4), ".4+"), new(new(4, true), ".4 only")];
     public IReadOnlyList<Option<int>> IconSizeOptions { get; } =
         [new(50, "50%"), new(75, "75%"), new(100, "100%"), new(125, "125%"), new(150, "150%"), new(200, "200%")];
     public IReadOnlyList<Option<int>> IconOpacityOptions { get; } =
@@ -808,17 +811,14 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         }
     }
 
-    // The lower-tier exception never changes which nodes meet the main threshold.
-    private bool ShowsSeenTier(int tier, int enchantment) => ActivityResourceFilter.ShowsTier(settings, tier, enchantment);
-
     private IReadOnlyList<ActivityResourceNode> ShownResources(IReadOnlyList<ActivityResourceNode>? nodes) =>
         !ShowResources || nodes is not { Count: > 0 } ? [] : nodes
-            .Where(x => x.Charges > 0 && ShowsSeenTier(x.Tier, x.Enchantment) && ShowsFamily(x.Family))
+            .Where(x => x.Charges > 0 && ActivityResourceFilter.ShowsSeen(settings, x.Family, x.Tier, x.Enchantment))
             .OrderByDescending(x => x.Tier).ThenByDescending(x => x.Enchantment).ThenByDescending(x => x.Charges).ToArray();
 
     private IReadOnlyList<ActivityResourceMob> ShownResourceMobs(IReadOnlyList<ActivityResourceMob>? mobs) =>
         !ShowResources || !ShowResourceMobs || mobs is not { Count: > 0 } ? [] : mobs
-            .Where(x => ShowsSeenTier(x.Tier, x.Enchantment) && ShowsFamily(x.Family))
+            .Where(x => ActivityResourceFilter.ShowsSeen(settings, x.Family, x.Tier, x.Enchantment))
             .OrderBy(x => x.Tier).ThenBy(x => x.Enchantment).ToArray();
 
     private IReadOnlyList<MapResourceSpawn> SpawnSpots(ZoneView? zone, string rawMapId, string? layout, int? turns)
@@ -833,10 +833,16 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         return ShownResourceSpawns(Turned(zone?.ResourceSpawns ?? [], LayoutTurns(zone, layout, turns)));
     }
 
-    private IReadOnlyList<MapResourceSpawn> ShownResourceSpawns(IReadOnlyList<MapResourceSpawn> spawns) =>
-        !ShowResourceSpawns || spawns.Count == 0 ? [] : spawns
-            .Where(x => x.MatchesMinimumTier(SelectedResourceSpawnTier.Value) && ShowsFamily(x.Family))
+    private IReadOnlyList<MapResourceSpawn> ShownResourceSpawns(IReadOnlyList<MapResourceSpawn> spawns)
+    {
+        if (!ShowResourceSpawns || spawns.Count == 0) return [];
+        var descriptions = settings.MapSpawnResourceFilters.ToDictionary(x => x.Key,
+            x => "Looking for: " + string.Join(" or ", (x.Value.Rules ?? []).Select(r => r.Summary)) + ". Spawn enchantment is unknown.", StringComparer.OrdinalIgnoreCase);
+        return spawns
+            .Where(x => ActivityResourceFilter.ShowsSpawn(settings, x))
+            .Select(x => descriptions.TryGetValue(x.Family, out var description) ? x with { FilterDescription = description } : x)
             .OrderBy(x => x.Tier).ThenBy(x => x.Mob).ToArray();
+    }
 
     // Points of interest follow only their own switch. Wisps and camp spots, the most numerous, are drawn first and
     // bosses and chests last, the best of each kind on top.
