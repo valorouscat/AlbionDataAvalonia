@@ -65,19 +65,23 @@
                 <TextBlock Text="{Binding Note}" TextWrapping="Wrap" FontSize="{DynamicResource UiFontSizeSmall}" />
             </Border>
 
-            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" IsVisible="{Binding IsLive}">
-                <StackPanel Spacing="6" IsVisible="{Binding ShowFollow}">
-                    <Border Classes="UiOverlay" IsVisible="{Binding Follow}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Ellipse Classes="UiStatusDot Busy" />
-                            <TextBlock Text="Following you" FontSize="{DynamicResource UiFontSizeSmall}" />
-                        </StackPanel>
-                    </Border>
-                    <Button Content="Follow me" Command="{Binding FollowMeCommand}" IsVisible="{Binding !Follow}"
-                            ToolTip.Tip="Keep your character in the middle of the map" />
+            <StackPanel HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Spacing="6">
+                <Button Content="Overlay mode" Command="{Binding ToggleOverlayCommand}" IsVisible="{Binding !IsOverlay}"
+                        ToolTip.Tip="Show a compact translucent map with the current layers and filters" />
+                <StackPanel IsVisible="{Binding IsLive}">
+                    <StackPanel Spacing="6" IsVisible="{Binding ShowFollow}">
+                        <Border Classes="UiOverlay" IsVisible="{Binding Follow}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Ellipse Classes="UiStatusDot Busy" />
+                                <TextBlock Text="Following you" FontSize="{DynamicResource UiFontSizeSmall}" />
+                            </StackPanel>
+                        </Border>
+                        <Button Content="Follow me" Command="{Binding FollowMeCommand}" IsVisible="{Binding !Follow}"
+                                ToolTip.Tip="Keep your character in the middle of the map" />
+                    </StackPanel>
+                    <Button Content="Clear live map" Command="{Binding ClearLiveMapCommand}"
+                            ToolTip.Tip="Clear remembered Live data for every location and character. Recorded History and filters are kept." />
                 </StackPanel>
-                <Button Content="Clear live map" Command="{Binding ClearLiveMapCommand}"
-                        ToolTip.Tip="Clear remembered Live data for every location and character. Recorded History and filters are kept." />
             </StackPanel>
 
             <Border Classes="UiOverlay" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12" MaxWidth="420" MaxHeight="480" Padding="12">
