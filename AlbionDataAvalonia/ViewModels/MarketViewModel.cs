@@ -28,11 +28,27 @@ public sealed partial class MarketViewModel : ViewModelBase
     public MarketViewModel(MarketCatalog catalog, CraftingPriceService prices, CharacterMasteryService mastery)
     {
         this.catalog = catalog; this.prices = prices; this.mastery = mastery;
+        CityFilters = [.. Cities.Select(x => new MarketCityViewModel(x, true, Recalculate)), new("Black Market", false, Recalculate)];
         searchDelay = new(TimeSpan.FromMilliseconds(150), FilterItems);
         priceDelay = new(TimeSpan.FromMilliseconds(300), () => _ = LoadPrices(false));
     }
     public IReadOnlyList<Option<string>> Regions { get; } = [new("Europe", "Europe"), new("Americas", "Americas"), new("Asia", "Asia")];
     public static IReadOnlyList<string> Cities { get; } = ["Bridgewatch", "Caerleon", "Fort Sterling", "Lymhurst", "Martlock", "Thetford", "Brecilien"];
+    public IReadOnlyList<MarketCityViewModel> CityFilters { get; }
+    private static IReadOnlyList<string> PriceCities { get; } = [.. Cities, "Black Market"];
+    public IReadOnlyList<Option<int>> Intervals { get; } = [new(25, "25 IP"), new(50, "50 IP"), new(100, "100 IP")];
+    public IReadOnlyList<Option<MarketResultOrder>> SortOrders { get; } = [new(MarketResultOrder.ItemPower, "Item power"), new(MarketResultOrder.TotalPrice, "Total price"), new(MarketResultOrder.PricePerPower, "Price / IP")];
+    public IReadOnlyList<Option<bool>> ResultViews { get; } = [new(true, "IP ranges"), new(false, "By city")];
+    public ReplaceableCollection<MarketPowerCardViewModel> PowerCards { get; } = new();
+    [ObservableProperty] private Option<int> selectedInterval = new(50, "50 IP");
+    [ObservableProperty] private Option<MarketResultOrder> selectedSortOrder = new(MarketResultOrder.ItemPower, "Item power");
+    [ObservableProperty] private Option<bool> selectedResultView = new(true, "IP ranges");
+    public bool ShowPowerCards => HasPower && SelectedResultView.Value;
+    public bool ShowCityResults => !ShowPowerCards;
+    public bool HasPowerCards => PowerCards.Count > 0;
+    partial void OnSelectedIntervalChanged(Option<int> value) => Recalculate();
+    partial void OnSelectedSortOrderChanged(Option<MarketResultOrder> value) => Recalculate();
+    partial void OnSelectedResultViewChanged(Option<bool> value) { OnPropertyChanged(nameof(ShowPowerCards)); OnPropertyChanged(nameof(ShowCityResults)); }
     public IReadOnlyList<Option<MarketAction>> Actions { get; } = [new(MarketAction.BuyInstantly, "Buy instantly"), new(MarketAction.BuyOrder, "Place buy orders"),
         new(MarketAction.SellInstantly, "Sell instantly"), new(MarketAction.SellOrder, "Place sell orders")];
     public IReadOnlyList<Option<int>> Tiers => UiOptions.ItemTiers;
@@ -46,7 +62,7 @@ public sealed partial class MarketViewModel : ViewModelBase
     [ObservableProperty] private Option<MarketAction> selectedAction = new(MarketAction.BuyInstantly, "Buy instantly");
     [ObservableProperty] private Option<int> selectedTier = new(0, "Any tier");
     [ObservableProperty] private Option<int> selectedEnchantment = new(-1, "Any enchantment");
-    [ObservableProperty] private Option<int> selectedQuality = new(1, "Normal");
+    [ObservableProperty] private Option<int> selectedQuality = new(0, "Any quality");
     [ObservableProperty] private Option<int> selectedAge = new(24, "24 hours");
     [ObservableProperty] private MarketFamily? selectedItem;
     [ObservableProperty] private decimal? quantity = 1;
@@ -69,6 +85,7 @@ public sealed partial class MarketViewModel : ViewModelBase
     public bool HasSelection => SelectedItem is not null;
     public bool HasPower => SelectedItem?.HasPower == true;
     public bool HasQuality => SelectedItem?.HasQuality == true;
+    public bool ShowCharacterOptions => HasPower && PersonalPower;
     public bool ShowSkillBonus => HasPower && PersonalPower && ManualSkills;
     public bool ShowProfilePicker => HasPower && PersonalPower && !ManualSkills;
     public string TotalLabel => MarketCalculator.IsBuying(SelectedAction.Value) ? "Lowest total cost" : "Highest net proceeds";
@@ -143,6 +160,8 @@ public sealed partial class MarketViewModel : ViewModelBase
     partial void OnSelectedItemChanged(MarketFamily? value)
     {
         if (updatingSearchItems) return;
+        OnPropertyChanged(nameof(ShowPowerCards)); OnPropertyChanged(nameof(ShowCityResults));
+        OnPropertyChanged(nameof(ShowCharacterOptions));
         OnPropertyChanged(nameof(HasSelection)); OnPropertyChanged(nameof(HasPower)); OnPropertyChanged(nameof(HasQuality)); OnPropertyChanged(nameof(ShowSkillBonus)); OnPropertyChanged(nameof(ShowProfilePicker));
         QueuePrices();
     }
@@ -150,15 +169,15 @@ public sealed partial class MarketViewModel : ViewModelBase
     partial void OnSelectedTierChanged(Option<int> value) { FilterItems(); QueuePrices(); }
     partial void OnSelectedEnchantmentChanged(Option<int> value) { FilterItems(); QueuePrices(); }
     partial void OnSelectedQualityChanged(Option<int> value) { FilterItems(); QueuePrices(); }
-    partial void OnMinimumPowerChanged(decimal? value) => QueuePrices();
-    partial void OnPersonalPowerChanged(bool value) { OnPropertyChanged(nameof(ShowSkillBonus)); OnPropertyChanged(nameof(ShowProfilePicker)); QueuePrices(); }
-    partial void OnManualSkillsChanged(bool value) { OnPropertyChanged(nameof(ShowSkillBonus)); OnPropertyChanged(nameof(ShowProfilePicker)); QueuePrices(); }
-    partial void OnSelectedProfileChanged(Option<string>? value) { RefreshProfileStatus(); QueuePrices(); }
+    partial void OnMinimumPowerChanged(decimal? value) => Recalculate();
+    partial void OnPersonalPowerChanged(bool value) { OnPropertyChanged(nameof(ShowSkillBonus)); OnPropertyChanged(nameof(ShowProfilePicker)); OnPropertyChanged(nameof(ShowCharacterOptions)); Recalculate(); }
+    partial void OnManualSkillsChanged(bool value) { OnPropertyChanged(nameof(ShowSkillBonus)); OnPropertyChanged(nameof(ShowProfilePicker)); Recalculate(); }
+    partial void OnSelectedProfileChanged(Option<string>? value) { RefreshProfileStatus(); Recalculate(); }
     private void MasteryChanged()
     {
         if (UiDispatch.Repost(MasteryChanged)) return;
         if (!active) return;
-        RefreshProfiles(); QueuePrices();
+        RefreshProfiles(); Recalculate();
     }
     private void RefreshProfiles()
     {
@@ -179,7 +198,7 @@ public sealed partial class MarketViewModel : ViewModelBase
         var bonus = ManualSkills ? SkillBonus ?? 0 : SelectedProfile is { } selected && mastery.Find(selected.Value) is { } profile ? mastery.Bonus(profile, item) : 0;
         return item.EffectivePower(quality, true, bonus);
     }
-    partial void OnSkillBonusChanged(decimal? value) => QueuePrices();
+    partial void OnSkillBonusChanged(decimal? value) => Recalculate();
     partial void OnSelectedAgeChanged(Option<int> value) => Recalculate();
     partial void OnQuantityChanged(decimal? value) => Recalculate();
     partial void OnSalesTaxChanged(decimal? value) => Recalculate();
@@ -199,14 +218,13 @@ public sealed partial class MarketViewModel : ViewModelBase
     private bool MatchesSearchFilters(MarketItem item) => (SelectedTier.Value == 0 || item.Tier == SelectedTier.Value)
         && (SelectedEnchantment.Value < 0 || item.Enchantment == SelectedEnchantment.Value)
         && (SelectedQuality.Value == 0 || item.MaxQuality >= SelectedQuality.Value);
-    private MarketCandidate[] Candidates()
-    {
-        if (SelectedItem is null || !PowerValid()) return [];
-        return SelectedItem.Variants.Where(MatchesSearchFilters)
-            .SelectMany(x => Enumerable.Range(1, x.MaxQuality).Where(q => !HasQuality || SelectedQuality.Value == 0 || q == SelectedQuality.Value)
-                .Select(q => new MarketCandidate(x, q, HasPower ? ItemPower(x, q) : null)))
-            .Where(x => !HasPower || x.ItemPower >= MinimumPower).ToArray();
-    }
+    // Fetch the variant/quality set once. IP, cities, fees, quantity and grouping only filter those snapshots locally.
+    private MarketCandidate[] PriceCandidates() => SelectedItem is null ? [] : SelectedItem.Variants.Where(MatchesSearchFilters)
+        .SelectMany(x => Enumerable.Range(1, x.MaxQuality).Where(q => !HasQuality || SelectedQuality.Value == 0 || q == SelectedQuality.Value)
+            .Select(q => new MarketCandidate(x, q))).ToArray();
+    private MarketCandidate[] Candidates() => !PowerValid() ? [] : PriceCandidates()
+        .Select(x => x with { ItemPower = HasPower ? ItemPower(x.Item, x.Quality) : null })
+        .Where(x => !HasPower || x.ItemPower >= MinimumPower).ToArray();
     private bool PowerValid() => !HasPower || MinimumPower is >= 0 and <= 5000 && (!PersonalPower || (ManualSkills ? SkillBonus is >= 0 and <= 5000 : SelectedProfile is { } selected && mastery.Find(selected.Value) is not null));
     private void QueuePrices()
     {
@@ -219,18 +237,18 @@ public sealed partial class MarketViewModel : ViewModelBase
     private async Task LoadPrices(bool refresh)
     {
         if (!active || SelectedItem is null) return;
-        var candidates = Candidates();
+        var candidates = PriceCandidates();
         if (candidates.Length == 0) { PriceStatus = "No variants match the selected filters."; return; }
         var ticket = loads.Begin(); priceCancellation?.Cancel();
         using var cancellation = new CancellationTokenSource(); priceCancellation = cancellation;
-        IsLoadingPrices = true; PriceStatus = "Loading AODP snapshots for seven cities…";
+        IsLoadingPrices = true; PriceStatus = "Loading AODP market snapshots…";
         try
         {
-            var loaded = await prices.GetMarketsAsync(SelectedRegion.Value, Cities, candidates.Select(x => x.Item.ItemId),
+            var loaded = await prices.GetMarketsAsync(SelectedRegion.Value, PriceCities, candidates.Select(x => x.Item.ItemId),
                 candidates.Select(x => x.Quality), refresh, cancellation.Token);
             if (!active || !loads.IsCurrent(ticket)) return;
             quotes = loaded; Recalculate();
-            PriceStatus = "AODP snapshots loaded. Maximum price age controls whether old or unknown-time prices are eligible.";
+            PriceStatus = "AODP snapshots loaded. City, IP and calculation changes use these snapshots. Refresh to request newer prices.";
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
         catch (Exception failure)
@@ -251,12 +269,13 @@ public sealed partial class MarketViewModel : ViewModelBase
     {
         BestCity = BestTotal = UiText.None; BestItem = "";
         if (Quantity is null || SalesTax is null || SetupFee is null || !PowerValid())
-        { Results.ReplaceAll([]); CalculationStatus = "Enter quantity, fees and a valid IP target / skill bonus."; return; }
+        { ClearResults(); CalculationStatus = "Enter quantity, fees and a valid IP target / skill bonus."; return; }
         try
         {
             var candidates = Candidates();
             var now = DateTime.UtcNow;
-            var result = MarketCalculator.Calculate(Cities, candidates, quotes, SelectedAction.Value, Quantity.Value, SalesTax.Value, SetupFee.Value,
+            var cities = CityFilters.Where(x => x.IsSelected).Select(x => x.Name).ToArray();
+            var result = MarketCalculator.Calculate(cities, candidates, quotes, SelectedAction.Value, Quantity.Value, SalesTax.Value, SetupFee.Value,
                 SelectedAge.Value == 0 ? null : TimeSpan.FromHours(SelectedAge.Value), now);
             var best = result.FirstOrDefault(x => x.Total.HasValue);
             Results.ReplaceAll(result.Select(x => new MarketRowViewModel(x, best is not null && x.Total == best.Total, now)));
@@ -265,9 +284,28 @@ public sealed partial class MarketViewModel : ViewModelBase
                 BestCity = best.City; BestTotal = UiFormat.Decimal(best.Total!.Value);
                 BestItem = $"{best.Candidate!.Item.Label} · {MarketRowViewModel.QualityName(best.Candidate.Quality)}";
             }
-            CalculationStatus = candidates.Length == 0 ? "No variants match these tier, enchantment, quality and IP filters."
-                : $"{UiFormat.Whole(candidates.Length)} eligible item / quality variants · {result.Count(x => x.Total.HasValue)} of 7 cities have a matching price. Each city shows its best eligible variant.";
+            if (HasPower)
+            {
+                var cards = MarketCalculator.ByPower(cities, candidates, quotes, SelectedAction.Value, Quantity.Value, SalesTax.Value, SetupFee.Value,
+                    SelectedAge.Value == 0 ? null : TimeSpan.FromHours(SelectedAge.Value), now, SelectedInterval.Value)
+                    .Select(x => new MarketPowerCardViewModel(x, SelectedAction.Value, now));
+                cards = SelectedSortOrder.Value switch
+                {
+                    MarketResultOrder.TotalPrice => cards.OrderBy(x => !x.HasPrice).ThenBy(x => MarketCalculator.IsBuying(SelectedAction.Value) ? x.SortPrice : -x.SortPrice).ThenBy(x => x.Minimum),
+                    MarketResultOrder.PricePerPower => cards.OrderBy(x => x.SortPerPower is null).ThenBy(x => MarketCalculator.IsBuying(SelectedAction.Value) ? x.SortPerPower : -x.SortPerPower).ThenBy(x => x.Minimum),
+                    _ => cards.OrderBy(x => x.Minimum)
+                };
+                PowerCards.ReplaceAll(cards); OnPropertyChanged(nameof(HasPowerCards));
+            }
+            else { PowerCards.ReplaceAll([]); OnPropertyChanged(nameof(HasPowerCards)); }
+            CalculationStatus = cities.Length == 0 ? "Choose at least one city." : candidates.Length == 0 ? "No variants match these tier, enchantment, quality and IP filters."
+                : $"{UiFormat.Whole(candidates.Length)} matching variants · {result.Count(x => x.Total.HasValue)} / {cities.Length} markets with prices";
         }
-        catch (ArgumentOutOfRangeException) { Results.ReplaceAll([]); CalculationStatus = "Use a whole quantity from 1 to 1,000,000, nonnegative fees, and combined selling fees below 100%."; }
+        catch (ArgumentOutOfRangeException) { ClearResults(); CalculationStatus = "Use a whole quantity from 1 to 1,000,000, nonnegative fees, and combined selling fees below 100%."; }
+    }
+
+    private void ClearResults()
+    {
+        Results.ReplaceAll([]); PowerCards.ReplaceAll([]); OnPropertyChanged(nameof(HasPowerCards));
     }
 }
