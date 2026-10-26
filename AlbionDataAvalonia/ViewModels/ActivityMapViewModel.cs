@@ -528,7 +528,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Note = live.Position is null ? "Waiting for your position. Take a few steps in game."
             : zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
             : WaitingForDepthsOrientation(live.RawMapId, live.LayoutTurns)
-                ? "Finding this Depths floor's orientation. Move near exits or shrines; your path and observed objects still show."
+                ? DepthsOrientationNote(live.DepthsRecognition)
             : zone is { Zone: null } && live.Layout is null && AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.Mists
                 ? "Finding this Mists layout. The map shows once a wisp or exit comes into view."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
@@ -718,6 +718,14 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
     private static bool WaitingForDepthsOrientation(string rawMapId, int? turns) =>
         turns is null && AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.AbyssalDepths;
+
+    private static string DepthsOrientationNote(ActivityDepthsRecognition? progress) => progress switch
+    {
+        { Observed: > 0, Matched: 0 } => $"Received {UiFormat.Count(progress.Observed, "Depths landmark")}, but they don't match a known floor. Enable packet diagnostics to help check this layout; your path still shows.",
+        { IsAmbiguous: true } => $"Received {UiFormat.Count(progress.Observed, "Depths landmark")}; more than one orientation still fits. Move near another exit or altar; your path still shows.",
+        { Observed: > 0 } => $"Finding this Depths floor's orientation: {UiFormat.Count(progress.Observed, "landmark")} received, {UiFormat.Whole(progress.Matched)} matched. Move near another exit or altar; your path still shows.",
+        _ => "Waiting for Depths landmarks from the game. Move near an exit or altar; your path and observed objects still show."
+    };
 
     private static ZoneView? WithDepthsOrientation(ZoneView? zone, string rawMapId, int? turns) =>
         zone?.Zone is { } map && WaitingForDepthsOrientation(rawMapId, turns)

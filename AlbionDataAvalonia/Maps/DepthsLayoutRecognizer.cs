@@ -9,6 +9,7 @@ public enum DepthsLandmarkKind { Up, Down, SoulExit, ResurrectionShrine, Altar }
 
 internal readonly record struct DepthsLandmark(DepthsLandmarkKind Kind, ActivityWorldPosition Position);
 internal readonly record struct DepthsLayoutPlacement(string Layout, int QuarterTurns);
+internal readonly record struct DepthsRecognitionResult(DepthsLayoutPlacement? Placement, int Observed, int Matched, int RunnerUp);
 
 internal static partial class DepthsMapData
 {
@@ -17,9 +18,12 @@ internal static partial class DepthsMapData
 
     public static int? FloorLevel(string master) => Floors.TryGetValue(master, out var floor) ? floor.Level : null;
 
-    public static DepthsLayoutPlacement? Recognize(IReadOnlyCollection<DepthsLandmark> landmarks)
+    public static DepthsLayoutPlacement? Recognize(IReadOnlyCollection<DepthsLandmark> landmarks) => Analyze(landmarks).Placement;
+
+    public static DepthsRecognitionResult Analyze(IReadOnlyCollection<DepthsLandmark> landmarks)
     {
-        if (landmarks.Count < 2) return null;
+        var observations = landmarks.Where(x => double.IsFinite(x.Position.X) && double.IsFinite(x.Position.Y)).Distinct().ToArray();
+        if (observations.Length == 0) return new(null, 0, 0, 0);
         DepthsLayoutPlacement? best = null;
         int bestScore = 0, runnerUp = 0;
         foreach (var (layout, floor) in Floors)
@@ -29,7 +33,7 @@ internal static partial class DepthsMapData
             {
                 // Count distinct template points, so duplicate packets or two objects at one spot cannot confirm a turn.
                 var matched = new HashSet<(DepthsLandmarkKind, double, double)>();
-                foreach (var landmark in landmarks)
+                foreach (var landmark in observations)
                 {
                     if (!double.IsFinite(landmark.Position.X) || !double.IsFinite(landmark.Position.Y)) continue;
                     var points = landmark.Kind switch
@@ -63,6 +67,7 @@ internal static partial class DepthsMapData
 
         // Slave sections can add objects that are absent from the master. They are harmless outliers;
         // a close runner-up still means we must wait for another fixed landmark.
-        return bestScore >= 2 && runnerUp < bestScore && runnerUp * 2 <= bestScore ? best : null;
+        return new(bestScore >= 2 && runnerUp < bestScore && runnerUp * 2 <= bestScore ? best : null,
+            observations.Length, bestScore, runnerUp);
     }
 }

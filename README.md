@@ -325,6 +325,12 @@ Enter the number of **items** to produce, the return rate and station fee per **
 
 If the Windows client closes and opens again, check the log for **Closing client intentionally to install update**: automatic updates restart the client through the installer. For an actual managed crash, recent versions also save `%LOCALAPPDATA%\AFMDataClient\logs\runtime-crash.txt`, with the stack trace and last map state. Keep the daily log from the same time. If that file is absent after a crash, Windows Event Viewer › Windows Logs › Application can show native or graphics-driver failures that the client cannot catch.
 
+### Depths map recognition
+
+The Depths map determines the floor and its rotation from exits, resurrection shrines and altars. The map banner shows how many landmarks have arrived and matched. Until the orientation is confirmed, your position and trail remain visible on the coordinate grid.
+
+If the banner keeps saying no landmarks have arrived, or says received landmarks do not match a known floor, enable packet diagnostics in **Settings › About › Diagnostics mode** before entering and keep the diagnostics log from that visit. This distinguishes missing object events from a changed layout. Extra walking alone may not resend objects the game already announced at entry.
+
 ### Mists resource spawn spots
 
 **Spawn spots** includes built-in candidates for all 23 recognised Mists master layouts, with the instance’s rotation and available resource tiers. A **?** means the candidate can have several tiers; hover it to see the possibilities. The minimum spawn tier filters those possibilities, independently of seen-resource filters. These are possible locations, not live nodes or guaranteed enchanted resources.
