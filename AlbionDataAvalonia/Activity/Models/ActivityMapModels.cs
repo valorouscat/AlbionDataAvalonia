@@ -72,10 +72,13 @@ public sealed record ActivityMapMarker(ActivityMapMarkerKind Kind, string RawMap
 public sealed record ActivityLiveMap(long Version, string RawMapId, string MapName, ActivityPathPoint? Position, double? Heading,
     IReadOnlyList<ActivityPathPoint> Trail, IReadOnlyList<ActivityMapMarker> Markers, string? Layout = null, int? LayoutTurns = null,
     IReadOnlyList<ActivityResourceNode>? Resources = null, IReadOnlyList<ActivityResourceMob>? ResourceMobs = null,
-    IReadOnlyList<ActivityLiveActor>? RoamingBosses = null, IReadOnlyList<ActivityHostileSighting>? Hostiles = null, IReadOnlyList<ActivityWisp>? Wisps = null)
+    IReadOnlyList<ActivityLiveActor>? RoamingBosses = null, IReadOnlyList<ActivityHostileSighting>? Hostiles = null, IReadOnlyList<ActivityWisp>? Wisps = null,
+    ActivityDepthsRecognition? DepthsRecognition = null)
 {
     public static ActivityLiveMap Empty { get; } = new(0, "", "", null, null, [], []);
 }
+
+public sealed record ActivityDepthsRecognition(int Observed, int Matched, bool IsAmbiguous);
 
 /// <summary>A recorded run with its path and placed events, for the history map.</summary>
 public sealed record ActivityRunMap(ActivitySession Run, IReadOnlyList<ActivityPathSegment> Segments, IReadOnlyList<ActivityMapMarker> Markers);
