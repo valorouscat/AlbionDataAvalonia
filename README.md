@@ -330,3 +330,13 @@ If the Windows client closes and opens again, check the log for **Closing client
 **Spawn spots** includes built-in candidates for all 23 recognised Mists master layouts, with the instance’s rotation and available resource tiers. A **?** means the candidate can have several tiers; hover it to see the possibilities. The minimum spawn tier filters those possibilities, independently of seen-resource filters. These are possible locations, not live nodes or guaranteed enchanted resources.
 
 Dashed squares mark slots that may hold a resource patch, camp, exit or another section. Their contents are chosen for each instance, so the map does not fill them with guessed node positions. The layer waits until landmarks identify both the layout and its rotation. Built-in data also works on the coordinate grid when CDN map data is unavailable; Live and recorded History use the same filters.
+
+### Market price ranges
+
+Open **Market prices** beside Crafting. Choose an item with the searchable picker (English, Russian or item ID), then select markets and filters. Equipment shows the best available offer in each **25 / 50 / 100 IP** range, including quality, unit price, price per IP and snapshot age. Empty ranges remain visible. Switch to **By city** for a city comparison; resources without IP use this view automatically.
+
+Choose whether to buy instantly, place an order or sell, and enter quantity. **Character IP and fees** contains the captured-character/manual mastery modes, minimum IP, sales tax and order fee. Seven city markets start enabled; **Black Market** can be selected for its buy orders. Quantity totals use snapshots and cannot guarantee the order has enough stock.
+
+**Refresh prices** requests newer AODP snapshots. City selection, IP settings, quantity, fees, grouping and sorting recalculate locally. Recent prices are shared with Crafting for five minutes; missing data stays unavailable. If AODP limits requests, the status shows when to try again.
+
+![Market price ranges](docs/screenshots/market-ip-ranges.png)
