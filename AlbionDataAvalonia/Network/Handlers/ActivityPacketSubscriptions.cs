@@ -73,6 +73,8 @@ internal static class ActivityPacketSubscriptions
         builder.SubscribeEvent<MistsLandmarkEvent>((int)EventCodes.NewMistsWispSpawn, packet => { activity.ObserveMistsLandmark(packet); return Task.CompletedTask; });
         builder.SubscribeEvent<MistsLandmarkEvent>((int)EventCodes.NewMistsBorderExit, packet => { activity.ObserveMistsLandmark(packet); return Task.CompletedTask; });
         // Reuse the shared world-object envelope (0 object id, 1 position), without another Photon parser.
+        builder.SubscribeEvent<MistsLandmarkEvent>((int)EventCodes.NewMistsDungeonExit, packet => { activity.ObserveMistsLandmark(packet, abbey: true); return Task.CompletedTask; });
+
         DepthsLandmark(builder, EventCodes.NewHellDungeonUpwardExit, DepthsLandmarkKind.Up, activity);
         DepthsLandmark(builder, EventCodes.NewHellDungeonDownwardExit, DepthsLandmarkKind.Down, activity);
         DepthsLandmark(builder, EventCodes.NewHellDungeonSoulExit, DepthsLandmarkKind.SoulExit, activity);

@@ -30,6 +30,36 @@ internal static partial class MistsMapData
             && Dungeons.Count == 1 ? DungeonZone(Dungeons.Keys.Single()) : null;
     }
 
+    // Like outdoor Mists, an Abbey instance may turn its master. Exits are fixed;
+    // chest spawns and player arrival points are not evidence of the orientation.
+    public static MistsLayoutPlacement? RecognizeAbbey(IReadOnlyCollection<ActivityWorldPosition> landmarks)
+    {
+        var observations = landmarks.Where(p => double.IsFinite(p.X) && double.IsFinite(p.Y)).Distinct().ToArray();
+        MistsLayoutPlacement? best = null;
+        int bestScore = 0, runnerUp = 0;
+        foreach (var (layout, dungeon) in Dungeons)
+        {
+            for (var turns = 0; turns < 4; turns++)
+            {
+                var score = dungeon.Exits.Count(point =>
+                {
+                    var (x, y) = point;
+                    for (var turn = 0; turn < turns; turn++) (x, y) = (y, -x);
+                    return observations.Any(p => Math.Abs(x - p.X) <= 1.5 && Math.Abs(y - p.Y) <= 1.5);
+                });
+                if (score > bestScore)
+                {
+                    runnerUp = bestScore;
+                    bestScore = score;
+                    best = new(layout, turns);
+                }
+                else if (score > runnerUp) runnerUp = score;
+            }
+        }
+        // Duplicate packets at one exit cannot confirm an orientation.
+        return bestScore >= 2 && runnerUp < bestScore && runnerUp * 2 <= bestScore ? best : null;
+    }
+
     /// <summary>The layout's camp slots and, for a Mists dungeon, its boss chest spots.</summary>
     public static IReadOnlyList<MapPoi> Chests(string layout)
     {
