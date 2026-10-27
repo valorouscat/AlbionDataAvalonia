@@ -261,10 +261,13 @@ public sealed partial class ActivityTrackerService : IDisposable
             if (packet is NewJournalItemEvent journalItem) gathering.NoteGameValue(journalItem.Item);
             else if (packet is NewSimpleItemEvent simpleItem) gathering.NoteGameValue(simpleItem.Item);
             ObservePendingActorMetadata(packet, at);
+            ObservePendingAbbeyObjectState(packet, at);
             if (!awaitingContext && (at < mapEnteredAt || !SameConnection(packet.ConnectionId, packet.MessageIdentity)))
             { gathering.Reset(); fameCollector.Reset(); return; }
             Expire(at);
             if (captureGap) ResumeAfterCaptureGap(at);
+            if (HasConfirmedContext && actorJoinStartedAt is null && map!.Kind == ActivityMapKind.MistsDungeon
+                && packet is UpdateLootChestEvent { State: 8 } emptyChest) ForgetLiveActor(emptyChest.ObjectId);
             switch (packet)
             {
                 case NewRandomDungeonExitEvent entrance when HasConfirmedContext:
@@ -367,7 +370,7 @@ public sealed partial class ActivityTrackerService : IDisposable
             if (captureGap && packet is not JoinResponse) ResumeAfterCaptureGap(at);
             if (packet is JoinResponse join && join.ReturnCode == 0
                 && join.userObjectId > 0 && !string.IsNullOrWhiteSpace(join.RawLocationId)) Join(join, at);
-            else if (packet is JoinResponse) { locations.ClearPending(); ClearPendingActorMetadata(); }
+            else if (packet is JoinResponse) { locations.ClearPending(); ClearPendingActorMetadata(); pendingAbbeyObjects.Clear(); }
             else if (packet is ChangeClusterResponse transition && HasConfirmedContext)
                 ObserveLocationTransition(transition, at);
             else if (packet is ExitEnterStartRequest entrance && HasConfirmedContext)
@@ -443,6 +446,8 @@ public sealed partial class ActivityTrackerService : IDisposable
         locationObservation = null;
         if (sameCharacter) RestoreLocationMetadata();
         mapEnteredAt = at;
+        PlaceMistsDungeonEntrances(pendingLayoutJoin, at);
+        ReplayAbbeyObjects(pendingLayoutJoin, at);
         mapMetadata = WithDepthsPlacement(WithDepthsFloor(WithMistsLayout(mapMetadata), previous));
         partialEntry = !enabled;
         awaitingContext = !actors.HasIdentity;

@@ -32,6 +32,11 @@ public sealed partial class ActivityTrackerService
         if (entrance.ObjectId is not { } id || entrance.SourceExitPosition is not { } position
             || string.IsNullOrWhiteSpace(entrance.UniqueName)
             || !double.IsFinite(position.X) || !double.IsFinite(position.Y)) return;
+        if (ActivityLiveActors.IsAbbeyEntrance(entrance.UniqueName))
+        {
+            PlaceAbbeyEntrance(id, position.X, position.Y, at, ActivityLiveActors.Tier(entrance.UniqueName));
+            return;
+        }
         // Portal wisps have a separate layer and rarity/size filters.
         if (entrance.UniqueName.StartsWith("MISTS_", StringComparison.OrdinalIgnoreCase)) return;
         observedThisVisit.Add(id);
@@ -42,6 +47,27 @@ public sealed partial class ActivityTrackerService
         Keep(new ActivityLiveActor(id, seasonal ? ActivityLiveActorKind.EventDungeon : ActivityLiveActorKind.Dungeon,
             position.X, position.Y, at, name, Tier: metadata.Tier ?? 0, Enchantment: metadata.Enchantment));
         liveMapVersion++;
+    }
+
+    private void PlaceAbbeyEntrance(long id, double x, double y, DateTime at, int tier = 0)
+    {
+        if (at < liveMemoryClearedAt) return;
+        SyncLiveActors();
+        observedThisVisit.Add(id);
+        // The dedicated event supplies no tier. Preserve it if the random-exit event supplied it.
+        if (tier == 0 && roamingBosses.TryGetValue(id, out var previous)
+            && previous.Kind == ActivityLiveActorKind.AbbeyEntrance) tier = previous.Tier;
+        Keep(new(id, ActivityLiveActorKind.AbbeyEntrance, x, y, at, "Knightfall Abbey", Tier: tier));
+        liveMapVersion++;
+    }
+
+    private void PlaceMistsDungeonEntrances(DateTime? startedAt, DateTime joinedAt)
+    {
+        if (startedAt is null || map?.Kind != ActivityMapKind.Mists || CurrentLiveMemoryKey() is not { } key) return;
+        foreach (var exit in mistsLandmarks.Where(x => x.Abbey && x.Id is not null && x.MapKey == key
+            && x.PendingJoinAt is null && x.At >= startedAt && x.At <= joinedAt && joinedAt - x.At <= LandmarkLead
+            && SameConnection(x.ConnectionId, x.Identity)))
+            PlaceAbbeyEntrance(exit.Id!.Value, exit.Position.X, exit.Position.Y, exit.At);
     }
 
     private void Keep(ActivityLiveActor actor)
