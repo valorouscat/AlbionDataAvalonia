@@ -45,16 +45,17 @@ public sealed partial class ActivityTrackerService
 
     public void ObserveMistsLandmark(MistsLandmarkEvent packet, bool abbey = false)
     {
-        if (packet.ObjectId is not { } id || packet.Position is not { } position
+        if (packet.Position is not { } position
             || !double.IsFinite(position.X) || !double.IsFinite(position.Y)) return;
         lock (sync)
         {
             if (disposed) return;
+            var id = packet.ObjectId;
             var at = Utc(packet.CapturedAt);
             if (HasConfirmedContext && at < mapEnteredAt && SameConnection(packet.ConnectionId, packet.MessageIdentity)) return;
             var pendingJoin = actorJoinStartedAt is { } started && at >= started ? actorJoinStartedAt : null;
             var mapKey = pendingJoin is null && HasConfirmedContext && SameConnection(packet.ConnectionId, packet.MessageIdentity) ? CurrentLiveMemoryKey() : null;
-            mistsLandmarks.RemoveAll(x => x.Id == id && x.Abbey == abbey && x.MapKey == mapKey && x.PendingJoinAt == pendingJoin
+            mistsLandmarks.RemoveAll(x => (id is not null && x.Id == id || x.Position == position) && x.Abbey == abbey && x.MapKey == mapKey && x.PendingJoinAt == pendingJoin
                 && x.ConnectionId == packet.ConnectionId && x.Identity?.ReceiverGeneration == packet.MessageIdentity?.ReceiverGeneration
                 && x.Identity?.Challenge == packet.MessageIdentity?.Challenge);
             if (mistsLandmarks.Count >= 256) mistsLandmarks.RemoveAt(0);
@@ -93,7 +94,7 @@ public sealed partial class ActivityTrackerService
         return metadata with { Layout = found.Layout, LayoutTurns = found.QuarterTurns };
     }
 
-    private sealed record MistsLandmarkObservation(long Id, bool Abbey, ActivityWorldPosition Position, DateTime At,
+    private sealed record MistsLandmarkObservation(long? Id, bool Abbey, ActivityWorldPosition Position, DateTime At,
         string ConnectionId, PhotonMessageIdentity? Identity, LiveMemoryKey? MapKey, DateTime? PendingJoinAt);
 
     // Joining the Depths names no layout, so the floor is counted: a party enters at the first floor and each exit
