@@ -529,9 +529,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Note = live.Position is null ? "Waiting for your position. Take a few steps in game."
             : zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
             : WaitingForInstanceOrientation(live.RawMapId, live.LayoutTurns)
-                ? AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.MistsDungeon
-                    ? "Finding this Abbey orientation. Move near two different exits back to the Mists; your path and observed objects still show."
-                    : DepthsOrientationNote(live.DepthsRecognition)
+                ? DepthsOrientationNote(live.DepthsRecognition)
+            : zone is { Zone.MapCategory: "mistsdungeon" } && live.LayoutTurns is null
+                ? "Showing the standard Abbey orientation. Its rotation has not been confirmed from an exit yet."
             : zone is { Zone: null } && live.Layout is null && AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.Mists
                 ? "Finding this Mists layout. The map shows once a wisp or exit comes into view."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
@@ -698,7 +698,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             : FallbackGeometry((points.Min(x => x.X), points.Min(x => x.Y), points.Max(x => x.X), points.Max(x => x.Y))));
         Note = zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
             : WaitingForInstanceOrientation(option.RawMapId, option.LayoutTurns)
-                ? "This visit has no confirmed instance orientation. Showing the recorded path and observations."
+                ? "This visit has no confirmed Depths orientation. Showing the recorded path and observations."
+            : zone is { Zone.MapCategory: "mistsdungeon" } && option.LayoutTurns is null
+                ? "Showing the standard Abbey orientation. No confirmed rotation was recorded for this visit."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
             : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing available map layers on a coordinate grid."
@@ -719,7 +721,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     }
 
     private static bool WaitingForInstanceOrientation(string rawMapId, int? turns) =>
-        turns is null && AlbionLocations.ResolveActivityLocation(rawMapId).Kind is ActivityMapKind.AbyssalDepths or ActivityMapKind.MistsDungeon;
+        turns is null && AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.AbyssalDepths;
 
     private static string DepthsOrientationNote(ActivityDepthsRecognition? progress) => progress switch
     {
