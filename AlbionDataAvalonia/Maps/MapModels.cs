@@ -33,7 +33,7 @@ public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position
 }
 
 /// <summary>The kinds of point of interest the map shows in one layer, each drawn its own way.</summary>
-public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown }
+public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown, Lever }
 
 /// <summary>
 /// A point of interest from the game files, a spot where something can stand rather than what stands there now:
@@ -48,6 +48,7 @@ public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, Ex
 /// <item>Key: where a Depths key can appear.</item>
 /// <item>Coffer: where a Depths coffer can spawn.</item>
 /// <item>Altar: a Depths demon altar, where the floor's monsters spawn.</item>
+/// <item>Lever: a fixed lever position in a dungeon template.</item>
 /// <item>ExitUp and ExitDown: a Depths exit out or a floor deeper.</item>
 /// </list>
 /// Grade orders the spots of a kind: 1 small, 2 medium, 3 boss, large or high-tier. Notes, when set, are the spot's
@@ -66,11 +67,11 @@ public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnly
 public readonly record struct MapRect(MapPoint Min, MapPoint Max);
 
 /// <summary>A zone from the AlbionWorld catalog the website also uses, or a Mists dungeon or Depths floor from the game
-/// files, which has no minimap (ImageFile is empty) and is drawn as its Rooms on a grid, over the rough Outline of
-/// its ground when the game files give one.</summary>
+/// files. Without an image it is drawn as Rooms/Outline on a grid. ImageUsesWorldCoordinates means image UVs
+/// run from BoundsMin to BoundsMax (positive X/Z right/down), rather than an already projected minimap.</summary>
 public sealed record MapZone(string Id, string DisplayName, string ImageFile, string MapCategory, string PvpCategory, int? Tier,
     MapPoint BoundsMin, MapPoint BoundsMax, IReadOnlyList<MapZoneExit> Exits, IReadOnlyList<MapRect>? Rooms = null,
-    IReadOnlyList<MapRect>? Outline = null)
+    IReadOnlyList<MapRect>? Outline = null, bool ImageUsesWorldCoordinates = false)
 {
     public MapImageGeometry? Geometry { get; } = MapImageGeometry.From(BoundsMin, BoundsMax);
 }

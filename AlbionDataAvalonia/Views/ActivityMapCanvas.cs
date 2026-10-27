@@ -147,7 +147,7 @@ public sealed class ActivityMapCanvas : Control
         if (change.Property != SceneProperty || Scene is not { } scene) return;
         var newView = scene.ViewKey != viewKey;
         if (!newView && !Follow && change.OldValue is ActivityMapScene previous
-            && (previous.Geometry.Min != scene.Geometry.Min || previous.Geometry.Max != scene.Geometry.Max))
+            && (previous.Geometry.Min != scene.Geometry.Min || previous.Geometry.Max != scene.Geometry.Max || ImageSize(previous) != ImageSize(scene)))
         {
             // A newly recognized turn changes the projection frame, not the world point the user is looking at.
             var previousSize = ImageSize(previous);
@@ -284,7 +284,8 @@ public sealed class ActivityMapCanvas : Control
         drawnGlide = shown;
         drawnScale = scale;
 
-        if (scene.Image is { } image)
+        if (scene.Image is { } worldImage && scene.ImageUsesWorldCoordinates) DrawWorldImage(context, scene, worldImage, scale);
+        else if (scene.Image is { } image)
         {
             var origin = ToScreen(new Point(0, 0), scale);
             var rect = new Rect(origin, new Size(size.Width * scale, size.Height * scale));
@@ -327,6 +328,26 @@ public sealed class ActivityMapCanvas : Control
                 hover.Items.Select(row => new ChartDrawing.TooltipRow(row.Mob ? LazyMobImage.ForDrawing(row.UniqueName, InvalidateVisual)
                     : LazyItemImage.ForDrawing(row.UniqueName, row.Quality, InvalidateVisual), row.Text, row.Value, row.Mob)).ToArray(),
                 hover.Lines);
+    }
+
+    // This texture's UV origin represents BoundsMin, with positive world X/Z to the right/down.
+    // Project its three corners just like POIs, including the instance turn; no guessed pixel offsets.
+    private void DrawWorldImage(DrawingContext context, ActivityMapScene scene, Bitmap image, double scale)
+    {
+        var source = scene.Geometry.Turned(-scene.ImageQuarterTurns);
+        Point At(double x, double y)
+        {
+            var turns = (scene.ImageQuarterTurns % 4 + 4) % 4;
+            for (var i = 0; i < turns; i++) (x, y) = (y, -x);
+            return ToScreen(ImagePoint(scene, x, y), scale);
+        }
+        var origin = At(source.Min.X, source.Min.Y);
+        var right = At(source.Max.X, source.Min.Y);
+        var bottom = At(source.Min.X, source.Max.Y);
+        var xAxis = (right - origin) / image.Size.Width;
+        var yAxis = (bottom - origin) / image.Size.Height;
+        using (context.PushTransform(new Matrix(xAxis.X, xAxis.Y, yAxis.X, yAxis.Y, origin.X, origin.Y)))
+            context.DrawImage(image, new Rect(image.Size), new Rect(image.Size));
     }
 
     // The frame is centred on the minimap, which fills MapFrame.MapScale of it. Only the minimap's empty corners lie
@@ -708,6 +729,11 @@ public sealed class ActivityMapCanvas : Control
                         new Point(at.X, at.Y + tip), new Point(at.X + radius * 0.5, at.Y - tip * 0.6), new Point(at.X - radius * 0.5, at.Y - tip * 0.6)));
                     break;
                 }
+            case MapPoiKind.Lever:
+                context.DrawRectangle(null, UiPalette.Pen(MarkerOutline, 2), new Rect(at.X - 5, at.Y + 2, 10, 4), 1, 1);
+                context.DrawLine(UiPalette.Pen(UiPalette.Color("UiMapPoiShrineColor"), 3), new Point(at.X, at.Y + 2), new Point(at.X + 4, at.Y - 5));
+                context.DrawEllipse(UiPalette.Brush("UiMapPoiShrineColor"), OutlinePen, new Point(at.X + 4, at.Y - 5), 2, 2);
+                break;
             case MapPoiKind.Key:
                 context.DrawEllipse(null, UiPalette.Pen(MarkerOutline, 4.5), at, 4 * size, 4 * size);
                 context.DrawEllipse(null, UiPalette.Pen(UiPalette.Color("UiMapChestColor"), 2.5), at, 4 * size, 4 * size);
@@ -835,6 +861,7 @@ public sealed class ActivityMapCanvas : Control
         MapPoiKind.Altar => "demon altar",
         MapPoiKind.ExitUp => "exit up",
         MapPoiKind.ExitDown => "exit down",
+        MapPoiKind.Lever => "lever",
         _ => "wisp spawn"
     };
 

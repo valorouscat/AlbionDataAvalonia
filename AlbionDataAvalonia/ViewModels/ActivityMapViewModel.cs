@@ -552,7 +552,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             Turned(zone?.Zone?.Rooms ?? [], turns), Turned(zone?.Zone?.Outline ?? [], turns), ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
-            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps());
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps(), ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
     }
 
     // No one can attack the character in a blue zone, so a player there is no threat.
@@ -715,7 +715,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             Layers, turns, ResourceSpawns: SpawnSpots(zone, option.RawMapId, option.Layout, option.LayoutTurns),
             Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: Turned(zone?.Zone?.Rooms ?? [], turns), Outline: Turned(zone?.Zone?.Outline ?? [], turns), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
-            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d);
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
     }
 
     private static bool WaitingForInstanceOrientation(string rawMapId, int? turns) =>
@@ -773,7 +773,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             if (zone is null) return new ZoneView(rawMapId, null, null, null, [], [], [], [], fallbackName, "", null, false);
             var imageTask = maps.GetImageAsync(zone);
             var featuresTask = maps.GetFeaturesAsync(zone);
-            var frameTask = zone.ImageFile.Length == 0 ? Task.FromResult<Bitmap?>(null) : maps.GetFrameImageAsync();
+            var frameTask = zone.ImageFile.Length == 0 || zone.ImageUsesWorldCoordinates ? Task.FromResult<Bitmap?>(null) : maps.GetFrameImageAsync();
             var exits = new List<ActivityMapExit>();
             foreach (var exit in zone.Exits)
             {

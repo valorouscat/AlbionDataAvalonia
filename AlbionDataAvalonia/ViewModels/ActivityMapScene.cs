@@ -26,7 +26,8 @@ public sealed record ActivityMapIcon(MapPoint Position, string Label, Bitmap? Im
 /// <summary>
 /// Everything the map canvas draws for one frame. ViewKey changes when a different zone, run or mode is shown,
 /// which resets zoom and panning; the rest can change every frame. Frame is the in-game paper frame drawn around the zone.
-/// ImageQuarterTurns turns the minimap clockwise about its centre, as a Mists instance turns its layout.
+/// ImageUsesWorldCoordinates maps a raw texture from world-bounds UVs (positive X/Z right/down) through the same
+/// projection as all objects; otherwise the image is already projected. ImageQuarterTurns turns the minimap clockwise about its centre, as a Mists instance turns its layout.
 /// Resources are the live map's resource nodes, already filtered by tier and kind and sorted best first; ResourceMobs are
 /// the mobs that yield resources, filtered the same way and sorted best last. ResourceSpawns are the zone's possible
 /// resource spots from the game files, filtered the same way and sorted best last. Pois are the zone's possible
@@ -65,4 +66,5 @@ public sealed record ActivityMapScene(
     double ResourceIconOpacity = 1,
     double ResourceClusterRadius = 16,
     double ResourceSpawnIconOpacity = 0.5,
-    IReadOnlyList<ActivityWisp>? Wisps = null);
+    IReadOnlyList<ActivityWisp>? Wisps = null,
+    bool ImageUsesWorldCoordinates = false);

@@ -6,13 +6,12 @@ using System.Linq;
 namespace AlbionDataAvalonia.Maps;
 
 /// <summary>
-/// Mists map data that AlbionWorld's map features leave out, read from the game files. The camp slots of the Mists
-/// layouts: each slot gets a section the game picks when the instance opens, and when that is a PvE camp, its chest
-/// stands within the slot's radius of its centre. And the Mists dungeon (Knightfall Abbey), which AlbionWorld has no map
-/// for: its rooms, the boss chest many rooms hold and its exits back to the Mists, drawn on a grid without a minimap.
+/// Local Mists camp-slot data and Abbey geometry/possible POIs from game templates. Abbey also has a bundled
+/// terrain image; room rectangles remain the fallback when the image cannot be loaded.
 /// </summary>
 internal static partial class MistsMapData
 {
+    internal const string AbbeyImageFile = "avares://AlbionDataAvalonia/Assets/Maps/knightfall-abbey.webp";
     private const string DungeonName = "Knightfall Abbey";
 
     // The game can identify the instance as @MISTSDUNGEON@ without announcing a master name.
@@ -60,9 +59,10 @@ internal static partial class MistsMapData
         return bestScore >= 2 && runnerUp < bestScore && runnerUp * 2 <= bestScore ? best : null;
     }
 
-    /// <summary>The layout's camp slots and, for a Mists dungeon, its boss chest spots.</summary>
-    public static IReadOnlyList<MapPoi> Chests(string layout)
+    /// <summary>The layout's camp slots or Abbey's possible bosses, room rewards and other static points.</summary>
+    public static IReadOnlyList<MapPoi> Pois(string layout)
     {
+        if (AbbeyPoints.TryGetValue(layout, out var points)) return points;
         if (Dungeons.TryGetValue(layout, out var dungeon))
             return dungeon.Chests.Select(chest => new MapPoi(MapPoiKind.Chest, "Boss chest", 3, new MapPoint(chest.X, chest.Z))).ToArray();
         return Slots.TryGetValue(layout, out var slots)
@@ -71,12 +71,12 @@ internal static partial class MistsMapData
             : [];
     }
 
-    /// <summary>A zone without a minimap for a Mists dungeon layout, or null for any other layout.</summary>
+    /// <summary>An Abbey zone with its local terrain image, or a room schematic when no image is bundled.</summary>
     public static MapZone? DungeonZone(string layout) =>
         Dungeons.TryGetValue(layout, out var dungeon)
-            ? new MapZone(layout, DungeonName, "", "mistsdungeon", "", null, new MapPoint(dungeon.Min.X, dungeon.Min.Z),
+            ? new MapZone(layout, DungeonName, layout == "MISTS_DNG_UND_01" ? AbbeyImageFile : "", "mistsdungeon", "", null, new MapPoint(dungeon.Min.X, dungeon.Min.Z),
                 new MapPoint(dungeon.Max.X, dungeon.Max.Z), dungeon.Exits.Select(exit => new MapZoneExit("", new MapPoint(exit.X, exit.Z))).ToArray(),
-                dungeon.Rooms.Select(room => new MapRect(new MapPoint(room.MinX, room.MinZ), new MapPoint(room.MaxX, room.MaxZ))).ToArray())
+                dungeon.Rooms.Select(room => new MapRect(new MapPoint(room.MinX, room.MinZ), new MapPoint(room.MaxX, room.MaxZ))).ToArray(), ImageUsesWorldCoordinates: layout == "MISTS_DNG_UND_01")
             : null;
 
     private sealed record DungeonLayout((double X, double Z) Min, (double X, double Z) Max,

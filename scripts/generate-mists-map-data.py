@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Writes AlbionDataAvalonia/Maps/MistsMapData.g.cs from the game's Mists template files.
 
-AlbionWorld's map features leave out the Mists chests and have no map at all for the Mists dungeon (Knightfall Abbey),
-so the map reads them from the game files at https://github.com/ao-data/ao-bin-dumps:
+The map supplements Mists features and keeps Abbey's fallback geometry from the game files
+at https://github.com/ao-data/ao-bin-dumps (Abbey terrain is bundled separately):
 
 - Camp slots. A Mists instance is one of a few fixed master layouts with a handful of slots, each filled with a small or
   medium section the game picks when the instance opens: a PvE camp, a resource patch, an exit or plain landscape. Only

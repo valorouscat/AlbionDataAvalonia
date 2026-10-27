@@ -1,5 +1,6 @@
 using AlbionDataAvalonia.Locations;
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Serilog;
 using System;
 using System.Collections.Concurrent;
@@ -123,11 +124,27 @@ public sealed class MapDataService : IDisposable
             }
 
             var name = Path.GetFileNameWithoutExtension(zone.ImageFile);
-            var image = LoadBitmapAsync($"{MapsBase}/images/{Uri.EscapeDataString(name)}.webp", Path.Combine("images", SafeFileName(name) + ".webp"));
+            var image = zone.ImageFile == MistsMapData.AbbeyImageFile
+                ? LoadAbbeyImage()
+                : LoadBitmapAsync($"{MapsBase}/images/{Uri.EscapeDataString(name)}.webp", Path.Combine("images", SafeFileName(name) + ".webp"));
             images.AddFirst((zone.ImageFile, image));
             // Decoded open-world minimaps are large, so only the last few stay in memory.
             while (images.Count > CachedImages) images.RemoveLast();
             return image;
+        }
+    }
+
+    private static Task<Bitmap?> LoadAbbeyImage()
+    {
+        try
+        {
+            using var stream = AssetLoader.Open(new Uri(MistsMapData.AbbeyImageFile));
+            return Task.FromResult<Bitmap?>(new Bitmap(stream));
+        }
+        catch (Exception error) when (error is IOException or InvalidOperationException)
+        {
+            Log.Warning(error, "Could not load the bundled Abbey terrain image; using its schematic");
+            return Task.FromResult<Bitmap?>(null);
         }
     }
 
@@ -156,7 +173,7 @@ public sealed class MapDataService : IDisposable
     /// but for the Mists and Depths spots that come with the app.</summary>
     public Task<MapZoneFeatures> GetFeaturesAsync(MapZone zone) =>
         // A zone the client draws itself has no AlbionWorld feature file.
-        zone.ImageFile.Length == 0 ? Task.FromResult(new MapZoneFeatures([], [], [.. MistsMapData.Chests(zone.Id), .. DepthsMapData.Pois(zone.Id)]))
+        (zone.ImageFile.Length == 0 || zone.ImageFile == MistsMapData.AbbeyImageFile) ? Task.FromResult(new MapZoneFeatures([], [], [.. MistsMapData.Pois(zone.Id), .. DepthsMapData.Pois(zone.Id)]))
             : features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
 
     public Task<Bitmap?> GetIconImageAsync(string markerType) =>
@@ -336,14 +353,14 @@ public sealed class MapDataService : IDisposable
                 .Where(x => x.X is { } featureX && x.Z is { } featureZ && double.IsFinite(featureX) && double.IsFinite(featureZ))
                 .ToArray();
             return new(placed.Select(Icon).OfType<MapZoneIcon>().ToArray(), placed.Select(ResourceSpawn).OfType<MapResourceSpawn>().ToArray(),
-                [.. placed.Select(Poi).OfType<MapPoi>(), .. MistsMapData.Chests(zone.Id)]);
+                [.. placed.Select(Poi).OfType<MapPoi>(), .. MistsMapData.Pois(zone.Id)]);
         }
         catch (Exception error) when (error is HttpRequestException or IOException or JsonException or TaskCanceledException)
         {
             Log.Warning(error, "Could not load map features for {ZoneId}", zone.Id);
             features.TryRemove(zone.Id, out _);
             // The Mists chest spots come with the app, so they still show.
-            return new([], [], MistsMapData.Chests(zone.Id));
+            return new([], [], MistsMapData.Pois(zone.Id));
         }
     }
 
