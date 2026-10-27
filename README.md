@@ -325,6 +325,10 @@ Enter the number of **items** to produce, the return rate and station fee per **
 
 If the Windows client closes and opens again, check the log for **Closing client intentionally to install update**: automatic updates restart the client through the installer. For an actual managed crash, recent versions also save `%LOCALAPPDATA%\AFMDataClient\logs\runtime-crash.txt`, with the stack trace and last map state. Keep the daily log from the same time. If that file is absent after a crash, Windows Event Viewer › Windows Logs › Application can show native or graphics-driver failures that the client cannot catch.
 
+### Knightfall Abbey map
+
+Knightfall Abbey uses a built-in schematic of its rooms, exits and possible boss chest spots. It also works when the game supplies no layout name or the map CDN is unavailable. Chest spots are possible locations, not confirmation that a chest has spawned.
+
 ### Depths map recognition
 
 The Depths map determines the floor and its rotation from exits, resurrection shrines and altars. The map banner shows how many landmarks have arrived and matched. Until the orientation is confirmed, your position and trail remain visible on the coordinate grid.

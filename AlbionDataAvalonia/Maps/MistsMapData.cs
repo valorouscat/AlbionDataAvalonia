@@ -1,3 +1,4 @@
+using AlbionDataAvalonia.Locations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,21 @@ namespace AlbionDataAvalonia.Maps;
 internal static partial class MistsMapData
 {
     private const string DungeonName = "Knightfall Abbey";
+
+    // The game can identify the instance as @MISTSDUNGEON@ without announcing a master name.
+    // Use a default only while the bundled Abbey catalog has exactly one layout.
+    public static MapZone? AbbeyZone(string rawMapId, string? layout)
+    {
+        foreach (var candidate in (layout ?? "").Split('@', StringSplitOptions.RemoveEmptyEntries)
+            .Concat(rawMapId.Split('@', StringSplitOptions.RemoveEmptyEntries)))
+        {
+            if (DungeonZone(candidate) is { } exact) return exact;
+            var mapped = ActivityInstanceMetadata.FromTransition(ActivityMapKind.MistsDungeon, candidate, null).Layout;
+            if (mapped is not null && DungeonZone(mapped) is { } alias) return alias;
+        }
+        return string.IsNullOrWhiteSpace(layout) && AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.MistsDungeon
+            && Dungeons.Count == 1 ? DungeonZone(Dungeons.Keys.Single()) : null;
+    }
 
     /// <summary>The layout's camp slots and, for a Mists dungeon, its boss chest spots.</summary>
     public static IReadOnlyList<MapPoi> Chests(string layout)

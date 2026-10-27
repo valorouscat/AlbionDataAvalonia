@@ -771,11 +771,11 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             if (zone is null) return new ZoneView(rawMapId, null, null, null, [], [], [], [], fallbackName, "", null, false);
             var imageTask = maps.GetImageAsync(zone);
             var featuresTask = maps.GetFeaturesAsync(zone);
-            var frameTask = maps.GetFrameImageAsync();
+            var frameTask = zone.ImageFile.Length == 0 ? Task.FromResult<Bitmap?>(null) : maps.GetFrameImageAsync();
             var exits = new List<ActivityMapExit>();
             foreach (var exit in zone.Exits)
             {
-                var target = await maps.ZoneAsync(exit.TargetId);
+                var target = exit.TargetId.Length == 0 ? null : DepthsMapData.Zone(exit.TargetId) ?? await maps.ZoneAsync(exit.TargetId);
                 // A Mists dungeon's exits lead back to the Mists, which has no zone of its own; a Depths floor names its own.
                 var label = exit.Label ?? (exit.TargetId.Length == 0 ? "Exit to the Mists" : $"To {target?.DisplayName ?? exit.TargetId}");
                 exits.Add(new ActivityMapExit(exit.Position, label, Zone(target?.PvpCategory)));

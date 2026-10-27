@@ -74,6 +74,11 @@ public sealed class MapDataService : IDisposable
     public async Task<MapZone?> FindZoneAsync(string rawMapId, string? layout = null, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(rawMapId)) return null;
+        cancellationToken.ThrowIfCancellationRequested();
+        if (MistsMapData.AbbeyZone(rawMapId, layout) is { } abbey) return abbey;
+        if (AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.AbyssalDepths
+            && DepthsMapData.Master(rawMapId, layout) is { } depthsMaster && DepthsMapData.Zone(depthsMaster) is { } depths)
+            return depths;
         IReadOnlyDictionary<string, MapZone> zones;
         try { zones = await GetCatalogAsync(cancellationToken).ConfigureAwait(false); }
         catch (Exception error) when (error is HttpRequestException or IOException or JsonException or TaskCanceledException)
