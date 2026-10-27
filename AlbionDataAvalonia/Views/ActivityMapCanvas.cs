@@ -122,7 +122,7 @@ public sealed class ActivityMapCanvas : Control
             .Select(x => ImagePoint(scene, x.X, x.Y)).Concat(scene.Markers.Select(x => ImagePoint(scene, x.X, x.Y))).ToArray();
         if (scene.IsLive || points.Length < 2)
         {
-            zoom = scene.IsLive && scene.Position is not null ? LiveZoom : 1;
+            zoom = scene.IsLive && scene.Position is not null && Follow ? LiveZoom : 1;
             center = new Point(size.Width / 2, size.Height / 2);
         }
         else
@@ -146,6 +146,14 @@ public sealed class ActivityMapCanvas : Control
         base.OnPropertyChanged(change);
         if (change.Property != SceneProperty || Scene is not { } scene) return;
         var newView = scene.ViewKey != viewKey;
+        if (!newView && !Follow && change.OldValue is ActivityMapScene previous
+            && (previous.Geometry.Min != scene.Geometry.Min || previous.Geometry.Max != scene.Geometry.Max))
+        {
+            // A newly recognized turn changes the projection frame, not the world point the user is looking at.
+            var previousSize = ImageSize(previous);
+            var world = previous.Geometry.FromImageFraction(center.X / previousSize.Width, center.Y / previousSize.Height);
+            center = ImagePoint(scene, world.X, world.Y);
+        }
         Glide(scene, newView);
         if (newView)
         {

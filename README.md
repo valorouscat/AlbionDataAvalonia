@@ -327,7 +327,7 @@ If the Windows client closes and opens again, check the log for **Closing client
 
 ### Knightfall Abbey map
 
-Knightfall Abbey uses a built-in schematic of its rooms, exits and possible boss chest spots. It also works when the game supplies no layout name or the map CDN is unavailable. The map determines its rotation from two different exits back to the Mists. Until then, your path and observed objects show on a grid. The placement is remembered for that instance until the app closes. Chest spots are possible locations, not confirmation that a chest has spawned.
+Knightfall Abbey currently uses a schematic of rectangular rooms, exits and possible boss chest spots, without a terrain texture or complete corridor/wall geometry. It also works when the game supplies no layout name or the map CDN is unavailable. The map determines its rotation from two different exits back to the Mists. Until then, your path and observed objects show on a grid. The placement is remembered for that instance until the app closes. With Follow me off, the fit button shows the full zone. Chest spots are possible locations, not confirmation that a chest has spawned.
 
 ### Depths map recognition
 

@@ -524,7 +524,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var geometry = zone?.Geometry ?? LiveFallbackGeometry();
+        var turns = LayoutTurns(zone, live.Layout, live.LayoutTurns);
+        var geometry = zone?.Geometry?.Turned(turns) ?? LiveFallbackGeometry();
         Note = live.Position is null ? "Waiting for your position. Take a few steps in game."
             : zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
             : WaitingForInstanceOrientation(live.RawMapId, live.LayoutTurns)
@@ -544,7 +545,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         }
 
         zone = WithInstanceOrientation(zone, live.RawMapId, live.LayoutTurns);
-        var turns = LayoutTurns(zone, live.Layout, live.LayoutTurns);
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
@@ -693,7 +693,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         TimelineNowText = until is { } moment ? UiFormat.LocalTime(moment) : "";
         var markers = Shown(option.Markers);
         var points = option.Points.Select(x => (x.X, x.Y)).Concat(markers.Select(x => (x.X, x.Y))).ToArray();
-        var geometry = zone?.Geometry ?? (points.Length == 0 ? null
+        var turns = LayoutTurns(zone, option.Layout, option.LayoutTurns);
+        var geometry = zone?.Geometry?.Turned(turns) ?? (points.Length == 0 ? null
             : FallbackGeometry((points.Min(x => x.X), points.Min(x => x.Y), points.Max(x => x.X), points.Max(x => x.Y))));
         Note = zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
             : WaitingForInstanceOrientation(option.RawMapId, option.LayoutTurns)
@@ -709,7 +710,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         }
 
         zone = WithInstanceOrientation(zone, option.RawMapId, option.LayoutTurns);
-        var turns = LayoutTurns(zone, option.Layout, option.LayoutTurns);
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
             Layers, turns, ResourceSpawns: SpawnSpots(zone, option.RawMapId, option.Layout, option.LayoutTurns),

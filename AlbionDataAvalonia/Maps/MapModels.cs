@@ -122,6 +122,31 @@ public sealed class MapImageGeometry
             Math.Ceiling((sourceHeight + rotatedHeight) / 2) - Math.Floor((sourceHeight - rotatedHeight) / 2));
     }
 
+    /// <summary>The world bounds after turning a template about the world origin, just like its features.</summary>
+    public MapImageGeometry Turned(int quarterTurns)
+    {
+        var turns = (quarterTurns % 4 + 4) % 4;
+        if (turns == 0) return this;
+        static MapPoint Turn(MapPoint point, int count)
+        {
+            for (var i = 0; i < count; i++) point = new(point.Y, -point.X);
+            return point;
+        }
+        var a = Turn(Min, turns);
+        var b = Turn(Max, turns);
+        return From(new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y)),
+            new(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y)))!;
+    }
+
+    /// <summary>The world point at a fraction of the minimap canvas, also outside its bounds while panning.</summary>
+    public MapPoint FromImageFraction(double x, double y)
+    {
+        var rotatedX = (x - 0.5) * CanvasWidth;
+        var rotatedY = (0.5 - y) * CanvasHeight;
+        return new((Min.X + Max.X) / 2 + rotatedX * Cosine + rotatedY * Sine,
+            (Min.Y + Max.Y) / 2 - rotatedX * Sine + rotatedY * Cosine);
+    }
+
     /// <summary>Where a local point lands on the minimap, as a fraction of its width and height.</summary>
     public MapPoint ToImageFraction(double x, double y)
     {
