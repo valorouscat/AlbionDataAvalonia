@@ -744,14 +744,20 @@ public sealed class ActivityMapCanvas : Control
         }
     }
 
-    // A roaming boss is its portrait in a red ring, smaller for a miniboss, with its tier beside it. The scene lists the
-    // best last, so it ends up on top.
+    // Observed mobs use portraits; observed world objects use their own symbols.
+    // Rings distinguish these sightings from the possible template spots drawn earlier.
     private void DrawRoamingBosses(DrawingContext context, ActivityMapScene scene, double scale)
     {
         if (scene.RoamingBosses is not { Count: > 0 } bosses) return;
-        var ring = UiPalette.Pen(UiPalette.Color("UiMapPoiBossColor"), 2.5);
         foreach (var boss in bosses)
         {
+            var ringColor = !boss.IsMob ? boss.Kind switch
+            {
+                ActivityLiveActorKind.Chest => "UiMapChestColor",
+                ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward => "UiMapPoiShrineColor",
+                _ => "UiMapPoiBossColor"
+            } : "UiMapPoiBossColor";
+            var ring = UiPalette.Pen(UiPalette.Color(ringColor), 2.5);
             var at = ToScreen(ImagePoint(scene, boss.X, boss.Y), scale);
             var radius = boss.Kind == ActivityLiveActorKind.Boss ? 12 : 9.5;
             if (!Visible(at, radius + 4)) continue;
@@ -761,7 +767,17 @@ public sealed class ActivityMapCanvas : Control
             if (boss.IsMob && LazyMobImage.ForDrawing(boss.MobUniqueName, InvalidateVisual) is { } portrait)
                 using (context.PushGeometryClip(new EllipseGeometry(rect)))
                     context.DrawImage(portrait, new Rect(portrait.Size), rect);
-            if (!boss.IsMob)
+            if (!boss.IsMob && boss.Kind is ActivityLiveActorKind.Chest or ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward)
+            {
+                var symbol = boss.Kind switch
+                {
+                    ActivityLiveActorKind.Chest => MapPoiKind.Chest,
+                    ActivityLiveActorKind.Shrine => MapPoiKind.Shrine,
+                    _ => MapPoiKind.Camp
+                };
+                DrawPoiMark(context, at, new(symbol, boss.Name, 2, new(boss.X, boss.Y)));
+            }
+            else if (!boss.IsMob)
             {
                 var entranceColor = boss.Kind == ActivityLiveActorKind.EventDungeon
                     ? "UiMapChestColor" : "UiMapPoiShrineColor";
@@ -1348,7 +1364,9 @@ public sealed class ActivityMapCanvas : Control
             return;
         }
 
-        var next = hits.Where(x => Distance(x.At, at) <= x.Radius).OrderBy(x => Distance(x.At, at)).FirstOrDefault();
+        // Equal-position markers should describe the topmost observation, rather than
+        // the possible template spot underneath it. Nearest-marker selection is retained.
+        var next = hits.AsEnumerable().Reverse().Where(x => Distance(x.At, at) <= x.Radius).OrderBy(x => Distance(x.At, at)).FirstOrDefault();
         if (next != hovered)
         {
             hovered = next;

@@ -99,7 +99,7 @@ public sealed record ActivityResourceNode(long Id, string Family, int Tier, int 
 public sealed record ActivityResourceMob(long Id, string Family, int Tier, int Enchantment, double X, double Y, DateTime SeenAtUtc,
     string MobUniqueName, string MobName, string ItemUniqueName, bool IsInView = true);
 
-public enum ActivityLiveActorKind { Boss, Miniboss, Dungeon, EventDungeon, Chest, EventMob, AbbeyEntrance }
+public enum ActivityLiveActorKind { Boss, Miniboss, Dungeon, EventDungeon, Chest, EventMob, AbbeyEntrance, Shrine, Reward }
 
 /// <summary>An observed dynamic POI. Mobs retain their last observed position outside visibility and across map revisits until clearing or app closure. The legacy scene/settings slot is preserved.</summary>
 public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, double X, double Y, DateTime SeenAtUtc, string Name,
@@ -114,6 +114,8 @@ public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, doub
         ActivityLiveActorKind.EventDungeon => "Event dungeon entrance",
         ActivityLiveActorKind.Chest => "Chest",
         ActivityLiveActorKind.AbbeyEntrance => "Abbey entrance",
+        ActivityLiveActorKind.Shrine => "Shrine / statue",
+        ActivityLiveActorKind.Reward => "Room reward",
         _ => "Event mob"
     };
 }

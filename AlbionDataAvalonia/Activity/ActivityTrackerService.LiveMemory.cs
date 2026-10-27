@@ -52,6 +52,7 @@ public sealed partial class ActivityTrackerService
             if (disposed) return;
             liveMemoryClearedAt = DateTime.UtcNow;
             liveMemory.Clear();
+            pendingAbbeyObjects.Clear();
             observedThisVisit.Clear();
             resourceNodes.Clear();
             resourceMobs.Clear();

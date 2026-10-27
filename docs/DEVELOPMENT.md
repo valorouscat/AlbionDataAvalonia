@@ -200,6 +200,16 @@ The external decoded-packet fixture verifies all 15 bundled mythical mob indices
 
 Map filter dropdowns are replaced by `OptionSlider`, a discrete horizontal choice over existing `Option<T>` lists. `ScrollSafeSlider` supports click/drag/keyboard adjustment and lets wheel events bubble to the filter scroller, including volume controls. History's variable-length run/map selectors remain dropdowns outside the filter panel. Wisp rarity is a minimum threshold (Rare+ includes Rare, Epic and Legendary). Existing bitmasks migrate to their lowest selected rarity; an empty old mask disables the layer, and all sizes remain independent.
 
+### Abbey observed objects
+
+The static Abbey layer is a union of possible room variants: 106 boss spots, 9 miniboss spots, 106 alternative boss-chest/statue rewards, 12 treasures, 12 coffers, 53 wisp trees and 7 levers (305 POIs), plus 14 exits on the exits layer. Direct template coordinates independently match the 252 non-wisp POIs; wisp trees expand their selected compound transforms. Possible spots are not removed on mob death or chest depletion.
+
+`ActivityTrackerService.AbbeyObjects` adds actual non-mob sightings only inside a confirmed `MistsDungeon` instance. `NewLootChest`, `NewTreasureChest` and `NewShrine` reuse the shared key-0 ID/key-1 position decoder. `NewMultiRewardObject` projects key 2 into that decoder; key 1 is an opaque numeric field, not a position or a guessed reward type. The public packet-schema source linked above documents these fields. A generic reward remains chest-or-statue until a specific chest/statue event identifies the same object ID. Later generic sightings preserve the known type and refresh visibility. Distinct object IDs are not merged by proximity.
+
+Spawn events received during Join wait for a matching successful response, with the original capture time, receiver generation and challenge. Same/new socket, failed/superseded Join, stale captures, an outdoor destination, pre-Join Leave/empty, revisits and clear are covered by the external packet fixture. The pending list is bounded and cleared on the next attempt or completion. World observations remain in world coordinates; the view turns only static template data. All four rotations are checked against actual static POI coordinates and rendered on the bundled image.
+
+`UpdateLootChest` state 8 is the existing shared chest ledger's empty state; it removes observed Abbey chests even with recording disabled. `LootChestOpened` alone does not remove a chest. Shrine state numbers and the multi-reward numeric field are not interpreted as availability or reward choices without captured evidence. Levers and possible wisp trees remain static template positions; portal wisps retain their own observed layer and filters. The external fixture checks every one of the 28 bundled T5–T8 Abbey boss/miniboss indices and terminal-health removal. Actual chest/statue/reward symbols reuse existing palette tokens; equal-position tooltip ties prefer the topmost observation. Live Windows gameplay still needs verification.
+
 ### Mists resource candidates
 
 `ReferenceData/mists-resource-spawns.json.gz` is embedded through the existing reference-data resource glob. Regenerate it from one pinned revision of [ao-data/ao-bin-dumps](https://github.com/ao-data/ao-bin-dumps):

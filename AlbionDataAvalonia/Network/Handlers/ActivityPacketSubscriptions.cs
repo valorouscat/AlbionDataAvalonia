@@ -74,6 +74,10 @@ internal static class ActivityPacketSubscriptions
         builder.SubscribeEvent<MistsLandmarkEvent>((int)EventCodes.NewMistsBorderExit, packet => { activity.ObserveMistsLandmark(packet); return Task.CompletedTask; });
         // Dungeon exits carry a GUID at 1 and the position at 2; the adapter reuses the shared decoder.
         builder.SubscribeEvent<DebugEventProbeEvent>((int)EventCodes.NewMistsDungeonExit, packet => { activity.ObserveMistsDungeonExit(packet); return Task.CompletedTask; });
+        AbbeyObject(builder, EventCodes.NewLootChest, activity);
+        AbbeyObject(builder, EventCodes.NewTreasureChest, activity);
+        AbbeyObject(builder, EventCodes.NewShrine, activity);
+        AbbeyObject(builder, EventCodes.NewMultiRewardObject, activity);
 
         DepthsLandmark(builder, EventCodes.NewHellDungeonUpwardExit, DepthsLandmarkKind.Up, activity);
         DepthsLandmark(builder, EventCodes.NewHellDungeonDownwardExit, DepthsLandmarkKind.Down, activity);
@@ -93,6 +97,9 @@ internal static class ActivityPacketSubscriptions
 
     private static void DepthsLandmark(ReceiverBuilder builder, EventCodes code, DepthsLandmarkKind kind, ActivityTrackerService activity)
         => builder.SubscribeEvent<MistsLandmarkEvent>((int)code, packet => { activity.ObserveDepthsLandmark(packet, kind); return Task.CompletedTask; });
+
+    private static void AbbeyObject(ReceiverBuilder builder, EventCodes code, ActivityTrackerService activity)
+        => builder.SubscribeEvent<DebugEventProbeEvent>((int)code, packet => { activity.ObserveAbbeyObject(packet, code); return Task.CompletedTask; });
 
     private static void ResourceNodes(ReceiverBuilder builder, EventCodes code, ActivityTrackerService activity)
         => builder.SubscribeEvent<DebugEventProbeEvent>((int)code, packet => { activity.ObserveResourceNodes(packet, code); return Task.CompletedTask; });
