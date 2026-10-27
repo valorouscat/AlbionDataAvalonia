@@ -1,0 +1,35 @@
+Knightfall Abbey terrain image (1024 x 1024 WebP)
+
+Original game artwork: Albion Online / Sandbox Interactive GmbH.
+Public mirror: Jung1330/Nightwatch-Radar
+Source commit: 0515ba90bf9f648a22d23095a4a10986da187eee
+Source path: Nightwatch/Assets/Maps/DNG-MISTS-UND-WIP-01-01.webp
+https://github.com/Jung1330/Nightwatch-Radar/blob/0515ba90bf9f648a22d23095a4a10986da187eee/Nightwatch/Assets/Maps/DNG-MISTS-UND-WIP-01-01.webp
+
+The original image bytes are unchanged. World UVs use bounds (-430,-330) to
+(430,530), with positive X/Z to the right/down. Projection occurs at draw time.
+The mirror's software license follows; original game artwork remains its owner's.
+
+SHA-256: 3d25cc70a5c91ba3ba2bb68ae9e8dd7abd802bd76a75aee0f16d61952a4cdf02
+
+MIT License
+
+Copyright (c) 2026 Jung1330
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

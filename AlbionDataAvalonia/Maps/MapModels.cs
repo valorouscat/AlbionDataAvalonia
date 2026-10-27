@@ -33,7 +33,7 @@ public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position
 }
 
 /// <summary>The kinds of point of interest the map shows in one layer, each drawn its own way.</summary>
-public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown }
+public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown, Lever }
 
 /// <summary>
 /// A point of interest from the game files, a spot where something can stand rather than what stands there now:
@@ -48,6 +48,7 @@ public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, Ex
 /// <item>Key: where a Depths key can appear.</item>
 /// <item>Coffer: where a Depths coffer can spawn.</item>
 /// <item>Altar: a Depths demon altar, where the floor's monsters spawn.</item>
+/// <item>Lever: a fixed lever position in a dungeon template.</item>
 /// <item>ExitUp and ExitDown: a Depths exit out or a floor deeper.</item>
 /// </list>
 /// Grade orders the spots of a kind: 1 small, 2 medium, 3 boss, large or high-tier. Notes, when set, are the spot's
@@ -66,11 +67,11 @@ public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnly
 public readonly record struct MapRect(MapPoint Min, MapPoint Max);
 
 /// <summary>A zone from the AlbionWorld catalog the website also uses, or a Mists dungeon or Depths floor from the game
-/// files, which has no minimap (ImageFile is empty) and is drawn as its Rooms on a grid, over the rough Outline of
-/// its ground when the game files give one.</summary>
+/// files. Without an image it is drawn as Rooms/Outline on a grid. ImageUsesWorldCoordinates means image UVs
+/// run from BoundsMin to BoundsMax (positive X/Z right/down), rather than an already projected minimap.</summary>
 public sealed record MapZone(string Id, string DisplayName, string ImageFile, string MapCategory, string PvpCategory, int? Tier,
     MapPoint BoundsMin, MapPoint BoundsMax, IReadOnlyList<MapZoneExit> Exits, IReadOnlyList<MapRect>? Rooms = null,
-    IReadOnlyList<MapRect>? Outline = null)
+    IReadOnlyList<MapRect>? Outline = null, bool ImageUsesWorldCoordinates = false)
 {
     public MapImageGeometry? Geometry { get; } = MapImageGeometry.From(BoundsMin, BoundsMax);
 }
@@ -120,6 +121,31 @@ public sealed class MapImageGeometry
         return new(min, max,
             Math.Ceiling((sourceWidth + rotatedWidth) / 2) - Math.Floor((sourceWidth - rotatedWidth) / 2),
             Math.Ceiling((sourceHeight + rotatedHeight) / 2) - Math.Floor((sourceHeight - rotatedHeight) / 2));
+    }
+
+    /// <summary>The world bounds after turning a template about the world origin, just like its features.</summary>
+    public MapImageGeometry Turned(int quarterTurns)
+    {
+        var turns = (quarterTurns % 4 + 4) % 4;
+        if (turns == 0) return this;
+        static MapPoint Turn(MapPoint point, int count)
+        {
+            for (var i = 0; i < count; i++) point = new(point.Y, -point.X);
+            return point;
+        }
+        var a = Turn(Min, turns);
+        var b = Turn(Max, turns);
+        return From(new(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y)),
+            new(Math.Max(a.X, b.X), Math.Max(a.Y, b.Y)))!;
+    }
+
+    /// <summary>The world point at a fraction of the minimap canvas, also outside its bounds while panning.</summary>
+    public MapPoint FromImageFraction(double x, double y)
+    {
+        var rotatedX = (x - 0.5) * CanvasWidth;
+        var rotatedY = (0.5 - y) * CanvasHeight;
+        return new((Min.X + Max.X) / 2 + rotatedX * Cosine + rotatedY * Sine,
+            (Min.Y + Max.Y) / 2 - rotatedX * Sine + rotatedY * Cosine);
     }
 
     /// <summary>Where a local point lands on the minimap, as a fraction of its width and height.</summary>

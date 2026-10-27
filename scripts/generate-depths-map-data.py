@@ -20,7 +20,7 @@ Rerun after a game patch changes the Depths:
 
     git clone --depth 1 --filter=blob:none --sparse https://github.com/ao-data/ao-bin-dumps.git /tmp/ao-bin-dumps
     git -C /tmp/ao-bin-dumps sparse-checkout set --no-cone /helldungeons.xml /helldungeonstemplatemetadata.xml \\
-        '/templates/DEAD/HELLDNG_*'
+        '/templates/DEAD/HELLDNG_*' /cluster/tiles.xml
     python3 scripts/generate-depths-map-data.py /tmp/ao-bin-dumps
 """
 import math
@@ -28,6 +28,7 @@ import re
 import sys
 import xml.etree.ElementTree as ElementTree
 from pathlib import Path
+from template_geometry import IDENTITY, walk
 
 ROOT = Path(__file__).resolve().parent.parent
 TILE = re.compile(r'<(?:tile|compoundtile|criticaltile) name="([^"]+)" pos="([^"]+)"')
@@ -155,6 +156,17 @@ def main(source: str) -> None:
         # Duo and trio pools weigh their slots alike; the first one seen speaks for the floor.
         levels.setdefault(entry.get("mastertemplate"), (int(entry.get("difficultylevel")) + 1, entry.get("templatepool")))
 
+    tile_catalog = ElementTree.parse(dumps / "cluster" / "tiles.xml").getroot()
+    compounds = {tile.get("name"): tile for tile in tile_catalog.findall("compoundtile")}
+    # Match network objects, not the enclosing decoration origins (3–5 metres away).
+    landmark_tiles = {
+        "HIGHLAND_DEAD_DNG_HELL_EXIT_UP": "up",
+        "HIGHLAND_DEAD_DNG_HELL_EXIT_UP_L3": "up",
+        "HIGHLAND_DEAD_DNG_HELL_EXIT_DOWN_A": "down",
+        "HIGHLAND_DEAD_DNG_HELL_EXIT_DOWN_A_OUTSIDE": "down",
+        "HIGHLAND_DEAD_DNG_HELL_EXIT_SOUL_A": "soul",
+        "HIGHLAND_DEAD_DNG_HELL_RESSHRINE_A": "shrine",
+    }
     floors = {}
     for master in metadata.iter("master"):
         name = master.get("name")
@@ -177,11 +189,22 @@ def main(source: str) -> None:
                 altars.append(ground(pos) + (ALTARS[tile],))
                 continue
             kind = ("chest" if tile == "TreasureSpawnpointLootchest" else "coffer" if tile == "TreasureSpawnpointCoffer"
-                    else "key" if tile == "helldungeonkeyspawnMarker" else "soul" if "SOUL_EXIT" in tile
-                    else "shrine" if "RESHRINE" in tile or "RESSHRINE" in tile else "up" if "_EXIT_UP" in tile
-                    else "down" if "_EXIT_DOWN" in tile else None)
+                    else "key" if tile == "helldungeonkeyspawnMarker" else None)
             if kind:
                 found[kind].append(ground(pos))
+        # Limit expansion to fixed exit/shrine decorations; random camp slots are not known placements.
+        fixed = ElementTree.Element("tiles")
+        for placement in ElementTree.fromstring(text).iter():
+            tile = placement.get("name", "")
+            if placement.tag == "compoundtile" and any(word in tile for word in ("EXIT", "SHRINE")):
+                fixed.append(placement)
+            elif placement.tag in ("tile", "criticaltile") and tile in landmark_tiles:
+                if placement.tag == "criticaltile":
+                    placement.tag = "tile"
+                fixed.append(placement)
+        for tile, matrix in walk(fixed, IDENTITY, compounds):
+            if kind := landmark_tiles.get(tile):
+                found[kind].append((round(matrix[4], 1) + 0.0, round(matrix[5], 1) + 0.0))
         found["altar"] = unique(altars)
         floors[name] = (level, low, high, slots, sections,
                         outline(text, low, high, slots, {medium: sections[medium][0] for medium in sections}),

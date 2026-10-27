@@ -430,13 +430,14 @@ public sealed partial class ActivityTrackerService : IDisposable
         connectionId = packet.ConnectionId;
         connectionIdentity = packet.MessageIdentity;
         actors.Join(packet, nextServer, mapEpoch);
-        var pendingDepthsJoin = actorJoinStartedAt;
+        var pendingLayoutJoin = actorJoinStartedAt;
         ReplayPendingActorMetadata(packet, at);
         confirmedOwner = actors.HasIdentity ? new ActivityOwner(actors.ServerId!.Value.ToString(CultureInfo.InvariantCulture),
             actors.CharacterId, actors.CharacterName) : null;
         OpenPlaySessionFor(confirmedOwner, at);
         map = next;
-        BindDepthsJoinLandmarks(pendingDepthsJoin, at);
+        BindDepthsJoinLandmarks(pendingLayoutJoin, at);
+        BindMistsJoinLandmarks(pendingLayoutJoin, at);
         RestoreLiveMemory();
         mapMetadata = nextMetadata;
         locationObservation = null;

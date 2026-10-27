@@ -17,10 +17,11 @@ public sealed partial class ActivityTrackerService
     private readonly ActivityLocationCollector locations = new();
     private ActivityMapMetadata mapMetadata = new();
     private ActivityEvent? locationObservation;
-    // Mists wisp spawns and border exits. Those of an instance being entered arrive just before its join, on the
-    // new connection, so only landmarks on the current map's connection from shortly before its join place it.
+    // Fixed outdoor Mists and Abbey exits may arrive before Join confirms the instance.
+    // Keep their connection and Join attempt so a reused socket cannot mix adjacent maps.
     private static readonly TimeSpan LandmarkLead = TimeSpan.FromSeconds(10);
-    private readonly List<(ActivityWorldPosition Position, DateTime At, string ConnectionId, PhotonMessageIdentity? Identity)> mistsLandmarks = new();
+    private readonly List<MistsLandmarkObservation> mistsLandmarks = new();
+    private readonly Dictionary<LiveMemoryKey, MistsLayoutPlacement> mistsPlacements = new();
     // The Depths floor of each Depths map entered lately, so rejoining one after a disconnect keeps its floor.
     private readonly Dictionary<string, int> depthsFloors = new(StringComparer.OrdinalIgnoreCase);
 
@@ -42,29 +43,59 @@ public sealed partial class ActivityTrackerService
             ActivityInstanceMetadata.FromTransition(map.Kind, packet.LayoutId, packet.DungeonInformation)))));
     }
 
-    public void ObserveMistsLandmark(MistsLandmarkEvent packet)
+    public void ObserveMistsLandmark(MistsLandmarkEvent packet, bool abbey = false)
     {
-        if (packet.Position is not { } position) return;
+        if (packet.Position is not { } position
+            || !double.IsFinite(position.X) || !double.IsFinite(position.Y)) return;
         lock (sync)
         {
             if (disposed) return;
+            var id = packet.ObjectId;
+            var at = Utc(packet.CapturedAt);
+            if (HasConfirmedContext && at < mapEnteredAt && SameConnection(packet.ConnectionId, packet.MessageIdentity)) return;
+            var pendingJoin = actorJoinStartedAt is { } started && at >= started ? actorJoinStartedAt : null;
+            var mapKey = pendingJoin is null && HasConfirmedContext && SameConnection(packet.ConnectionId, packet.MessageIdentity) ? CurrentLiveMemoryKey() : null;
+            mistsLandmarks.RemoveAll(x => (id is not null && x.Id == id || x.Position == position) && x.Abbey == abbey && x.MapKey == mapKey && x.PendingJoinAt == pendingJoin
+                && x.ConnectionId == packet.ConnectionId && x.Identity?.ReceiverGeneration == packet.MessageIdentity?.ReceiverGeneration
+                && x.Identity?.Challenge == packet.MessageIdentity?.Challenge);
             if (mistsLandmarks.Count >= 256) mistsLandmarks.RemoveAt(0);
-            mistsLandmarks.Add((position, Utc(packet.CapturedAt), packet.ConnectionId, packet.MessageIdentity));
+            mistsLandmarks.Add(new(id, abbey, position, at, packet.ConnectionId, packet.MessageIdentity, mapKey, pendingJoin));
             ApplyMapMetadata(WithMistsLayout(mapMetadata));
         }
     }
 
-    // Entering the Mists through a wisp names no layout, so its landmarks place it.
+    private void BindMistsJoinLandmarks(DateTime? startedAt, DateTime joinedAt)
+    {
+        if (startedAt is null || CurrentLiveMemoryKey() is not { } key) return;
+        for (var i = 0; i < mistsLandmarks.Count; i++)
+        {
+            var landmark = mistsLandmarks[i];
+            if (landmark.PendingJoinAt != startedAt || landmark.At > joinedAt || joinedAt - landmark.At > LandmarkLead
+                || !SameConnection(landmark.ConnectionId, landmark.Identity)) continue;
+            mistsLandmarks[i] = landmark with { MapKey = key, PendingJoinAt = null };
+        }
+    }
+
+    // Outdoor Mists use wisps/border exits; Abbeys use their own fixed exits back to the Mists.
     private ActivityMapMetadata WithMistsLayout(ActivityMapMetadata metadata)
     {
-        if (map is not { Kind: ActivityMapKind.Mists } || metadata.LayoutTurns is not null) return metadata;
-        var landmarks = mistsLandmarks.Where(x => x.At >= mapEnteredAt - LandmarkLead && SameConnection(x.ConnectionId, x.Identity))
-            .Select(x => x.Position).ToArray();
-        if (MistsLayoutRecognizer.Recognize(landmarks) is not { } placement) return metadata;
-        Log.Debug("Placed {RawMapId} as Mists layout {Layout} turned {QuarterTurns} quarter turns from {Count} landmarks",
-            map.RawLocationId, placement.Layout, placement.QuarterTurns, landmarks.Length);
-        return metadata with { Layout = placement.Layout, LayoutTurns = placement.QuarterTurns };
+        if (map is not { Kind: ActivityMapKind.Mists or ActivityMapKind.MistsDungeon } || metadata.LayoutTurns is not null) return metadata;
+        var key = CurrentLiveMemoryKey();
+        var abbey = map.Kind == ActivityMapKind.MistsDungeon;
+        var landmarks = mistsLandmarks.Where(x => x.Abbey == abbey && x.PendingJoinAt is null && x.At >= mapEnteredAt - LandmarkLead
+                && (x.MapKey is null || x.MapKey == key) && SameConnection(x.ConnectionId, x.Identity))
+            .Select(x => x.Position).Distinct().ToArray();
+        var placement = abbey ? MistsMapData.RecognizeAbbey(landmarks) : MistsLayoutRecognizer.Recognize(landmarks);
+        if (placement is { } recognized && key is { } owner) mistsPlacements[owner] = recognized;
+        else if (key is { } rememberedOwner && mistsPlacements.TryGetValue(rememberedOwner, out var remembered)) placement = remembered;
+        if (placement is not { } found) return metadata;
+        Log.Debug("Placed {RawMapId} as {Kind} layout {Layout} turned {QuarterTurns} quarter turns from {Count} landmarks",
+            map.RawLocationId, map.Kind, found.Layout, found.QuarterTurns, landmarks.Length);
+        return metadata with { Layout = found.Layout, LayoutTurns = found.QuarterTurns };
     }
+
+    private sealed record MistsLandmarkObservation(long? Id, bool Abbey, ActivityWorldPosition Position, DateTime At,
+        string ConnectionId, PhotonMessageIdentity? Identity, LiveMemoryKey? MapKey, DateTime? PendingJoinAt);
 
     // Joining the Depths names no layout, so the floor is counted: a party enters at the first floor and each exit
     // down leads one floor deeper.

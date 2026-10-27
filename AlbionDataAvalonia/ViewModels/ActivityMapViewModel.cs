@@ -524,11 +524,14 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             return;
         }
 
-        var geometry = zone?.Geometry ?? LiveFallbackGeometry();
+        var turns = LayoutTurns(zone, live.Layout, live.LayoutTurns);
+        var geometry = zone?.Geometry?.Turned(turns) ?? LiveFallbackGeometry();
         Note = live.Position is null ? "Waiting for your position. Take a few steps in game."
             : zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
-            : WaitingForDepthsOrientation(live.RawMapId, live.LayoutTurns)
-                ? DepthsOrientationNote(live.DepthsRecognition)
+            : WaitingForInstanceOrientation(live.RawMapId, live.LayoutTurns)
+                ? AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.MistsDungeon
+                    ? "Finding this Abbey orientation. Move near two different exits back to the Mists; your path and observed objects still show."
+                    : DepthsOrientationNote(live.DepthsRecognition)
             : zone is { Zone: null } && live.Layout is null && AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.Mists
                 ? "Finding this Mists layout. The map shows once a wisp or exit comes into view."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
@@ -541,8 +544,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             return;
         }
 
-        zone = WithDepthsOrientation(zone, live.RawMapId, live.LayoutTurns);
-        var turns = LayoutTurns(zone, live.Layout, live.LayoutTurns);
+        zone = WithInstanceOrientation(zone, live.RawMapId, live.LayoutTurns);
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
@@ -550,7 +552,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             Turned(zone?.Zone?.Rooms ?? [], turns), Turned(zone?.Zone?.Outline ?? [], turns), ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
-            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps());
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps(), ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
     }
 
     // No one can attack the character in a blue zone, so a player there is no threat.
@@ -691,11 +693,12 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         TimelineNowText = until is { } moment ? UiFormat.LocalTime(moment) : "";
         var markers = Shown(option.Markers);
         var points = option.Points.Select(x => (x.X, x.Y)).Concat(markers.Select(x => (x.X, x.Y))).ToArray();
-        var geometry = zone?.Geometry ?? (points.Length == 0 ? null
+        var turns = LayoutTurns(zone, option.Layout, option.LayoutTurns);
+        var geometry = zone?.Geometry?.Turned(turns) ?? (points.Length == 0 ? null
             : FallbackGeometry((points.Min(x => x.X), points.Min(x => x.Y), points.Max(x => x.X), points.Max(x => x.Y))));
         Note = zone is { Failed: true } ? "Couldn't load map data. Check your connection; your path still shows."
-            : WaitingForDepthsOrientation(option.RawMapId, option.LayoutTurns)
-                ? "This visit has no confirmed Depths orientation. Showing the recorded path and observations."
+            : WaitingForInstanceOrientation(option.RawMapId, option.LayoutTurns)
+                ? "This visit has no confirmed instance orientation. Showing the recorded path and observations."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
             : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing available map layers on a coordinate grid."
@@ -706,18 +709,17 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             return;
         }
 
-        zone = WithDepthsOrientation(zone, option.RawMapId, option.LayoutTurns);
-        var turns = LayoutTurns(zone, option.Layout, option.LayoutTurns);
+        zone = WithInstanceOrientation(zone, option.RawMapId, option.LayoutTurns);
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
             Layers, turns, ResourceSpawns: SpawnSpots(zone, option.RawMapId, option.Layout, option.LayoutTurns),
             Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: Turned(zone?.Zone?.Rooms ?? [], turns), Outline: Turned(zone?.Zone?.Outline ?? [], turns), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
-            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d);
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
     }
 
-    private static bool WaitingForDepthsOrientation(string rawMapId, int? turns) =>
-        turns is null && AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.AbyssalDepths;
+    private static bool WaitingForInstanceOrientation(string rawMapId, int? turns) =>
+        turns is null && AlbionLocations.ResolveActivityLocation(rawMapId).Kind is ActivityMapKind.AbyssalDepths or ActivityMapKind.MistsDungeon;
 
     private static string DepthsOrientationNote(ActivityDepthsRecognition? progress) => progress switch
     {
@@ -727,8 +729,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         _ => "Waiting for Depths landmarks from the game. Move near an exit or altar; your path and observed objects still show."
     };
 
-    private static ZoneView? WithDepthsOrientation(ZoneView? zone, string rawMapId, int? turns) =>
-        zone?.Zone is { } map && WaitingForDepthsOrientation(rawMapId, turns)
+    private static ZoneView? WithInstanceOrientation(ZoneView? zone, string rawMapId, int? turns) =>
+        zone?.Zone is { } map && WaitingForInstanceOrientation(rawMapId, turns)
             ? zone with { Zone = map with { Rooms = [], Outline = [] }, Image = null, Exits = [], Icons = [], Pois = [], ResourceSpawns = [] }
             : zone;
 
@@ -771,11 +773,11 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             if (zone is null) return new ZoneView(rawMapId, null, null, null, [], [], [], [], fallbackName, "", null, false);
             var imageTask = maps.GetImageAsync(zone);
             var featuresTask = maps.GetFeaturesAsync(zone);
-            var frameTask = maps.GetFrameImageAsync();
+            var frameTask = zone.ImageFile.Length == 0 || zone.ImageUsesWorldCoordinates ? Task.FromResult<Bitmap?>(null) : maps.GetFrameImageAsync();
             var exits = new List<ActivityMapExit>();
             foreach (var exit in zone.Exits)
             {
-                var target = await maps.ZoneAsync(exit.TargetId);
+                var target = exit.TargetId.Length == 0 ? null : DepthsMapData.Zone(exit.TargetId) ?? await maps.ZoneAsync(exit.TargetId);
                 // A Mists dungeon's exits lead back to the Mists, which has no zone of its own; a Depths floor names its own.
                 var label = exit.Label ?? (exit.TargetId.Length == 0 ? "Exit to the Mists" : $"To {target?.DisplayName ?? exit.TargetId}");
                 exits.Add(new ActivityMapExit(exit.Position, label, Zone(target?.PvpCategory)));

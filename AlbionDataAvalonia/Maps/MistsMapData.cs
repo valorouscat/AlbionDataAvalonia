@@ -1,3 +1,4 @@
+using AlbionDataAvalonia.Locations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,18 +6,63 @@ using System.Linq;
 namespace AlbionDataAvalonia.Maps;
 
 /// <summary>
-/// Mists map data that AlbionWorld's map features leave out, read from the game files. The camp slots of the Mists
-/// layouts: each slot gets a section the game picks when the instance opens, and when that is a PvE camp, its chest
-/// stands within the slot's radius of its centre. And the Mists dungeon (Knightfall Abbey), which AlbionWorld has no map
-/// for: its rooms, the boss chest many rooms hold and its exits back to the Mists, drawn on a grid without a minimap.
+/// Local Mists camp-slot data and Abbey geometry/possible POIs from game templates. Abbey also has a bundled
+/// terrain image; room rectangles remain the fallback when the image cannot be loaded.
 /// </summary>
 internal static partial class MistsMapData
 {
+    internal const string AbbeyImageFile = "avares://AlbionDataAvalonia/Assets/Maps/knightfall-abbey.webp";
     private const string DungeonName = "Knightfall Abbey";
 
-    /// <summary>The layout's camp slots and, for a Mists dungeon, its boss chest spots.</summary>
-    public static IReadOnlyList<MapPoi> Chests(string layout)
+    // The game can identify the instance as @MISTSDUNGEON@ without announcing a master name.
+    // Use a default only while the bundled Abbey catalog has exactly one layout.
+    public static MapZone? AbbeyZone(string rawMapId, string? layout)
     {
+        foreach (var candidate in (layout ?? "").Split('@', StringSplitOptions.RemoveEmptyEntries)
+            .Concat(rawMapId.Split('@', StringSplitOptions.RemoveEmptyEntries)))
+        {
+            if (DungeonZone(candidate) is { } exact) return exact;
+            var mapped = ActivityInstanceMetadata.FromTransition(ActivityMapKind.MistsDungeon, candidate, null).Layout;
+            if (mapped is not null && DungeonZone(mapped) is { } alias) return alias;
+        }
+        return string.IsNullOrWhiteSpace(layout) && AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.MistsDungeon
+            && Dungeons.Count == 1 ? DungeonZone(Dungeons.Keys.Single()) : null;
+    }
+
+    // Like outdoor Mists, an Abbey instance may turn its master. Exits are fixed;
+    // chest spawns and player arrival points are not evidence of the orientation.
+    public static MistsLayoutPlacement? RecognizeAbbey(IReadOnlyCollection<ActivityWorldPosition> landmarks)
+    {
+        var observations = landmarks.Where(p => double.IsFinite(p.X) && double.IsFinite(p.Y)).Distinct().ToArray();
+        MistsLayoutPlacement? best = null;
+        int bestScore = 0, runnerUp = 0;
+        foreach (var (layout, dungeon) in Dungeons)
+        {
+            for (var turns = 0; turns < 4; turns++)
+            {
+                var score = dungeon.Exits.Count(point =>
+                {
+                    var (x, y) = point;
+                    for (var turn = 0; turn < turns; turn++) (x, y) = (y, -x);
+                    return observations.Any(p => Math.Abs(x - p.X) <= 1.5 && Math.Abs(y - p.Y) <= 1.5);
+                });
+                if (score > bestScore)
+                {
+                    runnerUp = bestScore;
+                    bestScore = score;
+                    best = new(layout, turns);
+                }
+                else if (score > runnerUp) runnerUp = score;
+            }
+        }
+        // Duplicate packets at one exit cannot confirm an orientation.
+        return bestScore >= 2 && runnerUp < bestScore && runnerUp * 2 <= bestScore ? best : null;
+    }
+
+    /// <summary>The layout's camp slots or Abbey's possible bosses, room rewards and other static points.</summary>
+    public static IReadOnlyList<MapPoi> Pois(string layout)
+    {
+        if (AbbeyPoints.TryGetValue(layout, out var points)) return points;
         if (Dungeons.TryGetValue(layout, out var dungeon))
             return dungeon.Chests.Select(chest => new MapPoi(MapPoiKind.Chest, "Boss chest", 3, new MapPoint(chest.X, chest.Z))).ToArray();
         return Slots.TryGetValue(layout, out var slots)
@@ -25,12 +71,12 @@ internal static partial class MistsMapData
             : [];
     }
 
-    /// <summary>A zone without a minimap for a Mists dungeon layout, or null for any other layout.</summary>
+    /// <summary>An Abbey zone with its local terrain image, or a room schematic when no image is bundled.</summary>
     public static MapZone? DungeonZone(string layout) =>
         Dungeons.TryGetValue(layout, out var dungeon)
-            ? new MapZone(layout, DungeonName, "", "mistsdungeon", "", null, new MapPoint(dungeon.Min.X, dungeon.Min.Z),
+            ? new MapZone(layout, DungeonName, layout == "MISTS_DNG_UND_01" ? AbbeyImageFile : "", "mistsdungeon", "", null, new MapPoint(dungeon.Min.X, dungeon.Min.Z),
                 new MapPoint(dungeon.Max.X, dungeon.Max.Z), dungeon.Exits.Select(exit => new MapZoneExit("", new MapPoint(exit.X, exit.Z))).ToArray(),
-                dungeon.Rooms.Select(room => new MapRect(new MapPoint(room.MinX, room.MinZ), new MapPoint(room.MaxX, room.MaxZ))).ToArray())
+                dungeon.Rooms.Select(room => new MapRect(new MapPoint(room.MinX, room.MinZ), new MapPoint(room.MaxX, room.MaxZ))).ToArray(), ImageUsesWorldCoordinates: layout == "MISTS_DNG_UND_01")
             : null;
 
     private sealed record DungeonLayout((double X, double Z) Min, (double X, double Z) Max,
