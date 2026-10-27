@@ -755,6 +755,9 @@ public sealed class ActivityMapCanvas : Control
             {
                 ActivityLiveActorKind.Chest => "UiMapChestColor",
                 ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward => "UiMapPoiShrineColor",
+                ActivityLiveActorKind.CampSite => "UiMapPoiCampColor",
+                ActivityLiveActorKind.ResourceSite => "UiMapPoiWispColor",
+                ActivityLiveActorKind.OtherSite => "UiMapPoiShrineColor",
                 _ => "UiMapPoiBossColor"
             } : "UiMapPoiBossColor";
             var ring = UiPalette.Pen(UiPalette.Color(ringColor), 2.5);
@@ -767,7 +770,19 @@ public sealed class ActivityMapCanvas : Control
             if (boss.IsMob && LazyMobImage.ForDrawing(boss.MobUniqueName, InvalidateVisual) is { } portrait)
                 using (context.PushGeometryClip(new EllipseGeometry(rect)))
                     context.DrawImage(portrait, new Rect(portrait.Size), rect);
-            if (!boss.IsMob && boss.Kind is ActivityLiveActorKind.Chest or ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward)
+            if (boss.IsCampChest && boss.ChestReward == CampChestReward.Books)
+            {
+                var bookPen = UiPalette.Pen(UiPalette.Color("UiMapChestColor"), 1.5);
+                context.DrawGeometry(UiPalette.Brush("UiMapDeathFillColor"), bookPen, Polygon(
+                    new(at.X - 7, at.Y - 5), new(at.X, at.Y - 3), new(at.X + 7, at.Y - 5),
+                    new(at.X + 7, at.Y + 5), new(at.X, at.Y + 7), new(at.X - 7, at.Y + 5)));
+                context.DrawLine(bookPen, new(at.X, at.Y - 3), new(at.X, at.Y + 7));
+            }
+            else if (boss.IsSite || boss.IsCampChest && boss.ChestReward == CampChestReward.Unknown)
+            {
+                DrawPoiMark(context, at, new(MapPoiKind.Camp, boss.Name, 2, new(boss.X, boss.Y)));
+            }
+            else if (!boss.IsMob && boss.Kind is ActivityLiveActorKind.Chest or ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward)
             {
                 var symbol = boss.Kind switch
                 {
@@ -796,6 +811,8 @@ public sealed class ActivityMapCanvas : Control
             hits.Add(new Hit(at, radius + 2, boss.Name,
                 [$"{boss.KindLabel}, seen {UiFormat.Ago(boss.SeenAtUtc, scene.NowUtc)}",
                     boss.IsInView ? "In view" : "Out of view · Last known position, remembered until cleared or the app closes",
+                    boss.IsCampChest ? $"Reward: {boss.ChestReward}" : "",
+                    boss.Kind == ActivityLiveActorKind.OtherSite ? "The selected site's exact type is not yet identified" : "",
                     boss.Enchantment is { } enchantment ? $"Enchantment: .{enchantment}" : ""],
                 boss.IsMob ? [new ItemRow(boss.MobUniqueName, 1, boss.Name, "", Mob: true)] : []));
         }

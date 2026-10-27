@@ -99,12 +99,20 @@ public sealed record ActivityResourceNode(long Id, string Family, int Tier, int 
 public sealed record ActivityResourceMob(long Id, string Family, int Tier, int Enchantment, double X, double Y, DateTime SeenAtUtc,
     string MobUniqueName, string MobName, string ItemUniqueName, bool IsInView = true);
 
-public enum ActivityLiveActorKind { Boss, Miniboss, Dungeon, EventDungeon, Chest, EventMob, AbbeyEntrance, Shrine, Reward }
+public enum ActivityLiveActorKind { Boss, Miniboss, Dungeon, EventDungeon, Chest, EventMob, AbbeyEntrance, Shrine, Reward, CampSite, ResourceSite, OtherSite }
+public enum CampChestReward { Unknown, Books, Loot }
 
 /// <summary>An observed dynamic POI. Mobs retain their last observed position outside visibility and across map revisits until clearing or app closure. The legacy scene/settings slot is preserved.</summary>
 public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, double X, double Y, DateTime SeenAtUtc, string Name,
     string MobUniqueName = "", int Tier = 0, bool IsInView = true, int? Enchantment = null)
 {
+    public string CampChestDefinition { get; init; } = "";
+    public CampChestReward ChestReward { get; init; }
+    public DateTime ChestRewardObservedAtUtc { get; init; }
+    public bool IsDepleted { get; init; }
+    public string SourceTemplate { get; init; } = "";
+    public bool IsCampChest => CampChestDefinition.Length > 0;
+    public bool IsSite => Kind is ActivityLiveActorKind.CampSite or ActivityLiveActorKind.ResourceSite or ActivityLiveActorKind.OtherSite;
     public bool IsMob => !string.IsNullOrEmpty(MobUniqueName);
     public string KindLabel => Kind switch
     {
@@ -116,6 +124,9 @@ public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, doub
         ActivityLiveActorKind.AbbeyEntrance => "Abbey entrance",
         ActivityLiveActorKind.Shrine => "Shrine / statue",
         ActivityLiveActorKind.Reward => "Room reward",
+        ActivityLiveActorKind.CampSite => "Camp",
+        ActivityLiveActorKind.ResourceSite => "Resource site",
+        ActivityLiveActorKind.OtherSite => "Dynamic site",
         _ => "Event mob"
     };
 }

@@ -545,11 +545,13 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         }
 
         zone = WithInstanceOrientation(zone, live.RawMapId, live.LayoutTurns);
+        var templatePois = Turned(zone?.Pois ?? [], turns);
+        var sites = ActivitySiteResolution.Resolve(zone?.Zone?.MapCategory == "mists" && live.LayoutTurns is null ? [] : templatePois, live.RoamingBosses ?? []);
         Scene = new ActivityMapScene($"live:{live.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, live.Trail, Shown(live.Markers),
             Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), live.Position, live.Heading, true, DateTime.UtcNow, FadeSeconds,
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
-            SpawnSpots(zone, live.RawMapId, live.Layout, live.LayoutTurns), ShownPois(Turned(zone?.Pois ?? [], turns)),
-            Turned(zone?.Zone?.Rooms ?? [], turns), Turned(zone?.Zone?.Outline ?? [], turns), ShowRoamingBosses ? (live.RoamingBosses ?? []).OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
+            sites.Spawns(SpawnSpots(zone, live.RawMapId, live.Layout, live.LayoutTurns)), ShownPois(sites.Pois),
+            Turned(zone?.Zone?.Rooms ?? [], turns), Turned(zone?.Zone?.Outline ?? [], turns), ShowRoamingBosses ? sites.Actors.OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
             ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps(), ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);

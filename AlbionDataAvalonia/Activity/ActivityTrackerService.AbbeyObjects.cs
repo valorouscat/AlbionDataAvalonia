@@ -3,6 +3,7 @@ using AlbionDataAvalonia.Activity.Models;
 using AlbionDataAvalonia.Locations;
 using AlbionDataAvalonia.Network.Events;
 using AlbionDataAvalonia.Shared;
+using AlbionDataAvalonia.Maps;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,26 +36,64 @@ public sealed partial class ActivityTrackerService
             _ => ((ActivityLiveActorKind)(-1), "")
         };
         if (name.Length == 0) return;
+        var actor = new ActivityLiveActor(id, kind, position.X, position.Y, Utc(packet.CapturedAt), name);
+        if (code == EventCodes.NewLootChest)
+        {
+            var chest = new NewLootChestEvent(packet.Parameters);
+            var definition = ActivityCampSites.CampChests.Contains(chest.UniqueName) ? chest.UniqueName
+                : ActivityCampSites.CampChests.Contains(chest.UniqueNameWithLocation) ? chest.UniqueNameWithLocation : "";
+            if (definition.Length > 0) actor = ActivityCampSites.WithReward(actor with { CampChestDefinition = definition }, ActivityCampSites.Reward(packet.Parameters, 21));
+        }
+        ObserveMapObject(packet, actor, abbeyOnly: !actor.IsCampChest);
+    }
+
+    public void ObserveDynamicSite(DebugEventProbeEvent packet)
+    {
+        var point = new MistsLandmarkEvent(packet.Parameters);
+        if (point.ObjectId is not { } id || point.Position is not { } position
+            || !packet.Parameters.TryGetValue(3, out var raw) || raw is not string { Length: > 0 and <= 200 } template) return;
+        var kind = ActivityCampSites.Templates.GetValueOrDefault(template, ActivityLiveActorKind.OtherSite);
+        var name = kind switch { ActivityLiveActorKind.CampSite => "Observed camp", ActivityLiveActorKind.ResourceSite => "Observed resource site", _ => "Observed dynamic site" };
+        ObserveMapObject(packet, new(id, kind, position.X, position.Y, Utc(packet.CapturedAt), name) { SourceTemplate = template }, abbeyOnly: false);
+    }
+
+    private void ObserveMapObject(BaseEvent packet, ActivityLiveActor actor, bool abbeyOnly)
+    {
         lock (sync)
         {
             if (disposed) return;
             var at = Utc(packet.CapturedAt);
             if (at < liveMemoryClearedAt) return;
-            var actor = new ActivityLiveActor(id, kind, position.X, position.Y, at, name);
             if (actorJoinStartedAt is { } started && at >= started)
             {
                 if (pendingAbbeyObjects.Count >= 256) pendingAbbeyObjects.RemoveAt(0);
-                pendingAbbeyObjects.Add(new(actor, packet.ConnectionId, packet.MessageIdentity, started));
+                pendingAbbeyObjects.Add(new(actor, packet.ConnectionId, packet.MessageIdentity, started, abbeyOnly));
             }
-            else if (HasConfirmedContext && map!.Kind == ActivityMapKind.MistsDungeon && at >= mapEnteredAt
-                && SameConnection(packet.ConnectionId, packet.MessageIdentity)) PlaceAbbeyObject(actor);
+            else if (HasConfirmedContext && at >= mapEnteredAt
+                && SameConnection(packet.ConnectionId, packet.MessageIdentity)) PlaceMapObject(actor, abbeyOnly);
         }
+    }
+
+    private void PlaceMapObject(ActivityLiveActor actor, bool abbeyOnly)
+    {
+        if (abbeyOnly ? map?.Kind != ActivityMapKind.MistsDungeon : map?.Kind is not (ActivityMapKind.Mists or ActivityMapKind.OpenWorld)) return;
+        if (actor.Kind == ActivityLiveActorKind.OtherSite && !MistsMapData.IsSlotCenter(mapMetadata.Layout, mapMetadata.LayoutTurns, actor.X, actor.Y)) return;
+        PlaceAbbeyObject(actor);
     }
 
     private void PlaceAbbeyObject(ActivityLiveActor actor)
     {
         if (actor.SeenAtUtc < liveMemoryClearedAt) return;
         SyncLiveActors();
+        if (roamingBosses.TryGetValue(actor.Id, out var previous) && previous.SeenAtUtc > actor.SeenAtUtc) return;
+        if (actor.IsCampChest && previous?.CampChestDefinition == actor.CampChestDefinition && actor.ChestReward == CampChestReward.Unknown)
+            actor = ActivityCampSites.WithReward(actor, previous.ChestReward, previous.ChestRewardObservedAtUtc);
+        if (actor.IsSite)
+        {
+            var older = roamingBosses.Values.Where(x => x.IsSite && Math.Abs(x.X - actor.X) <= 0.1 && Math.Abs(x.Y - actor.Y) <= 0.1).ToArray();
+            if (older.Any(x => x.SeenAtUtc > actor.SeenAtUtc)) return;
+            foreach (var replaced in older) roamingBosses.Remove(replaced.Id);
+        }
         // A generic room-reward announcement must not replace a subsequently decoded
         // chest/statue for the same object. Do not guess the reward from its numeric field.
         if (actor.Kind == ActivityLiveActorKind.Reward && roamingBosses.TryGetValue(actor.Id, out var specific)
@@ -62,16 +101,32 @@ public sealed partial class ActivityTrackerService
             actor = actor with { Kind = specific.Kind, Name = specific.Name };
         observedThisVisit.Add(actor.Id);
         Keep(actor);
+        if (actor.IsSite && !actor.IsDepleted && actor.Kind != ActivityLiveActorKind.CampSite) SupersedeCampChests(actor);
         liveMapVersion++;
+    }
+
+    private void SupersedeCampChests(ActivityLiveActor site)
+    {
+        var pois = mapMetadata.Layout is { } layout && mapMetadata.LayoutTurns is { } turns
+            ? MistsMapData.Pois(layout).Select(p =>
+            {
+                var position = p.Position;
+                for (var i = 0; i < turns % 4; i++) position = new(position.Y, -position.X);
+                return p with { Position = position };
+            }).ToArray() : [];
+        var visible = ActivitySiteResolution.Resolve(pois, roamingBosses.Values.ToArray()).Actors.Select(x => x.Id).ToHashSet();
+        foreach (var chest in roamingBosses.Values.Where(x => x.IsCampChest && !x.IsDepleted && x.SeenAtUtc <= site.SeenAtUtc).ToArray())
+            if (!visible.Contains(chest.Id) || Math.Abs(chest.X - site.X) <= 0.1 && Math.Abs(chest.Y - site.Y) <= 0.1)
+                roamingBosses[chest.Id] = chest with { IsDepleted = true, IsInView = false, SeenAtUtc = site.SeenAtUtc };
     }
 
     private void ReplayAbbeyObjects(DateTime? startedAt, DateTime joinedAt)
     {
-        if (startedAt is not null && map?.Kind == ActivityMapKind.MistsDungeon)
+        if (startedAt is not null)
             foreach (var observation in pendingAbbeyObjects.Where(x => x.JoinStartedAt == startedAt
                 && x.Actor.SeenAtUtc <= joinedAt && joinedAt - x.Actor.SeenAtUtc <= LandmarkLead
                 && SameConnection(x.ConnectionId, x.Identity)).OrderBy(x => x.Actor.SeenAtUtc))
-                PlaceAbbeyObject(observation.Actor);
+                PlaceMapObject(observation.Actor, observation.AbbeyOnly);
         pendingAbbeyObjects.Clear();
     }
 
@@ -90,12 +145,14 @@ public sealed partial class ActivityTrackerService
             if (observation.Actor.Id != id || observation.Actor.SeenAtUtc > at || observation.JoinStartedAt != started
                 || observation.ConnectionId != packet.ConnectionId
                 || observation.Identity?.ReceiverGeneration != packet.MessageIdentity?.ReceiverGeneration
+                || observation.Identity?.PeerId != packet.MessageIdentity?.PeerId
                 || observation.Identity?.Challenge != packet.MessageIdentity?.Challenge) continue;
             if (packet is LeaveEvent) pendingAbbeyObjects[i] = observation with { Actor = observation.Actor with { IsInView = false } };
+            else if (observation.Actor.IsCampChest) pendingAbbeyObjects[i] = observation with { Actor = observation.Actor with { IsDepleted = true, IsInView = false, SeenAtUtc = at } };
             else pendingAbbeyObjects.RemoveAt(i);
         }
     }
 
     private sealed record AbbeyObjectObservation(ActivityLiveActor Actor, string ConnectionId,
-        PhotonMessageIdentity? Identity, DateTime JoinStartedAt);
+        PhotonMessageIdentity? Identity, DateTime JoinStartedAt, bool AbbeyOnly);
 }
