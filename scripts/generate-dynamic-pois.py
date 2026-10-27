@@ -4,13 +4,20 @@
     curl -fsSLo /tmp/mobs.json https://raw.githubusercontent.com/ao-data/ao-bin-dumps/master/mobs.json
     python3 scripts/generate-dynamic-pois.py /tmp/mobs.json
 
-Use the game's explicit categories, not English display-name guesses. Dungeon entrances
+Use the game's explicit categories, not English display-name guesses. The three
+mythical Mists creatures have boss prefabs but no mobtypecategory. Dungeon entrances
 are decoded separately from NewRandomDungeonExit. Ordinary seasonal combat mobs are
 included because their role is not always categorized (for example Flying Pumpkin).
 """
 import json
 import sys
 from pathlib import Path
+
+MISTS_BOSS_PREFABS = {
+    "MOB_MISTS_SPIDER_BOSS_01",
+    "MOB_MISTS_FAIRYDRAGON_BOSS_01",
+    "MOB_MISTS_GRIFFIN_BOSS_01",
+}
 
 
 def main(source: str) -> None:
@@ -20,6 +27,8 @@ def main(source: str) -> None:
         name = mob.get("@uniquename", "")
         category = mob.get("@mobtypecategory")
         kind = {"boss": "Boss", "miniboss": "Miniboss", "chest": "Chest"}.get(category)
+        if kind is None and mob.get("@prefab") in MISTS_BOSS_PREFABS:
+            kind = "Boss"
         if kind is None and "HALLOWEEN" in name and "_RESOURCE" not in name:
             kind = "EventMob"
         if name and kind:

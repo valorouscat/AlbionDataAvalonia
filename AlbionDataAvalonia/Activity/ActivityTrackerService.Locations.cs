@@ -46,22 +46,35 @@ public sealed partial class ActivityTrackerService
     }
 
     public void ObserveMistsLandmark(MistsLandmarkEvent packet, bool abbey = false)
+        => ObserveMistsLandmark(packet, packet.ObjectId, packet.Position, abbey);
+
+    public void ObserveMistsDungeonExit(DebugEventProbeEvent packet)
     {
-        if (packet.Position is not { } position
+        // Unlike border exits, this envelope is 0 id, 1 GUID, 2 position. Project it
+        // into the existing shared world-object decoder; keep the original capture context.
+        var fields = new Dictionary<byte, object>();
+        if (packet.Parameters.TryGetValue(0, out var id)) fields[0] = id;
+        if (packet.Parameters.TryGetValue(2, out var position)) fields[1] = position;
+        var exit = new MistsLandmarkEvent(fields);
+        ObserveMistsLandmark(packet, exit.ObjectId, exit.Position, abbey: true);
+    }
+
+    private void ObserveMistsLandmark(BaseEvent packet, long? id, ActivityWorldPosition? decodedPosition, bool abbey)
+    {
+        if (decodedPosition is not { } position
             || !double.IsFinite(position.X) || !double.IsFinite(position.Y))
         {
             lock (sync)
             {
                 if (disposed || !abbey || malformedAbbeyExitEpoch == mapEpoch) return;
                 malformedAbbeyExitEpoch = mapEpoch;
-                DiagnosticNote?.Invoke("Abbey exit ignored: no finite position in the shared key-1 world-object envelope. Check this event's raw parameters in packet diagnostics.");
+                DiagnosticNote?.Invoke("Abbey exit ignored: no finite decoded position. NewMistsDungeonExit uses key 2 (key 1 is a GUID). Check this event's raw parameters in packet diagnostics.");
             }
             return;
         }
         lock (sync)
         {
             if (disposed) return;
-            var id = packet.ObjectId;
             var at = Utc(packet.CapturedAt);
             if (HasConfirmedContext && at < mapEnteredAt && SameConnection(packet.ConnectionId, packet.MessageIdentity)) return;
             var pendingJoin = actorJoinStartedAt is { } started && at >= started ? actorJoinStartedAt : null;
@@ -71,6 +84,8 @@ public sealed partial class ActivityTrackerService
                 && x.Identity?.Challenge == packet.MessageIdentity?.Challenge);
             if (mistsLandmarks.Count >= 256) mistsLandmarks.RemoveAt(0);
             mistsLandmarks.Add(new(id, abbey, position, at, packet.ConnectionId, packet.MessageIdentity, mapKey, pendingJoin));
+            if (abbey && mapKey is not null && map?.Kind == ActivityMapKind.Mists && id is { } entranceId
+                && !captureSuspended) PlaceAbbeyEntrance(entranceId, position.X, position.Y, at);
             ApplyMapMetadata(WithMistsLayout(mapMetadata));
         }
     }

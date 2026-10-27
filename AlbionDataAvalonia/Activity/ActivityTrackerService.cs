@@ -443,6 +443,7 @@ public sealed partial class ActivityTrackerService : IDisposable
         locationObservation = null;
         if (sameCharacter) RestoreLocationMetadata();
         mapEnteredAt = at;
+        PlaceMistsDungeonEntrances(pendingLayoutJoin, at);
         mapMetadata = WithDepthsPlacement(WithDepthsFloor(WithMistsLayout(mapMetadata), previous));
         partialEntry = !enabled;
         awaitingContext = !actors.HasIdentity;
