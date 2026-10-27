@@ -327,7 +327,7 @@ If the Windows client closes and opens again, check the log for **Closing client
 
 ### Knightfall Abbey map
 
-Knightfall Abbey uses a bundled terrain map, including rooms and corridors, so its background loads without the map CDN. The map determines its rotation from two different exits back to the Mists; until confirmed, your path and observed objects remain on a grid. The placement is remembered for that instance until the app closes. With Follow me off, the fit button shows the full zone.
+Knightfall Abbey uses a bundled terrain map, including rooms and corridors, so its background loads without the map CDN. The map appears immediately in its standard orientation. A matching exit can confirm or correct its rotation; until then, a banner says that the rotation is unconfirmed. The placement is remembered for that instance until the app closes. With Follow me off, the fit button shows the full zone.
 
 Enable **Points of interest** to show possible boss and miniboss spawns, room rewards (a boss chest or statue depending on the room), treasure chests, coffers, wisp trees and levers. These markers come from game templates, not live sightings. Hover for details. The room schematic remains a fallback if the image cannot load.
 

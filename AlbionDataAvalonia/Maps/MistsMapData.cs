@@ -29,8 +29,8 @@ internal static partial class MistsMapData
             && Dungeons.Count == 1 ? DungeonZone(Dungeons.Keys.Single()) : null;
     }
 
-    // Like outdoor Mists, an Abbey instance may turn its master. Exits are fixed;
-    // chest spawns and player arrival points are not evidence of the orientation.
+    // An exact fixed Abbey exit identifies the master/turn when its placement is unique.
+    // Chest spawns and player arrival points are not evidence of the orientation.
     public static MistsLayoutPlacement? RecognizeAbbey(IReadOnlyCollection<ActivityWorldPosition> landmarks)
     {
         var observations = landmarks.Where(p => double.IsFinite(p.X) && double.IsFinite(p.Y)).Distinct().ToArray();
@@ -55,8 +55,9 @@ internal static partial class MistsMapData
                 else if (score > runnerUp) runnerUp = score;
             }
         }
-        // Duplicate packets at one exit cannot confirm an orientation.
-        return bestScore >= 2 && runnerUp < bestScore && runnerUp * 2 <= bestScore ? best : null;
+        // Abbey exit sets at the four turns are disjoint in this master, unlike outdoor Mists.
+        // One exact exit can therefore identify a unique placement; repeated packets cannot break a tie.
+        return bestScore >= 1 && runnerUp < bestScore && runnerUp * 2 <= bestScore ? best : null;
     }
 
     /// <summary>The layout's camp slots or Abbey's possible bosses, room rewards and other static points.</summary>

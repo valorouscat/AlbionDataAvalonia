@@ -22,6 +22,8 @@ public sealed partial class ActivityTrackerService
     private static readonly TimeSpan LandmarkLead = TimeSpan.FromSeconds(10);
     private readonly List<MistsLandmarkObservation> mistsLandmarks = new();
     private readonly Dictionary<LiveMemoryKey, MistsLayoutPlacement> mistsPlacements = new();
+    private long? malformedAbbeyExitEpoch;
+    private (long Epoch, int Count)? abbeyExitProgress;
     // The Depths floor of each Depths map entered lately, so rejoining one after a disconnect keeps its floor.
     private readonly Dictionary<string, int> depthsFloors = new(StringComparer.OrdinalIgnoreCase);
 
@@ -46,7 +48,16 @@ public sealed partial class ActivityTrackerService
     public void ObserveMistsLandmark(MistsLandmarkEvent packet, bool abbey = false)
     {
         if (packet.Position is not { } position
-            || !double.IsFinite(position.X) || !double.IsFinite(position.Y)) return;
+            || !double.IsFinite(position.X) || !double.IsFinite(position.Y))
+        {
+            lock (sync)
+            {
+                if (disposed || !abbey || malformedAbbeyExitEpoch == mapEpoch) return;
+                malformedAbbeyExitEpoch = mapEpoch;
+                DiagnosticNote?.Invoke("Abbey exit ignored: no finite position in the shared key-1 world-object envelope. Check this event's raw parameters in packet diagnostics.");
+            }
+            return;
+        }
         lock (sync)
         {
             if (disposed) return;
@@ -85,12 +96,18 @@ public sealed partial class ActivityTrackerService
         var landmarks = mistsLandmarks.Where(x => x.Abbey == abbey && x.PendingJoinAt is null && x.At >= mapEnteredAt - LandmarkLead
                 && (x.MapKey is null || x.MapKey == key) && SameConnection(x.ConnectionId, x.Identity))
             .Select(x => x.Position).Distinct().ToArray();
+        if (abbey && abbeyExitProgress != (mapEpoch, landmarks.Length))
+        {
+            abbeyExitProgress = (mapEpoch, landmarks.Length);
+            DiagnosticNote?.Invoke($"Abbey orientation: {landmarks.Length} distinct current-map exit positions available for matching; the standard map remains visible until a unique match is found.");
+        }
         var placement = abbey ? MistsMapData.RecognizeAbbey(landmarks) : MistsLayoutRecognizer.Recognize(landmarks);
         if (placement is { } recognized && key is { } owner) mistsPlacements[owner] = recognized;
         else if (key is { } rememberedOwner && mistsPlacements.TryGetValue(rememberedOwner, out var remembered)) placement = remembered;
         if (placement is not { } found) return metadata;
         Log.Debug("Placed {RawMapId} as {Kind} layout {Layout} turned {QuarterTurns} quarter turns from {Count} landmarks",
             map.RawLocationId, map.Kind, found.Layout, found.QuarterTurns, landmarks.Length);
+        if (abbey) DiagnosticNote?.Invoke($"Abbey orientation accepted: {found.Layout}, {found.QuarterTurns} quarter turns; {landmarks.Length} eligible exit positions (or a remembered exact-instance placement).");
         return metadata with { Layout = found.Layout, LayoutTurns = found.QuarterTurns };
     }
 
