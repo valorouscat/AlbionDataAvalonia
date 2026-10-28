@@ -78,6 +78,9 @@ internal static class ActivityPacketSubscriptions
         AbbeyObject(builder, EventCodes.NewTreasureChest, activity);
         AbbeyObject(builder, EventCodes.NewShrine, activity);
         AbbeyObject(builder, EventCodes.NewMultiRewardObject, activity);
+        builder.SubscribeEvent<DebugEventProbeEvent>((int)EventCodes.UpdateLootChest, packet => { activity.ObserveCampChestUpdate(packet); return Task.CompletedTask; });
+        builder.SubscribeEvent<DebugEventProbeEvent>((int)EventCodes.NewDynamicCompound, packet => { activity.ObserveDynamicSite(packet); return Task.CompletedTask; });
+        builder.SubscribeEvent<DebugEventProbeEvent>((int)EventCodes.DestroyDynamicTileComposition, packet => { activity.ObserveSiteDestroyed(packet); return Task.CompletedTask; });
 
         DepthsLandmark(builder, EventCodes.NewHellDungeonUpwardExit, DepthsLandmarkKind.Up, activity);
         DepthsLandmark(builder, EventCodes.NewHellDungeonDownwardExit, DepthsLandmarkKind.Down, activity);

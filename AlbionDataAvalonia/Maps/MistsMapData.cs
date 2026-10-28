@@ -67,9 +67,22 @@ internal static partial class MistsMapData
         if (Dungeons.TryGetValue(layout, out var dungeon))
             return dungeon.Chests.Select(chest => new MapPoi(MapPoiKind.Chest, "Boss chest", 3, new MapPoint(chest.X, chest.Z))).ToArray();
         return Slots.TryGetValue(layout, out var slots)
-            ? slots.Select(slot => new MapPoi(MapPoiKind.Chest, slot.Medium ? "Medium camp chest" : "Small camp chest", slot.Medium ? 2 : 1,
-                new MapPoint(slot.X, slot.Z), slot.Medium ? MediumChestRadius : SmallChestRadius)).ToArray()
+            ? slots.Select(slot => new MapPoi(MapPoiKind.Camp, slot.Medium ? "Possible medium site" : "Possible small site", slot.Medium ? 2 : 1,
+                new MapPoint(slot.X, slot.Z), slot.Medium ? MediumChestRadius : SmallChestRadius,
+                Notes: ["The instance can select a camp, resources or another variant here", "The circle bounds possible camp chest positions, not the full resource area", "Not a confirmed camp or chest"])).ToArray()
             : [];
+    }
+
+    /// <summary>Match an explicitly observed compound to a fixed slot centre in a confirmed layout/rotation.</summary>
+    public static bool IsSlotCenter(string? layout, int? turns, double x, double y)
+    {
+        if (layout is null || turns is null || !Slots.TryGetValue(layout, out var slots)) return false;
+        return slots.Any(slot =>
+        {
+            var point = new MapPoint(slot.X, slot.Z);
+            for (var turn = 0; turn < turns.Value % 4; turn++) point = new(point.Y, -point.X);
+            return Math.Abs(point.X - x) <= 0.1 && Math.Abs(point.Y - y) <= 0.1;
+        });
     }
 
     /// <summary>An Abbey zone with its local terrain image, or a room schematic when no image is bundled.</summary>

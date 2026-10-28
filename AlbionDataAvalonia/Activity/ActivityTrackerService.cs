@@ -266,8 +266,8 @@ public sealed partial class ActivityTrackerService : IDisposable
             { gathering.Reset(); fameCollector.Reset(); return; }
             Expire(at);
             if (captureGap) ResumeAfterCaptureGap(at);
-            if (HasConfirmedContext && actorJoinStartedAt is null && map!.Kind == ActivityMapKind.MistsDungeon
-                && packet is UpdateLootChestEvent { State: 8 } emptyChest) ForgetLiveActor(emptyChest.ObjectId);
+            if (HasConfirmedContext && actorJoinStartedAt is null
+                && packet is UpdateLootChestEvent { State: 8 } emptyChest) EmptyObservedChest(emptyChest.ObjectId, at);
             switch (packet)
             {
                 case NewRandomDungeonExitEvent entrance when HasConfirmedContext:
@@ -447,8 +447,8 @@ public sealed partial class ActivityTrackerService : IDisposable
         if (sameCharacter) RestoreLocationMetadata();
         mapEnteredAt = at;
         PlaceMistsDungeonEntrances(pendingLayoutJoin, at);
-        ReplayAbbeyObjects(pendingLayoutJoin, at);
         mapMetadata = WithDepthsPlacement(WithDepthsFloor(WithMistsLayout(mapMetadata), previous));
+        ReplayAbbeyObjects(pendingLayoutJoin, at);
         partialEntry = !enabled;
         awaitingContext = !actors.HasIdentity;
         captureSuspended = false;
