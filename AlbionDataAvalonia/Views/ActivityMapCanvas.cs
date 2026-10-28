@@ -760,7 +760,10 @@ public sealed class ActivityMapCanvas : Control
                 ActivityLiveActorKind.OtherSite => "UiMapPoiShrineColor",
                 _ => "UiMapPoiBossColor"
             } : "UiMapPoiBossColor";
-            var ring = UiPalette.Pen(UiPalette.Color(ringColor), 2.5);
+            var enchantment = boss.Enchantment is >= 0 and <= 4 ? boss.Enchantment : null;
+            var rarityColor = enchantment is > 0 ? ActivityPalette.Enchantment(enchantment.Value)
+                : enchantment == 0 ? UiPalette.Color("UiTextColor") : UiPalette.Color(ringColor);
+            var ring = UiPalette.Pen(rarityColor, 2.5);
             var at = ToScreen(ImagePoint(scene, boss.X, boss.Y), scale);
             var radius = boss.Kind == ActivityLiveActorKind.Boss ? 12 : 9.5;
             if (!Visible(at, radius + 4)) continue;
@@ -800,9 +803,12 @@ public sealed class ActivityMapCanvas : Control
                 context.DrawEllipse(null, portalPen, at, radius * 0.55, radius * 0.75);
             }
             context.DrawEllipse(null, ring, at, radius, radius);
-            if (boss.Tier > 0)
+            if (boss.Tier > 0 || enchantment is not null)
             {
-                var tier = ChartDrawing.Text($"T{boss.Tier}", 9, UiPalette.Color("UiTextColor"), FontWeight.Bold);
+                var label = boss.Tier > 0 ? $"T{boss.Tier}" : "";
+                if (enchantment is { } level) label += $".{level}";
+                var tier = ChartDrawing.Text(label, 9,
+                    enchantment is not null ? rarityColor : UiPalette.Color("UiTextColor"), FontWeight.Bold);
                 var badge = new Rect(at.X + radius - 4, at.Y + radius - 9, tier.Width + 6, tier.Height + 1);
                 context.DrawRectangle(UiPalette.Brush("UiMapCountColor"), UiPalette.Pen(UiPalette.Color("UiMapCountEdgeColor")), badge, 4, 4);
                 tier.Draw(context, new Point(badge.X + 3, badge.Y + 0.5));
@@ -813,7 +819,7 @@ public sealed class ActivityMapCanvas : Control
                     boss.IsInView ? "In view" : "Out of view · Last known position, remembered until cleared or the app closes",
                     boss.IsCampChest ? $"Reward: {boss.ChestReward}" : "",
                     boss.Kind == ActivityLiveActorKind.OtherSite ? "The selected site's exact type is not yet identified" : "",
-                    boss.Enchantment is { } enchantment ? $"Enchantment: .{enchantment}" : ""],
+                    enchantment is { } knownLevel ? $"Enchantment: .{knownLevel}" : ""],
                 boss.IsMob ? [new ItemRow(boss.MobUniqueName, 1, boss.Name, "", Mob: true)] : []));
         }
     }
