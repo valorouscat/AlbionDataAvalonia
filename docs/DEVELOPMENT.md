@@ -2,6 +2,12 @@
 
 Technical notes for contributors. For installing and using the client, see the [README](../README.md).
 
+## Dynamic POI enchantment
+
+Observed Dynamic POI with a known enchantment level (0–4), such as dungeon entrances, use the existing enchantment palette for their outer ring and badge. Known unenchanted entrances use the normal text color. The badge includes the level (`T8.2`, or `.2` if no tier is available); unknown levels retain the kind-colored ring and tier-only badge. This uses observed metadata and does not infer rarity from surrounding maps, chest rewards or object names.
+
+The [rendering preview](screenshots/dynamic-poi-enchantment.png) uses synthetic dungeon observations on the production map canvas, showing levels 0–4, unknown levels, a remembered entrance, an event dungeon and a known enchantment without a tier. Live gameplay remains unverified.
+
 ## Building with the shared core
 
 The desktop and Android clients share [AFMDataClientCore](https://github.com/JPCodeCraft/AFMDataClientCore). This repository pins its library at `shared/AFMDataClientCore`; no sibling checkout or NuGet feed is required to build.
