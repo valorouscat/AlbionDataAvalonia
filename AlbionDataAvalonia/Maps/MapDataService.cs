@@ -76,6 +76,8 @@ public sealed class MapDataService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(rawMapId)) return null;
         cancellationToken.ThrowIfCancellationRequested();
+        if (AncientLandsMapData.Zone(rawMapId, layout) is { } ancient) return ancient;
+        if (AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.DragonArea) return null;
         if (MistsMapData.AbbeyZone(rawMapId, layout) is { } abbey) return abbey;
         if (AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.AbyssalDepths
             && DepthsMapData.Master(rawMapId, layout) is { } depthsMaster && DepthsMapData.Zone(depthsMaster) is { } depths)
@@ -173,7 +175,7 @@ public sealed class MapDataService : IDisposable
     /// but for the Mists and Depths spots that come with the app.</summary>
     public Task<MapZoneFeatures> GetFeaturesAsync(MapZone zone) =>
         // A zone the client draws itself has no AlbionWorld feature file.
-        (zone.ImageFile.Length == 0 || zone.ImageFile == MistsMapData.AbbeyImageFile) ? Task.FromResult(new MapZoneFeatures([], [], [.. MistsMapData.Pois(zone.Id), .. DepthsMapData.Pois(zone.Id)]))
+        (zone.ImageFile.Length == 0 || zone.ImageFile == MistsMapData.AbbeyImageFile) ? Task.FromResult(new MapZoneFeatures([], [], [.. MistsMapData.Pois(zone.Id), .. DepthsMapData.Pois(zone.Id), .. AncientLandsMapData.Pois(zone.Id)]))
             : features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
 
     public Task<Bitmap?> GetIconImageAsync(string markerType) =>

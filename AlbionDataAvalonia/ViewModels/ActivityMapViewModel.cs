@@ -534,6 +534,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
                 ? "Showing the standard Abbey orientation. Its rotation has not been confirmed from an exit yet."
             : zone is { Zone: null } && live.Layout is null && AlbionLocations.ResolveActivityLocation(live.RawMapId).Kind == ActivityMapKind.Mists
                 ? "Finding this Mists layout. The map shows once a wisp or exit comes into view."
+            : zone is { Zone.MapCategory: "dragonarea" } ? "Ancient Lands: possible template POIs; alternatives do not all spawn together. Rings mark observed objects; Leygate availability is unknown."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
             : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing available map layers on a coordinate grid."
@@ -703,6 +704,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
                 ? "This visit has no confirmed Depths orientation. Showing the recorded path and observations."
             : zone is { Zone.MapCategory: "mistsdungeon" } && option.LayoutTurns is null
                 ? "Showing the standard Abbey orientation. No confirmed rotation was recorded for this visit."
+            : zone is { Zone.MapCategory: "dragonarea" } ? "Ancient Lands: possible template POIs; alternatives do not all spawn together. Rings mark observed objects; Leygate availability is unknown."
             : zone is { Image: null, Zone.Outline.Count: > 0 } ? "No minimap for this zone. Its rough outline and rooms come from the game files."
             : zone is { Image: null, Zone.Rooms.Count: > 0 } ? "No minimap for this zone. Its rooms come from the game files."
             : zone is { Image: null } ? "No map image for this zone. Showing available map layers on a coordinate grid."
@@ -867,7 +869,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     {
         MapPoiKind.Wisp => 0,
         MapPoiKind.Camp => 1,
-        MapPoiKind.Shrine or MapPoiKind.Altar => 2,
+        MapPoiKind.Shrine or MapPoiKind.Altar or MapPoiKind.Teleporter or MapPoiKind.Lore => 2,
         MapPoiKind.Key or MapPoiKind.Coffer => 3,
         MapPoiKind.Chest => 3,
         MapPoiKind.ExitUp or MapPoiKind.ExitDown => 5,
@@ -908,6 +910,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             "corrupted" => "Corrupted dungeon",
             "mistsdungeon" => "Mists dungeon",
             "helldungeon" => "Depths",
+            "dragonarea" => "Ancient Lands",
             "hellden" => "Hellgate",
             "hideout" => "Hideout area",
             "expedition" => "Expedition",

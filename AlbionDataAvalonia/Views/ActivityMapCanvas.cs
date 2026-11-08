@@ -699,6 +699,14 @@ public sealed class ActivityMapCanvas : Control
                     context.DrawEllipse(UiPalette.Brush("UiMapMarkerEdgeColor"), null, at, 1.6 * size, 1.6 * size);
                     break;
                 }
+            case MapPoiKind.Teleporter:
+                context.DrawEllipse(null, UiPalette.Pen(UiPalette.Color("UiMapPoiShrineColor"), 2), at, 5, 7);
+                context.DrawEllipse(UiPalette.Brush("UiMapPoiShrineColor"), null, at, 2, 2);
+                break;
+            case MapPoiKind.Lore:
+                context.DrawRectangle(UiPalette.Brush("UiMapPoiShrineColor"), OutlinePen, new Rect(at.X - 4, at.Y - 5, 8, 10), 1, 1);
+                context.DrawLine(WhitePen, new(at.X, at.Y - 4), new(at.X, at.Y + 4));
+                break;
             case MapPoiKind.Shrine:
                 {
                     var half = 6.5 * size;
@@ -785,12 +793,16 @@ public sealed class ActivityMapCanvas : Control
             {
                 DrawPoiMark(context, at, new(MapPoiKind.Camp, boss.Name, 2, new(boss.X, boss.Y)));
             }
-            else if (!boss.IsMob && boss.Kind is ActivityLiveActorKind.Chest or ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward)
+            else if (!boss.IsMob && boss.Kind is ActivityLiveActorKind.Chest or ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward or ActivityLiveActorKind.Teleporter or ActivityLiveActorKind.Exit or ActivityLiveActorKind.Altar or ActivityLiveActorKind.Lore)
             {
                 var symbol = boss.Kind switch
                 {
                     ActivityLiveActorKind.Chest => MapPoiKind.Chest,
                     ActivityLiveActorKind.Shrine => MapPoiKind.Shrine,
+                    ActivityLiveActorKind.Teleporter => MapPoiKind.Teleporter,
+                    ActivityLiveActorKind.Exit => MapPoiKind.ExitUp,
+                    ActivityLiveActorKind.Altar => MapPoiKind.Altar,
+                    ActivityLiveActorKind.Lore => MapPoiKind.Lore,
                     _ => MapPoiKind.Camp
                 };
                 DrawPoiMark(context, at, new(symbol, boss.Name, 2, new(boss.X, boss.Y)));
@@ -816,6 +828,7 @@ public sealed class ActivityMapCanvas : Control
 
             hits.Add(new Hit(at, radius + 2, boss.Name,
                 [$"{boss.KindLabel}, seen {UiFormat.Ago(boss.SeenAtUtc, scene.NowUtc)}",
+                    .. (boss.ObservationNote.Length > 0 ? new[] { boss.ObservationNote } : Array.Empty<string>()),
                     boss.IsInView ? "In view" : "Out of view · Last known position, remembered until cleared or the app closes",
                     boss.IsCampChest ? $"Reward: {boss.ChestReward}" : "",
                     boss.Kind == ActivityLiveActorKind.OtherSite ? "The selected site's exact type is not yet identified" : "",
@@ -897,7 +910,9 @@ public sealed class ActivityMapCanvas : Control
         MapPoiKind.Camp => "mob camp spot",
         MapPoiKind.Key => "key spawn",
         MapPoiKind.Coffer => "coffer spot",
-        MapPoiKind.Altar => "demon altar",
+        MapPoiKind.Altar => "altar",
+        MapPoiKind.Teleporter => "Leygate",
+        MapPoiKind.Lore => "lore spot",
         MapPoiKind.ExitUp => "exit up",
         MapPoiKind.ExitDown => "exit down",
         MapPoiKind.Lever => "lever",
