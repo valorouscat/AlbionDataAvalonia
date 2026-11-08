@@ -77,6 +77,23 @@ internal static class ActivityPacketSubscriptions
         builder.SubscribeEvent<DebugEventProbeEvent>((int)EventCodes.NewMistsDungeonExit, packet => { activity.ObserveMistsDungeonExit(packet); return Task.CompletedTask; });
         foreach (var code in new[] { EventCodes.NewTeleporterNode, EventCodes.NewDragonAreaExit, EventCodes.NewLoreSnippetObject, EventCodes.NewBuilding })
             builder.SubscribeEvent<DebugEventProbeEvent>((int)code, packet => { activity.ObserveAncientLandsObject(packet, code); return Task.CompletedTask; });
+        builder.SubscribeEvent<DebugEventProbeEvent>((int)EventCodes.NewCagedObject, packet => { activity.ObserveAncientRunestone(packet); return Task.CompletedTask; });
+        builder.SubscribeEvent<DebugEventProbeEvent>((int)EventCodes.CagedObjectStateUpdated, packet => { activity.ObserveAncientRunestoneState(packet); return Task.CompletedTask; });
+        // Make currently undecoded POI state events available to the existing opt-in
+        // handled-packet diagnostics. Do not infer state fields from event names.
+        foreach (var code in new[]
+        {
+            EventCodes.UpdateShrine, EventCodes.TeleporterNodeStateChanged,
+            EventCodes.TeleporterConnectionsFullStateUpdate, EventCodes.TeleporterConnectionStateChanged,
+            EventCodes.DragonAreaPlayerJoinedInfo, EventCodes.DragonAreaMainQuestStateUpdateBase,
+            EventCodes.DragonAreaMainQuestStateUpdate, EventCodes.DragonAreaExitStatusUpdate,
+            EventCodes.UpdateDragonEnergy, EventCodes.DragonAreaTeleporterKeyUpdate,
+            EventCodes.NewCarriableObject, EventCodes.CarriedObjectUpdate, EventCodes.PickupCarriableObjectFinished,
+            EventCodes.NewDynamicTileComposition, EventCodes.NewFishingZoneObject,
+            EventCodes.LocalQuestInfos, EventCodes.LocalQuestStarted, EventCodes.LocalQuestActive,
+            EventCodes.LocalQuestInactive, EventCodes.LocalQuestProgressUpdate,
+            EventCodes.NewTileSwitch, EventCodes.NewTileSwitchTrigger
+        }) builder.SubscribeEvent<DebugEventProbeEvent>((int)code, _ => Task.CompletedTask);
         AbbeyObject(builder, EventCodes.NewLootChest, activity);
         AbbeyObject(builder, EventCodes.NewTreasureChest, activity);
         AbbeyObject(builder, EventCodes.NewShrine, activity);

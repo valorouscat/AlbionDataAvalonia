@@ -88,7 +88,8 @@ public sealed partial class ActivityTrackerService
     {
         if (actor.SeenAtUtc < liveMemoryClearedAt) return;
         SyncLiveActors();
-        if (roamingBosses.TryGetValue(actor.Id, out var previous) && previous.SeenAtUtc > actor.SeenAtUtc) return;
+        if (roamingBosses.TryGetValue(actor.Id, out var previous)
+            && (previous.SeenAtUtc > actor.SeenAtUtc || actor.Kind == ActivityLiveActorKind.EnergyShrine && previous.StateObservedAtUtc > actor.SeenAtUtc)) return;
         if (actor.IsCampChest && previous?.CampChestDefinition == actor.CampChestDefinition && actor.ChestReward == CampChestReward.Unknown)
             actor = ActivityCampSites.WithReward(actor, previous.ChestReward, previous.ChestRewardObservedAtUtc);
         if (actor.IsSite)
