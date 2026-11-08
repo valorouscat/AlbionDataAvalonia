@@ -39,6 +39,12 @@ public partial class UserSettings
         get => combatMeterWindowPlacement;
         set => SetCombatSetting(ref combatMeterWindowPlacement, value, nameof(CombatMeterWindowPlacement));
     }
+    private WindowPlacement? combatMeterOverlayWindowPlacement;
+    public WindowPlacement? CombatMeterOverlayWindowPlacement
+    {
+        get => combatMeterOverlayWindowPlacement;
+        set => SetCombatSetting(ref combatMeterOverlayWindowPlacement, value, nameof(CombatMeterOverlayWindowPlacement));
+    }
 
     private void SetCombatSetting<T>(ref T field, T value, string property)
     {

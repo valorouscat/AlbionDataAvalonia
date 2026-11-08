@@ -27,13 +27,31 @@ public sealed record CombatMeterDisplayRow(int Rank, CombatMeterRow Value, strin
     public string CompactAmount => UiFormat.Compact(Value.Amount);
     public string RateLabel => $"{Rate} {RateUnit}";
     public string ShareLabel => $"{Share} of total";
-    public string DetailTip => $"{Amount} total · {Hits} events";
+    public string WidgetRankingValue => $"{CompactAmount} · {Share}";
+    public string DetailTip => $"{Amount} total · {RateLabel} · {Share}\n{Hits} events";
 }
 
 public sealed record CombatMeterContributionHeader(string PersonalTotal, string PersonalDetail,
     string GroupTotal, string GroupDetail, string ScopeTotal, string ScopeDetail)
 {
     public static CombatMeterContributionHeader Empty { get; } = new("—", "", "—", "", "—", "");
+}
+
+public sealed record CombatMeterCell(string Value, string FullValue, string Detail)
+{
+    public string Tip => $"{FullValue}\n{Detail}";
+    public static CombatMeterCell Empty { get; } = new("—", "—", "");
+    public static CombatMeterCell From(CombatMeterContribution value, string rateUnit) =>
+        new(UiFormat.Compact(value.Amount), UiFormat.Whole(value.Amount),
+            $"{UiFormat.Whole(value.Rate)} {rateUnit} · {value.Share:N1}% of total");
+}
+public sealed record CombatMeterValues(CombatMeterCell Damage, CombatMeterCell Taken, CombatMeterCell Healing, CombatMeterCell Healed)
+{
+    public static CombatMeterValues Empty { get; } = new(CombatMeterCell.Empty, CombatMeterCell.Empty, CombatMeterCell.Empty, CombatMeterCell.Empty);
+}
+public sealed record CombatMeterOverview(CombatMeterValues Personal, CombatMeterValues Group, CombatMeterValues Overall)
+{
+    public static CombatMeterOverview Empty { get; } = new(CombatMeterValues.Empty, CombatMeterValues.Empty, CombatMeterValues.Empty);
 }
 
 public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
@@ -45,6 +63,7 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
     private readonly UiDebouncer searchDebouncer;
     private bool initialized, disposed;
     private CombatMeterSnapshot? snapshot;
+    private CombatMeterMetricsSnapshot? metricSnapshots;
     private readonly HashSet<string> persisted = new(StringComparer.Ordinal)
     {
         nameof(SelectedScope), nameof(SelectedMetric), nameof(SelectedTargets), nameof(SelectedPeriod),
@@ -77,6 +96,7 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool includeSelfHealing;
     [ObservableProperty] private bool activeRate;
     [ObservableProperty] private bool isOverlay;
+    [ObservableProperty] private bool isCompactLayout;
     [ObservableProperty] private bool pinned;
     [ObservableProperty] private bool clickThrough;
     [ObservableProperty] private int overlayOpacity;
@@ -87,6 +107,10 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private string factionStatus = "";
     [ObservableProperty] private string total = "0";
     [ObservableProperty] private CombatMeterContributionHeader contributionHeader = CombatMeterContributionHeader.Empty;
+    [ObservableProperty] private CombatMeterOverview overview = CombatMeterOverview.Empty;
+    [ObservableProperty] private string widgetPeriodText = "";
+    [ObservableProperty] private string widgetScopeTitle = "";
+    [ObservableProperty] private string widgetContributionText = "";
     [ObservableProperty] private string periodText = "";
     [ObservableProperty] private string participantsText = "";
     [ObservableProperty] private string error = "";
@@ -111,11 +135,16 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
         ? "Me and My group show contributions within this city faction only. Group members without a matching observed city flag are excluded. These totals overlap and must not be added. Search and Top N filter only the player ranking."
         : "My group includes me. These totals overlap and must not be added. All contributions use the same period and combat filters; search and Top N filter only the player ranking.";
     public bool HasRows => Rows.Count > 0;
-    public bool ShowTable => HasRows && !IsOverlay;
-    public bool ShowOverlayRanking => HasRows && IsOverlay;
+    public bool UseWidget => IsOverlay || IsCompactLayout;
+    public bool ShowTable => HasRows && !UseWidget;
+    public bool ShowOverlayRanking => HasRows && UseWidget;
     public bool ShowControls => !IsOverlay || ShowSettings;
     public bool SupportsClickThrough => OperatingSystem.IsWindows();
     public string PauseText => tracker.CombatMeter.IsPaused ? "Resume" : "Pause";
+    public string PauseGlyph => tracker.CombatMeter.IsPaused ? "▶" : "Ⅱ";
+    public string WidgetHelp => $"{Status}\n{FactionStatus}\n{OverlayError}\n{ShortcutsHelp}";
+    public string OverallLabel => IsFactionScope ? "Faction" : "All";
+    public event EventHandler? ExpandWindowRequested;
     public string OverlayButtonText => IsOverlay ? "Window" : "Overlay";
     public string OverlayKeyHint => OperatingSystem.IsWindows()
         ? "Ctrl+Alt+D hide / show · Ctrl+Alt+H window"
@@ -158,8 +187,10 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
             OnPropertyChanged(nameof(IsCustomMinutes)); OnPropertyChanged(nameof(IsCustomRange));
         }
         if (e.PropertyName is nameof(IsOverlay) or nameof(ShowSettings)) OnPropertyChanged(nameof(ShowControls));
-        if (e.PropertyName is nameof(IsOverlay) or nameof(HasRows))
+        if (e.PropertyName is nameof(IsOverlay) or nameof(IsCompactLayout)) OnPropertyChanged(nameof(UseWidget));
+        if (e.PropertyName is nameof(IsOverlay) or nameof(IsCompactLayout) or nameof(HasRows))
         { OnPropertyChanged(nameof(ShowTable)); OnPropertyChanged(nameof(ShowOverlayRanking)); }
+        if (e.PropertyName is nameof(Status) or nameof(FactionStatus) or nameof(OverlayError)) OnPropertyChanged(nameof(WidgetHelp));
         if (e.PropertyName == nameof(IsOverlay)) OnPropertyChanged(nameof(OverlayButtonText));
         if (e.PropertyName == nameof(IsOverlay)) { IsHidden = false; ShowSettings = false; }
         if (e.PropertyName == nameof(SelectedMetric)) { OnPropertyChanged(nameof(MetricTitle)); OnPropertyChanged(nameof(RateTitle)); }
@@ -168,6 +199,7 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
             OnPropertyChanged(nameof(IsFactionScope)); OnPropertyChanged(nameof(ShowGroupContribution));
             OnPropertyChanged(nameof(ShowScopeContribution)); OnPropertyChanged(nameof(GroupContributionLabel));
             OnPropertyChanged(nameof(ContributionHint)); OnPropertyChanged(nameof(ContributionColumns));
+            OnPropertyChanged(nameof(OverallLabel));
         }
         if (e.PropertyName == nameof(Search)) { searchDebouncer.Trigger(); return; }
         if (e.PropertyName is { } name && persisted.Contains(name))
@@ -211,8 +243,13 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
             if (from > DateTime.UtcNow) { Error = "The start time must not be in the future."; ClearRows(); return; }
         }
         var seconds = IsCustomMinutes ? Math.Clamp(CustomMinutes, 1, 120) * 60 : SelectedPeriod.Value;
-        snapshot = tracker.CombatMeter.Snapshot(DateTime.UtcNow, seconds > 0 ? TimeSpan.FromSeconds(seconds) : null,
-            from, to, SelectedScope.Value, SelectedMetric.Value, SelectedTargets.Value, IncludeSelfHealing, ActiveRate, Search);
+        metricSnapshots = tracker.CombatMeter.SnapshotAll(DateTime.UtcNow, seconds > 0 ? TimeSpan.FromSeconds(seconds) : null,
+            from, to, SelectedScope.Value, SelectedTargets.Value, IncludeSelfHealing, ActiveRate, Search);
+        snapshot = metricSnapshots.For(SelectedMetric.Value);
+        CombatMeterValues Values(Func<CombatMeterSnapshot, CombatMeterContribution> pick) => new(
+            CombatMeterCell.From(pick(metricSnapshots.Damage), "DPS"), CombatMeterCell.From(pick(metricSnapshots.DamageReceived), "DPS"),
+            CombatMeterCell.From(pick(metricSnapshots.Healing), "HPS"), CombatMeterCell.From(pick(metricSnapshots.HealingReceived), "HPS"));
+        Overview = new(Values(x => x.Personal), Values(x => x.Party), Values(x => x.Overall));
         Rows.ReplaceAll(snapshot.Rows.Take(SelectedLimit.Value).Select((x, i) => new CombatMeterDisplayRow(i + 1, x, RateTitle)));
         OnPropertyChanged(nameof(HasRows));
         Total = UiFormat.Whole(snapshot.Total);
@@ -229,12 +266,20 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
         ContributionHeader = new(UiFormat.Whole(snapshot.Personal.Amount), personalDetail,
             UiFormat.Whole(snapshot.Party.Amount), groupDetail, Total, $"{UiFormat.Whole(snapshot.Overall.Rate)} {RateTitle}");
         PeriodText = $"{UiFormat.LocalTime(snapshot.Start)} – {UiFormat.LocalTime(snapshot.End)} · {UiFormat.Duration(snapshot.End - snapshot.Start)}";
+        var periodLabel = SelectedPeriod.Value switch { 0 => "Since reset", -1 => $"Last {CustomMinutes}m", -2 => "Time range", _ => SelectedPeriod.Label };
+        WidgetPeriodText = $"{periodLabel} · {UiFormat.Duration(snapshot.End - snapshot.Start)}";
+        WidgetContributionText = !ShowGroupContribution ? $"{UiFormat.Whole(snapshot.Personal.Rate)} {RateTitle}"
+            : !ShowScopeContribution ? $"Me: {snapshot.Personal.Share:N1}% of group"
+            : $"Me {snapshot.Personal.Share:N1}% · Group {snapshot.Party.Share:N1}%"
+                + (snapshot.Party.Amount > 0 ? $" · Me/group {snapshot.Personal.Amount / snapshot.Party.Amount * 100:N1}%" : "");
         ParticipantsText = $"{UiFormat.Count(snapshot.Rows.Count, "matching player")} · {UiFormat.Count(snapshot.Observations, "observation")} in scope";
         IsLive = !tracker.CombatMeter.IsPaused && tracker.CombatCaptureReady;
         var captureStatus = tracker.CombatMeter.IsPaused ? "Paused — incoming events are skipped"
             : IsLive ? "Live" : "Waiting for confirmed game traffic";
         Status = $"{SelectedScope.Label} · {captureStatus}";
         var flag = tracker.CombatFactionFlag;
+        WidgetScopeTitle = SelectedScope.Value switch
+        { CombatMeterScope.Personal => "Me", CombatMeterScope.Party => "Group", CombatMeterScope.Faction => flag is >= 1 and <= 6 ? "Faction" : "Faction ?", _ => "All players" };
         var faction = flag switch { 1 => "Martlock", 2 => "Lymhurst", 3 => "Bridgewatch", 4 => "Fort Sterling", 5 => "Thetford", 6 => "Caerleon", _ => "" };
         FactionStatus = flag is >= 1 and <= 6 ? $"Your city faction: {faction} · membership at event time"
             : flag is null ? "Your faction is not observed yet. Reflag in game once while capture is running. Earlier unknown events stay unclassified."
@@ -242,9 +287,14 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
         if (snapshot.Truncated) Error = "Oldest observations were removed by the 2-hour / 200,000-event memory limit. The period shows retained data.";
     }
 
-    private void ClearRows() { snapshot = null; Rows.ReplaceAll([]); Total = "—"; ContributionHeader = CombatMeterContributionHeader.Empty; PeriodText = ""; ParticipantsText = ""; OnPropertyChanged(nameof(HasRows)); }
+    private void ClearRows() { snapshot = null; metricSnapshots = null; Overview = CombatMeterOverview.Empty; Rows.ReplaceAll([]); Total = "—"; ContributionHeader = CombatMeterContributionHeader.Empty; PeriodText = ""; WidgetPeriodText = ""; WidgetContributionText = ""; ParticipantsText = ""; OnPropertyChanged(nameof(HasRows)); }
     [RelayCommand] private void Reset() { tracker.CombatMeter.Reset(DateTime.UtcNow); SelectedPeriod = Periods[0]; CopyStatus = ""; Refresh(); }
-    [RelayCommand] private void TogglePause() { tracker.CombatMeter.SetPaused(!tracker.CombatMeter.IsPaused, DateTime.UtcNow); OnPropertyChanged(nameof(PauseText)); Refresh(); }
+    [RelayCommand] private void TogglePause() { tracker.CombatMeter.SetPaused(!tracker.CombatMeter.IsPaused, DateTime.UtcNow); OnPropertyChanged(nameof(PauseText)); OnPropertyChanged(nameof(PauseGlyph)); Refresh(); }
+    [RelayCommand] private void CycleMetric() => SelectedMetric = Metrics[(Metrics.ToList().IndexOf(SelectedMetric) + 1) % Metrics.Count];
+    [RelayCommand] private void ExpandWindow() { IsOverlay = false; ShowSettings = false; ExpandWindowRequested?.Invoke(this, EventArgs.Empty); }
+    internal WindowPlacement? Placement(bool overlay) => overlay ? settings.CombatMeterOverlayWindowPlacement : settings.CombatMeterWindowPlacement;
+    internal void RememberPlacement(bool overlay, WindowPlacement placement)
+    { if (overlay) settings.CombatMeterOverlayWindowPlacement = placement; else settings.CombatMeterWindowPlacement = placement; }
     [RelayCommand] private void ToggleOverlay() => IsOverlay = !IsOverlay;
     [RelayCommand] private void ToggleSettings() => ShowSettings = !ShowSettings;
     [RelayCommand] private void ToggleVisibility() => IsHidden = !IsHidden;
@@ -252,8 +302,15 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task Copy()
     {
-        if (snapshot is null) return;
-        var text = new StringBuilder($"{MetricTitle} | {SelectedScope.Label} | {PeriodText}\nOverlapping contributions (do not add)\nSummary\tTotal\t{RateTitle}\tShare of scope\tObservations\n");
+        if (snapshot is null || metricSnapshots is null) return;
+        var text = new StringBuilder($"{SelectedScope.Label} | {PeriodText}\nOverlapping contributions (do not add)\nSummary\tDamage dealt\tDamage received\tHealing done\tHealing received\n");
+        void AllMetrics(string label, Func<CombatMeterSnapshot, CombatMeterContribution> pick) => text.AppendLine(
+            label + "\t" + string.Join("\t", new[] { metricSnapshots.Damage, metricSnapshots.DamageReceived, metricSnapshots.Healing, metricSnapshots.HealingReceived }
+                .Select(x => pick(x).Amount.ToString("0.##", CultureInfo.InvariantCulture))));
+        AllMetrics("Me", x => x.Personal);
+        if (ShowGroupContribution) AllMetrics(GroupContributionLabel, x => x.Party);
+        if (ShowScopeContribution) AllMetrics(SelectedScope.Label, x => x.Overall);
+        text.AppendLine($"\nRanked by {MetricTitle}\nSummary\tTotal\t{RateTitle}\tShare of scope\tObservations");
         void Summary(string label, CombatMeterContribution value) => text.AppendLine($"{label}\t{value.Amount.ToString("0.##", CultureInfo.InvariantCulture)}\t{value.Rate.ToString("0.##", CultureInfo.InvariantCulture)}\t{value.Share.ToString("0.##", CultureInfo.InvariantCulture)}%\t{value.Hits}");
         Summary("Me", snapshot.Personal);
         if (ShowGroupContribution) Summary(GroupContributionLabel, snapshot.Party);

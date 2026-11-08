@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:AlbionDataAvalonia.ViewModels"
+             x:Class="AlbionDataAvalonia.Views.CombatMeterTotalsView" x:DataType="vm:CombatMeterViewModel">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="2" ToolTip.Tip="{Binding ContributionHint}">
+        <Grid ColumnDefinitions="44,*,*,*,*" ColumnSpacing="4">
+            <TextBlock Grid.Column="1" Classes="UiCaption" Text="Dealt" ToolTip.Tip="Damage dealt" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="2" Classes="UiCaption" Text="Taken" ToolTip.Tip="Damage received" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="3" Classes="UiCaption" Text="Heal" ToolTip.Tip="Healing done" HorizontalAlignment="Right" />
+            <TextBlock Grid.Column="4" Classes="UiCaption" Text="H. in" ToolTip.Tip="Healing received" HorizontalAlignment="Right" />
+        </Grid>
+        <Grid Grid.Row="1" ColumnDefinitions="44,*,*,*,*" ColumnSpacing="4">
+            <TextBlock Classes="UiLabel" Text="Me" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Personal.Damage.Tip}">
+                <TextBlock Classes="UiValue UiAccent" Text="{Binding Overview.Personal.Damage.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle UiAccent" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Personal.Damage.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Personal.Damage.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Personal.Taken.Tip}">
+                <TextBlock Classes="UiValue UiAccent" Text="{Binding Overview.Personal.Taken.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle UiAccent" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Personal.Taken.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Personal.Taken.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Personal.Healing.Tip}">
+                <TextBlock Classes="UiValue UiAccent" Text="{Binding Overview.Personal.Healing.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle UiAccent" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Personal.Healing.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Personal.Healing.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="4" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Personal.Healed.Tip}">
+                <TextBlock Classes="UiValue UiAccent" Text="{Binding Overview.Personal.Healed.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle UiAccent" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Personal.Healed.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Personal.Healed.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Row="2" ColumnDefinitions="44,*,*,*,*" ColumnSpacing="4" IsVisible="{Binding ShowGroupContribution}">
+            <TextBlock Classes="UiLabel" Text="Group" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Group.Damage.Tip}">
+                <TextBlock Classes="UiValue" Text="{Binding Overview.Group.Damage.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Group.Damage.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Group.Damage.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Group.Taken.Tip}">
+                <TextBlock Classes="UiValue" Text="{Binding Overview.Group.Taken.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Group.Taken.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Group.Taken.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Group.Healing.Tip}">
+                <TextBlock Classes="UiValue" Text="{Binding Overview.Group.Healing.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Group.Healing.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Group.Healing.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="4" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Group.Healed.Tip}">
+                <TextBlock Classes="UiValue" Text="{Binding Overview.Group.Healed.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Group.Healed.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Group.Healed.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Row="3" ColumnDefinitions="44,*,*,*,*" ColumnSpacing="4" IsVisible="{Binding ShowScopeContribution}">
+            <TextBlock Classes="UiLabel" Text="{Binding OverallLabel}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Overall.Damage.Tip}">
+                <TextBlock Classes="UiValue" Text="{Binding Overview.Overall.Damage.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Overall.Damage.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Overall.Damage.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="2" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Overall.Taken.Tip}">
+                <TextBlock Classes="UiValue" Text="{Binding Overview.Overall.Taken.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Overall.Taken.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Overall.Taken.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="3" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Overall.Healing.Tip}">
+                <TextBlock Classes="UiValue" Text="{Binding Overview.Overall.Healing.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Overall.Healing.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Overall.Healing.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+            <StackPanel Grid.Column="4" HorizontalAlignment="Right" ToolTip.Tip="{Binding Overview.Overall.Healed.Tip}">
+                <TextBlock Classes="UiValue" Text="{Binding Overview.Overall.Healed.FullValue}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiRowTitle" FontSize="{DynamicResource UiFontSizeCompact}" Text="{Binding Overview.Overall.Healed.Value}" IsVisible="{Binding UseWidget}" HorizontalAlignment="Right" />
+                <TextBlock Classes="UiFine" Text="{Binding Overview.Overall.Healed.Detail}" IsVisible="{Binding !UseWidget}" HorizontalAlignment="Right" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

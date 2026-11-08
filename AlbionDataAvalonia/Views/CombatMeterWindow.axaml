@@ -5,129 +5,96 @@
         xmlns:controls="clr-namespace:AlbionDataAvalonia.Views.Controls"
         x:Class="AlbionDataAvalonia.Views.CombatMeterWindow" x:DataType="vm:CombatMeterViewModel"
         Title="AFM Combat statistics" Icon="/Assets/logo.ico" Classes="AppPage"
-        Width="900" Height="660" MinWidth="360" MinHeight="240" WindowStartupLocation="CenterScreen">
-    <!-- This window has a translucent overlay backdrop and a display-only compact ranking; other lists keep their standard selection skin. -->
+        Width="760" Height="560" MinWidth="360" MinHeight="260" WindowStartupLocation="CenterScreen">
+    <!-- The window backdrop and padding adapt to the compact widget; normal pages keep their standard spacing. -->
     <Window.Styles>
-        <Style Selector="Border.MeterContents"><Setter Property="Background" Value="{DynamicResource UiWindowBrush}" /></Style>
+        <Style Selector="Border.MeterContents"><Setter Property="Background" Value="{DynamicResource UiWindowBrush}" /><Setter Property="Padding" Value="12" /></Style>
         <Style Selector="Border.MeterContents.Overlay"><Setter Property="Background" Value="{DynamicResource UiOverlayBrush}" /></Style>
-        <Style Selector="ListBox.MeterRanking"><Setter Property="Background" Value="Transparent" /><Setter Property="BorderThickness" Value="0" /></Style>
-        <Style Selector="ListBox.MeterRanking ListBoxItem"><Setter Property="Padding" Value="0" /><Setter Property="Margin" Value="0,0,0,6" /><Setter Property="HorizontalContentAlignment" Value="Stretch" /><Setter Property="Focusable" Value="False" /></Style>
-        <Style Selector="ListBox.MeterRanking ListBoxItem:selected"><Setter Property="Background" Value="Transparent" /></Style>
+        <Style Selector="Border.MeterContents.Widget"><Setter Property="Padding" Value="6" /></Style>
     </Window.Styles>
-    <Border x:Name="MeterContents" Classes="MeterContents" Classes.Overlay="{Binding IsOverlay}" Padding="12" CornerRadius="{DynamicResource UiRadiusCard}">
-        <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="8">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <StackPanel PointerPressed="Drag_PointerPressed" Background="Transparent">
-                    <TextBlock Classes="UiSectionTitle" Text="{Binding MetricTitle}" />
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Ellipse Classes="UiStatusDot" Classes.Ok="{Binding IsLive}" Classes.Busy="{Binding !IsLive}" />
-                        <TextBlock Classes="UiFine" Text="{Binding Status}" />
+    <Border x:Name="MeterContents" Classes="MeterContents" Classes.Overlay="{Binding IsOverlay}" Classes.Widget="{Binding UseWidget}" CornerRadius="{DynamicResource UiRadiusCard}">
+        <Grid>
+            <Grid IsVisible="{Binding !UseWidget}" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="8">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <StackPanel Background="Transparent">
+                        <TextBlock Classes="UiSectionTitle" Text="Combat statistics" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Ellipse Classes="UiStatusDot" Classes.Ok="{Binding IsLive}" Classes.Busy="{Binding !IsLive}" />
+                            <TextBlock Classes="UiFine" Text="{Binding Status}" />
+                        </StackPanel>
                     </StackPanel>
+                    <WrapPanel Grid.Column="1" VerticalAlignment="Center">
+                        <Button Classes="UiGhost" Content="{Binding PauseText}" Command="{Binding TogglePauseCommand}" Margin="2" />
+                        <Button Classes="UiGhost" Content="Reset" Command="{Binding ResetCommand}" Margin="2" ToolTip.Tip="Clear only this meter and start a new period. Activity history is kept." />
+                        <Button Classes="UiGhost" Content="{Binding OverlayButtonText}" Command="{Binding ToggleOverlayCommand}" Margin="2" />
+                        <ToggleButton Content="Options" IsChecked="{Binding ShowSettings, Mode=TwoWay}" Margin="2" />
+                    </WrapPanel>
+                </Grid>
+                <StackPanel Grid.Row="1" Spacing="8" IsVisible="{Binding ShowControls}">
+                    <WrapPanel>
+                        <controls:FilterField Label="Players" Margin="0,0,8,4"><ComboBox ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope, Mode=TwoWay}" MinWidth="170" /></controls:FilterField>
+                        <controls:FilterField Label="Rank by" Margin="0,0,8,4"><ComboBox ItemsSource="{Binding Metrics}" SelectedItem="{Binding SelectedMetric, Mode=TwoWay}" MinWidth="160" /></controls:FilterField>
+                        <controls:FilterField Label="Period" Margin="0,0,8,4"><ComboBox ItemsSource="{Binding Periods}" SelectedItem="{Binding SelectedPeriod, Mode=TwoWay}" MinWidth="160" /></controls:FilterField>
+                        <controls:FilterField Label="Minutes" IsVisible="{Binding IsCustomMinutes}" Margin="0,0,8,4"><NumericUpDown Value="{Binding CustomMinutes, Mode=TwoWay}" Minimum="1" Maximum="120" FormatString="0" Width="100" /></controls:FilterField>
+                    </WrapPanel>
+                    <TextBlock Classes="UiFine" Text="{Binding FactionStatus}" IsVisible="{Binding IsFactionScope}" TextWrapping="Wrap" />
+                    <WrapPanel IsVisible="{Binding IsCustomRange}">
+                        <controls:FilterField Label="From (local time)" Margin="0,0,8,4"><StackPanel Orientation="Horizontal" Spacing="4"><DatePicker SelectedDate="{Binding FromDate, Mode=TwoWay}" /><TimePicker SelectedTime="{Binding FromTime, Mode=TwoWay}" ClockIdentifier="24HourClock" /></StackPanel></controls:FilterField>
+                        <controls:FilterField Label="To (local time)" Margin="0,0,8,4"><StackPanel Orientation="Horizontal" Spacing="4"><DatePicker SelectedDate="{Binding ToDate, Mode=TwoWay}" /><TimePicker SelectedTime="{Binding ToTime, Mode=TwoWay}" ClockIdentifier="24HourClock" /></StackPanel></controls:FilterField>
+                    </WrapPanel>
+                    <ScrollViewer MaxHeight="160" IsVisible="{Binding ShowSettings}" HorizontalScrollBarVisibility="Disabled">
+                        <StackPanel Spacing="8" Margin="0,0,12,0">
+                            <controls:SettingsGroup Header="Statistics">
+                                <controls:SettingsRow Title="Counterpart filter" Hint="For received statistics, filters the source of damage or healing."><ComboBox ItemsSource="{Binding TargetOptions}" SelectedItem="{Binding SelectedTargets, Mode=TwoWay}" /></controls:SettingsRow>
+                                <controls:SettingsRow Title="Player search" Hint="Filters the ranking; contribution summaries and share denominators stay unchanged."><TextBox Text="{Binding Search, Mode=TwoWay}" Watermark="Player name" Width="180" /></controls:SettingsRow>
+                                <controls:SettingsRow Title="Visible rows" Hint="My contribution and group totals remain visible outside the ranking. Copy includes every matching player."><ComboBox ItemsSource="{Binding Limits}" SelectedItem="{Binding SelectedLimit, Mode=TwoWay}" /></controls:SettingsRow>
+                                <controls:SettingsRow Title="Refresh interval"><ComboBox ItemsSource="{Binding RefreshOptions}" SelectedItem="{Binding SelectedRefresh, Mode=TwoWay}" /></controls:SettingsRow>
+                                <controls:SettingsRow Title="Include self-healing"><ToggleSwitch IsChecked="{Binding IncludeSelfHealing, Mode=TwoWay}" /></controls:SettingsRow>
+                                <controls:SettingsRow Title="Active-time DPS / HPS" Hint="Per player: union of 7-second spans after selected events, clipped to the period. Off: full period including idle time."><ToggleSwitch IsChecked="{Binding ActiveRate, Mode=TwoWay}" /></controls:SettingsRow>
+                            </controls:SettingsGroup>
+                            <controls:SettingsGroup Header="Overlay">
+                                <controls:SettingsRow Title="Always on top"><ToggleSwitch IsChecked="{Binding Pinned, Mode=TwoWay}" /></controls:SettingsRow>
+                                <controls:SettingsRow Title="Opacity"><Slider Value="{Binding OverlayOpacity, Mode=TwoWay}" Minimum="20" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" Width="180" /></controls:SettingsRow>
+                                <controls:SettingsRow Title="Pass clicks to the game (Windows)" Hint="Close Options to lock. Ctrl+Alt+H returns to an interactive window."><ToggleSwitch IsChecked="{Binding ClickThrough, Mode=TwoWay}" IsEnabled="{Binding SupportsClickThrough}" /></controls:SettingsRow>
+                                <TextBlock Classes="UiFine" Text="{Binding ShortcutsHelp}" TextWrapping="Wrap" Margin="8" />
+                                <TextBlock Classes="UiWarning" Text="{Binding OverlayError}" TextWrapping="Wrap" Margin="8" />
+                            </controls:SettingsGroup>
+                            <TextBlock Classes="UiFine" Text="{Binding FactionStatus}" TextWrapping="Wrap" />
+                            <TextBlock Classes="UiFine" Text="{Binding ContributionHint}" TextWrapping="Wrap" />
+                            <TextBlock Classes="UiFine" Text="Observed health changes within the game's visibility range. Unknown sources, missed traffic and overhealing cannot be reconstructed. Membership is captured at event time. Data stays in memory for up to 2 hours / 200,000 observations and clears on character/server change or app exit. Pause skips events; elapsed-time rates include the pause." TextWrapping="Wrap" />
+                            <Button Classes="UiAction" Content="Copy statistics" Command="{Binding CopyCommand}" HorizontalAlignment="Left" />
+                            <TextBlock Classes="UiFine" Text="{Binding CopyStatus}" />
+                        </StackPanel>
+                    </ScrollViewer>
                 </StackPanel>
-                <WrapPanel Grid.Column="1" VerticalAlignment="Center">
-                    <Button Classes="UiGhost" Content="{Binding PauseText}" Command="{Binding TogglePauseCommand}" Margin="2" />
-                    <Button Classes="UiGhost" Content="Reset" Command="{Binding ResetCommand}" Margin="2" ToolTip.Tip="Clear only this meter and start a new period. Activity history is kept." />
-                    <Button Classes="UiGhost" Content="{Binding OverlayButtonText}" Command="{Binding ToggleOverlayCommand}" Margin="2" />
-                    <ToggleButton Content="Options" IsChecked="{Binding ShowSettings, Mode=TwoWay}" Margin="2" />
-                </WrapPanel>
-            </Grid>
-            <StackPanel Grid.Row="1" Spacing="8" IsVisible="{Binding ShowControls}">
-                <WrapPanel>
-                    <controls:FilterField Label="Players" Margin="0,0,8,4"><ComboBox ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope, Mode=TwoWay}" MinWidth="170" /></controls:FilterField>
-                    <controls:FilterField Label="Metric" Margin="0,0,8,4"><ComboBox ItemsSource="{Binding Metrics}" SelectedItem="{Binding SelectedMetric, Mode=TwoWay}" MinWidth="160" /></controls:FilterField>
-                    <controls:FilterField Label="Period" Margin="0,0,8,4"><ComboBox ItemsSource="{Binding Periods}" SelectedItem="{Binding SelectedPeriod, Mode=TwoWay}" MinWidth="160" /></controls:FilterField>
-                    <controls:FilterField Label="Minutes" IsVisible="{Binding IsCustomMinutes}" Margin="0,0,8,4"><NumericUpDown Value="{Binding CustomMinutes, Mode=TwoWay}" Minimum="1" Maximum="120" FormatString="0" Width="100" /></controls:FilterField>
-                </WrapPanel>
-                <TextBlock Classes="UiFine" Text="{Binding FactionStatus}" IsVisible="{Binding IsFactionScope}" TextWrapping="Wrap" />
-                <WrapPanel IsVisible="{Binding IsCustomRange}">
-                    <controls:FilterField Label="From (local time)" Margin="0,0,8,4"><StackPanel Orientation="Horizontal" Spacing="4"><DatePicker SelectedDate="{Binding FromDate, Mode=TwoWay}" /><TimePicker SelectedTime="{Binding FromTime, Mode=TwoWay}" ClockIdentifier="24HourClock" /></StackPanel></controls:FilterField>
-                    <controls:FilterField Label="To (local time)" Margin="0,0,8,4"><StackPanel Orientation="Horizontal" Spacing="4"><DatePicker SelectedDate="{Binding ToDate, Mode=TwoWay}" /><TimePicker SelectedTime="{Binding ToTime, Mode=TwoWay}" ClockIdentifier="24HourClock" /></StackPanel></controls:FilterField>
-                </WrapPanel>
-                <ScrollViewer MaxHeight="160" IsVisible="{Binding ShowSettings}" HorizontalScrollBarVisibility="Disabled">
-                    <StackPanel Spacing="8" Margin="0,0,12,0">
-                        <controls:SettingsGroup Header="Statistics">
-                            <controls:SettingsRow Title="Counterpart filter" Hint="For received statistics, filters the source of damage or healing."><ComboBox ItemsSource="{Binding TargetOptions}" SelectedItem="{Binding SelectedTargets, Mode=TwoWay}" /></controls:SettingsRow>
-                            <controls:SettingsRow Title="Player search" Hint="Filters the ranking; contribution summaries and share denominators stay unchanged."><TextBox Text="{Binding Search, Mode=TwoWay}" Watermark="Player name" Width="180" /></controls:SettingsRow>
-                            <controls:SettingsRow Title="Visible rows" Hint="My contribution and group totals remain visible outside the ranking. Copy includes every matching player."><ComboBox ItemsSource="{Binding Limits}" SelectedItem="{Binding SelectedLimit, Mode=TwoWay}" /></controls:SettingsRow>
-                            <controls:SettingsRow Title="Refresh interval"><ComboBox ItemsSource="{Binding RefreshOptions}" SelectedItem="{Binding SelectedRefresh, Mode=TwoWay}" /></controls:SettingsRow>
-                            <controls:SettingsRow Title="Include self-healing"><ToggleSwitch IsChecked="{Binding IncludeSelfHealing, Mode=TwoWay}" /></controls:SettingsRow>
-                            <controls:SettingsRow Title="Active-time DPS / HPS" Hint="Per player: union of 7-second spans after selected events, clipped to the period. Off: full period including idle time."><ToggleSwitch IsChecked="{Binding ActiveRate, Mode=TwoWay}" /></controls:SettingsRow>
-                        </controls:SettingsGroup>
-                        <controls:SettingsGroup Header="Overlay">
-                            <controls:SettingsRow Title="Always on top"><ToggleSwitch IsChecked="{Binding Pinned, Mode=TwoWay}" /></controls:SettingsRow>
-                            <controls:SettingsRow Title="Opacity"><Slider Value="{Binding OverlayOpacity, Mode=TwoWay}" Minimum="20" Maximum="100" TickFrequency="5" IsSnapToTickEnabled="True" Width="180" /></controls:SettingsRow>
-                            <controls:SettingsRow Title="Pass clicks to the game (Windows)" Hint="Close Options to lock. Ctrl+Alt+H returns to an interactive window."><ToggleSwitch IsChecked="{Binding ClickThrough, Mode=TwoWay}" IsEnabled="{Binding SupportsClickThrough}" /></controls:SettingsRow>
-                            <TextBlock Classes="UiFine" Text="{Binding ShortcutsHelp}" TextWrapping="Wrap" Margin="8" />
-                            <TextBlock Classes="UiWarning" Text="{Binding OverlayError}" TextWrapping="Wrap" Margin="8" />
-                        </controls:SettingsGroup>
-                        <TextBlock Classes="UiFine" Text="{Binding FactionStatus}" TextWrapping="Wrap" />
-                        <TextBlock Classes="UiFine" Text="{Binding ContributionHint}" TextWrapping="Wrap" />
-                        <TextBlock Classes="UiFine" Text="Observed health changes within the game's visibility range. Unknown sources, missed traffic and overhealing cannot be reconstructed. Membership is captured at event time. Data stays in memory for up to 2 hours / 200,000 observations and clears on character/server change or app exit. Pause skips events; elapsed-time rates include the pause." TextWrapping="Wrap" />
-                        <Button Classes="UiAction" Content="Copy statistics" Command="{Binding CopyCommand}" HorizontalAlignment="Left" />
-                        <TextBlock Classes="UiFine" Text="{Binding CopyStatus}" />
-                    </StackPanel>
-                </ScrollViewer>
-            </StackPanel>
-            <StackPanel Grid.Row="2">
-                <StackPanel><TextBlock Classes="UiFine" Text="{Binding PeriodText}" TextWrapping="Wrap" /><TextBlock Classes="UiFine" Text="{Binding ParticipantsText}" /></StackPanel>
-            </StackPanel>
-            <views:ResponsiveUniformGrid Grid.Row="3" MaximumColumns="{Binding ContributionColumns}" MinimumItemWidth="150" Margin="-3"
-                                         ToolTip.Tip="{Binding ContributionHint}">
-                <controls:StatTile Classes="Card Outlined Small Accent" Label="Me" Value="{Binding ContributionHeader.PersonalTotal}"
-                                   Detail="{Binding ContributionHeader.PersonalDetail}" Margin="3" />
-                <controls:StatTile Classes="Card Outlined Small" Label="{Binding GroupContributionLabel}" Value="{Binding ContributionHeader.GroupTotal}"
-                                   Detail="{Binding ContributionHeader.GroupDetail}" IsVisible="{Binding ShowGroupContribution}" Margin="3" />
-                <controls:StatTile Classes="Card Outlined Small" Label="{Binding SelectedScope.Label}" Value="{Binding ContributionHeader.ScopeTotal}"
-                                   Detail="{Binding ContributionHeader.ScopeDetail}" IsVisible="{Binding ShowScopeContribution}" Margin="3" />
-            </views:ResponsiveUniformGrid>
-            <Grid Grid.Row="4">
-                <DataGrid ItemsSource="{Binding Rows}" IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
-                          CanUserReorderColumns="False" GridLinesVisibility="None" IsVisible="{Binding ShowTable}" RowHeight="40" HeadersVisibility="Column">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="#" Binding="{Binding Rank}" Width="38" />
-                        <DataGridTemplateColumn Header="Player / share" Width="*" MinWidth="100">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate x:DataType="vm:CombatMeterDisplayRow">
-                                    <Grid RowDefinitions="*,4" Margin="4,2"><TextBlock Classes="UiRowTitle" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><ProgressBar Grid.Row="1" Value="{Binding ShareValue}" Minimum="0" Maximum="100" Height="3" /></Grid>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="Total" Binding="{Binding Amount}" Width="100" />
-                        <DataGridTextColumn Header="{Binding RateTitle}" Binding="{Binding Rate}" Width="90" />
-                        <DataGridTextColumn Header="Share" Binding="{Binding Share}" Width="90" />
-                        <DataGridTextColumn Header="Events" Binding="{Binding Hits}" Width="90" />
-                    </DataGrid.Columns>
-                </DataGrid>
-                <ListBox Classes="MeterRanking" ItemsSource="{Binding Rows}" IsVisible="{Binding ShowOverlayRanking}" Focusable="False"
-                         ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="Combat contribution ranking">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="vm:CombatMeterDisplayRow">
-                            <Border Classes="UiCard Subtle" Padding="10,8" ToolTip.Tip="{Binding DetailTip}">
-                                <Grid ColumnDefinitions="24,*,Auto" RowDefinitions="Auto,Auto,3" ColumnSpacing="8" RowSpacing="3">
-                                    <TextBlock Grid.RowSpan="2" Classes="UiCaption" Text="{Binding Rank}" VerticalAlignment="Center" />
-                                    <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <TextBlock Classes="UiRowTitle" Classes.UiAccent="{Binding IsPersonal}" Text="{Binding Name}"
-                                                   TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                        <Border Grid.Column="1" Classes="UiBadge Accent" IsVisible="{Binding IsPersonal}"><TextBlock Text="Me" /></Border>
-                                    </Grid>
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Classes="UiFine" Text="{Binding ShareLabel}" />
-                                    <TextBlock Grid.Column="2" Classes="UiValue" Text="{Binding CompactAmount}" HorizontalAlignment="Right" />
-                                    <TextBlock Grid.Row="1" Grid.Column="2" Classes="UiFine" Text="{Binding RateLabel}" HorizontalAlignment="Right" />
-                                    <ProgressBar Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2" Value="{Binding ShareValue}" Minimum="0" Maximum="100" Height="3" />
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-                <controls:EmptyState IsVisible="{Binding !HasRows}" Message="No matching combat observations" Hint="Start capture and enter combat. Check the filters; faction detection may need a reflag." />
-            </Grid>
-            <Grid Grid.Row="5" ColumnDefinitions="*,Auto">
-                <StackPanel Spacing="3">
-                    <TextBlock Classes="UiWarning" Text="{Binding Error}" TextWrapping="Wrap" />
-                    <TextBlock Classes="UiFine" Text="{Binding OverlayKeyHint}" IsVisible="{Binding IsOverlay}" />
+                <StackPanel Grid.Row="2">
+                    <StackPanel><TextBlock Classes="UiFine" Text="{Binding PeriodText}" TextWrapping="Wrap" /><TextBlock Classes="UiFine" Text="{Binding ParticipantsText}" /></StackPanel>
                 </StackPanel>
-                <Border Grid.Column="1" Width="18" Height="18" Background="Transparent" Cursor="SizeWestEast" PointerPressed="Resize_PointerPressed" IsVisible="{Binding IsOverlay}"><TextBlock Classes="UiFine" Text="◢" HorizontalAlignment="Right" VerticalAlignment="Bottom" /></Border>
+                <views:CombatMeterTotalsView Grid.Row="3" ToolTip.Tip="{Binding ContributionHint}" />
+                <Grid Grid.Row="4">
+                    <DataGrid ItemsSource="{Binding Rows}" IsReadOnly="True" AutoGenerateColumns="False" CanUserSortColumns="False"
+                              CanUserReorderColumns="False" GridLinesVisibility="None" IsVisible="{Binding ShowTable}" RowHeight="40" HeadersVisibility="Column">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="#" Binding="{Binding Rank}" Width="38" />
+                            <DataGridTemplateColumn Header="Player / share" Width="*" MinWidth="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate x:DataType="vm:CombatMeterDisplayRow">
+                                        <Grid RowDefinitions="*,4" Margin="4,2"><TextBlock Classes="UiRowTitle" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" /><ProgressBar Grid.Row="1" Value="{Binding ShareValue}" Minimum="0" Maximum="100" Height="3" /></Grid>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Total" Binding="{Binding Amount}" Width="100" />
+                            <DataGridTextColumn Header="{Binding RateTitle}" Binding="{Binding Rate}" Width="90" />
+                            <DataGridTextColumn Header="Share" Binding="{Binding Share}" Width="90" />
+                            <DataGridTextColumn Header="Events" Binding="{Binding Hits}" Width="90" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <controls:EmptyState IsVisible="{Binding !HasRows}" Message="No matching players for this ranking metric" Hint="Other totals remain visible above. Change Rank by or check the filters." />
+                </Grid>
+                <TextBlock Grid.Row="5" Classes="UiWarning" Text="{Binding Error}" TextWrapping="Wrap" />
             </Grid>
+            <views:CombatMeterWidget IsVisible="{Binding UseWidget}" />
         </Grid>
     </Border>
 </Window>
