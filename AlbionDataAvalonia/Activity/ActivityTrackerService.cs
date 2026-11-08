@@ -192,6 +192,7 @@ public sealed partial class ActivityTrackerService : IDisposable
     // Keeps map, character and inventory context; only in-flight correlations are dropped.
     private void PauseCapture(DateTime at)
     {
+        SuspendCombatFaction();
         ResolvePending(at);
         ClearPendingActorMetadata();
         timedOutEncounter = null;
@@ -228,6 +229,7 @@ public sealed partial class ActivityTrackerService : IDisposable
 
     private void Suspend(DateTime at)
     {
+        SuspendCombatFaction();
         ResolvePending(at);
         ClearPendingActorMetadata();
         timedOutEncounter = null;
@@ -289,6 +291,7 @@ public sealed partial class ActivityTrackerService : IDisposable
                     ResolvePendingTerminals(mob.ObjectId.Value, at);
                     break;
                 case LeaveEvent leave:
+                    combatFlags.Remove(leave.userObjectId);
                     LeaveResourceMob(leave.userObjectId);
                     LeaveWisp(leave.userObjectId);
                     LeaveResourceNode(leave.userObjectId);
@@ -370,7 +373,7 @@ public sealed partial class ActivityTrackerService : IDisposable
             if (captureGap && packet is not JoinResponse) ResumeAfterCaptureGap(at);
             if (packet is JoinResponse join && join.ReturnCode == 0
                 && join.userObjectId > 0 && !string.IsNullOrWhiteSpace(join.RawLocationId)) Join(join, at);
-            else if (packet is JoinResponse) { locations.ClearPending(); ClearPendingActorMetadata(); pendingAbbeyObjects.Clear(); }
+            else if (packet is JoinResponse) { locations.ClearPending(); ClearPendingActorMetadata(); pendingAbbeyObjects.Clear(); pendingCombatFlags.Clear(); }
             else if (packet is ChangeClusterResponse transition && HasConfirmedContext)
                 ObserveLocationTransition(transition, at);
             else if (packet is ExitEnterStartRequest entrance && HasConfirmedContext)
@@ -435,6 +438,7 @@ public sealed partial class ActivityTrackerService : IDisposable
         actors.Join(packet, nextServer, mapEpoch);
         var pendingLayoutJoin = actorJoinStartedAt;
         ReplayPendingActorMetadata(packet, at);
+        JoinCombatMeter(packet, at);
         confirmedOwner = actors.HasIdentity ? new ActivityOwner(actors.ServerId!.Value.ToString(CultureInfo.InvariantCulture),
             actors.CharacterId, actors.CharacterName) : null;
         OpenPlaySessionFor(confirmedOwner, at);
@@ -640,6 +644,7 @@ public sealed partial class ActivityTrackerService : IDisposable
         double? resultingHealth, int? spell, long? gameTime, DateTime at, string? origin)
     {
         if (!double.IsFinite(delta) || targetId <= 0) return;
+        ObserveCombatHealth(sourceId, targetId, delta, at);
         // Mob deaths can arrive as health updates without Died. Live memory must
         // remove them even when activity recording is disabled or storage is paused.
         if (IsTerminalHealth(delta, healthState, resultingHealth))

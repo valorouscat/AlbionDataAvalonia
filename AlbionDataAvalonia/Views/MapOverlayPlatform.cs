@@ -16,15 +16,21 @@ internal sealed class MapOverlayPlatform : IDisposable
     private readonly Window window;
     private readonly Action toggleVisibility;
     private readonly Action toggleOverlay;
+    private readonly char visibilityShortcut, modeShortcut;
+    private readonly string subject;
     private nint handle;
     private long originalStyles;
     private bool capturedStyles, registered;
 
-    public MapOverlayPlatform(Window window, Action toggleVisibility, Action toggleOverlay)
+    public MapOverlayPlatform(Window window, Action toggleVisibility, Action toggleOverlay,
+        char visibilityShortcut = 'M', char modeShortcut = 'O', string subject = "map")
     {
         this.window = window;
         this.toggleVisibility = toggleVisibility;
         this.toggleOverlay = toggleOverlay;
+        this.visibilityShortcut = visibilityShortcut;
+        this.modeShortcut = modeShortcut;
+        this.subject = subject;
         if (OperatingSystem.IsWindows()) Win32Properties.AddWndProcHookCallback(window, WindowProc);
     }
 
@@ -46,14 +52,14 @@ internal sealed class MapOverlayPlatform : IDisposable
         // Keep the mode shortcut registered in the normal window too, so it can enter overlay mode.
         if (!registered)
         {
-            var visibility = RegisterHotKey(handle, VisibilityKey, Modifiers, 'M');
-            var normal = RegisterHotKey(handle, ModeKey, Modifiers, 'O');
+            var visibility = RegisterHotKey(handle, VisibilityKey, Modifiers, visibilityShortcut);
+            var normal = RegisterHotKey(handle, ModeKey, Modifiers, modeShortcut);
             registered = visibility && normal;
             if (!registered)
             {
                 if (visibility) UnregisterHotKey(handle, VisibilityKey);
                 if (normal) UnregisterHotKey(handle, ModeKey);
-                error = "Couldn't register Ctrl+Alt+M and Ctrl+Alt+O. Another app may use them. Click-through stays off; the map remains interactive.";
+                error = $"Couldn't register Ctrl+Alt+{visibilityShortcut} and Ctrl+Alt+{modeShortcut}. Another app may use them. Click-through stays off; the {subject} remains interactive.";
             }
         }
 
@@ -64,7 +70,7 @@ internal sealed class MapOverlayPlatform : IDisposable
         if (!WriteStyles(handle, styles) || overlay && !SetLayeredWindowAttributes(handle, 0, (byte)Math.Clamp(opacity * 255 / 100, 51, 255), 2))
         {
             WriteStyles(handle, (ReadStyles(handle) & ~OwnedStyles) | originalStyles);
-            error = "Windows couldn't apply the overlay window style. Click-through stays off; the map remains interactive.";
+            error = $"Windows couldn't apply the overlay window style. Click-through stays off; the {subject} remains interactive.";
             return false;
         }
         SetWindowPos(handle, 0, 0, 0, 0, 0, 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020);

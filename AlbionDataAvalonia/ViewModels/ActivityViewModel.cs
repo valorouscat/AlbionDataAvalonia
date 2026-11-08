@@ -61,7 +61,7 @@ public partial class ActivityViewModel : ViewModelBase, IDisposable
     public ActivityViewModel(ActivityTrackerService tracker, ActivityPersistence persistence, CsvExportService csvExportService,
         ActivityItemValuationService? valuations = null, PartyTrackerService? partyTracker = null,
         ActivityStreamerWindowService? streamerWindow = null, ActivityMapWindowService? mapWindow = null,
-        IDialogService? dialogs = null, IFileDialogService? files = null)
+        IDialogService? dialogs = null, IFileDialogService? files = null, CombatMeterWindowService? combatMeterWindow = null)
         : this(tracker, persistence, valuations, mapWindow, dialogs, new ActivityLootExport(persistence, csvExportService, files))
     {
         tracker.Changed += OnActivityChanged;
@@ -70,6 +70,7 @@ public partial class ActivityViewModel : ViewModelBase, IDisposable
         Current.AttachPartyTracker(partyTracker);
         AttachStreamerWindow(streamerWindow);
         AttachMapWindow(mapWindow);
+        CombatMeterWindow = combatMeterWindow;
         UpdateStatus();
     }
 
@@ -92,6 +93,9 @@ public partial class ActivityViewModel : ViewModelBase, IDisposable
     }
 
     public ActivityFilterState Filters { get; } = new();
+    private CombatMeterWindowService? CombatMeterWindow { get; }
+    public bool CanOpenCombatMeter => CombatMeterWindow is not null;
+    [RelayCommand] private void OpenCombatMeter() => CombatMeterWindow?.Show();
     public ActivityLootExport Export { get; }
     public ActivityCurrentViewModel Current { get; }
     public ActivityHistoryViewModel History { get; }

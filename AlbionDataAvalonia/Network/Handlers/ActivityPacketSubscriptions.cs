@@ -38,6 +38,7 @@ internal static class ActivityPacketSubscriptions
         Event<PartyDisbandedEvent>(builder, EventCodes.PartyDisbanded, activity);
         Event<PartyOnClusterPartyJoinedEvent>(builder, EventCodes.PartyOnClusterPartyJoined, activity);
         Event<PartySetRoleFlagEvent>(builder, EventCodes.PartySetRoleFlag, activity);
+        builder.AddHandler(new CombatFactionHandler(activity));
         Event<NewLootEvent>(builder, EventCodes.NewLoot, activity);
         Event<NewLootChestEvent>(builder, EventCodes.NewLootChest, activity);
         Event<UpdateLootChestEvent>(builder, EventCodes.UpdateLootChest, activity);
@@ -131,6 +132,19 @@ internal static class ActivityPacketSubscriptions
                 or (int)OperationCodes.InventoryStack or (int)OperationCodes.InventoryAddToStacks
                 or (int)OperationCodes.InventoryDestroyItem or (int)OperationCodes.InventoryDropAll)
                 activity.ObserveInventoryRearrangement(packet);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class CombatFactionHandler(ActivityTrackerService activity) : PacketHandler<EventPacket>
+    {
+        public override bool CanHandle(object packet) => packet is EventPacket value
+            && value.EventCode is (int)EventCodes.NewCharacter or (int)EventCodes.ChangeFlaggingFinished;
+
+        protected override Task OnHandleAsync(EventPacket packet)
+        {
+            if (packet.EventCode is (int)EventCodes.NewCharacter or (int)EventCodes.ChangeFlaggingFinished)
+                activity.ObserveCombatFaction(packet);
             return Task.CompletedTask;
         }
     }
