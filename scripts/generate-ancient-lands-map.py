@@ -112,6 +112,47 @@ def ground_cells(tiles):
     return cells
 
 
+def render_underlay(outline, low, high):
+    """Cartographic schematic, not game artwork or a navigability/elevation map.
+
+    Pixels use the declared world bounds: positive X/Z run right/down. The land
+    mask is exactly the exported five-metre cells; decoration never adds ground.
+    """
+    from PIL import Image, ImageChops, ImageDraw, ImageFilter
+    width, height = round(high[0]-low[0]), round(high[1]-low[1])
+    mask = Image.new('L', (width, height))
+    draw = ImageDraw.Draw(mask)
+    for a, b, c, d in outline:
+        draw.rectangle((round(a-low[0]), round(b-low[1]), round(c-low[0])-1, round(d-low[1])-1), fill=255)
+    image = Image.new('RGB', mask.size, '#142331')
+    # A diffuse rim and a small drop shadow separate known ground from the void.
+    halo = mask.filter(ImageFilter.GaussianBlur(9))
+    image.paste('#29414a', mask=halo)
+    shadow = Image.new('L', mask.size)
+    shadow.paste(mask, (0, 5))
+    image.paste('#0b151f', mask=shadow.filter(ImageFilter.GaussianBlur(3)))
+    image.paste('#53685f', mask=mask)
+    edge = ImageChops.subtract(mask, mask.filter(ImageFilter.MinFilter(3)))
+    image.paste('#9eafa0', mask=edge)
+    # Regular coordinate grid only: no invented contours, section shapes or paths.
+    grid = Image.new('RGB', mask.size, '#30414a')
+    grid_draw = ImageDraw.Draw(grid)
+    for x in range(math.ceil(low[0]/50)*50, math.ceil(high[0]/50)*50, 50):
+        grid_draw.line((x-low[0], 0, x-low[0], height), fill='#7b8c83')
+    for z in range(math.ceil(low[1]/50)*50, math.ceil(high[1]/50)*50, 50):
+        grid_draw.line((0, z-low[1], width, z-low[1]), fill='#7b8c83')
+    # Overlay only the grid lines, retaining the terrain colors between them.
+    grid_mask = Image.new('L', mask.size)
+    grid_draw = ImageDraw.Draw(grid_mask)
+    for x in range(math.ceil(low[0]/50)*50, math.ceil(high[0]/50)*50, 50):
+        grid_draw.line((x-low[0], 0, x-low[0], height), fill=36)
+    for z in range(math.ceil(low[1]/50)*50, math.ceil(high[1]/50)*50, 50):
+        grid_draw.line((0, z-low[1], width, z-low[1]), fill=36)
+    image.paste(grid, mask=grid_mask)
+    target = ROOT/'AlbionDataAvalonia/Assets/Maps/ancient-lands-schematic.webp'
+    image.save(target, lossless=True, method=6, exact=True)
+
+
 def main(source):
     source = Path(source)
     config = ET.parse(source/'dragonarea.xml').getroot()
@@ -203,6 +244,7 @@ def main(source):
     lines += ['    };','}','']
     target=ROOT/'AlbionDataAvalonia/Maps/AncientLandsMapData.g.cs'
     target.write_text('\n'.join(lines),encoding='utf-8')
+    render_underlay(outline, low, high)
     print('Source',revision,'outline',len(outline),'rectangles; candidates by mode', {k:len(v) for k,v in all_points.items()})
     print('Generic POI kinds',dict(Counter(x[0] for x in all_points['all'])))
 

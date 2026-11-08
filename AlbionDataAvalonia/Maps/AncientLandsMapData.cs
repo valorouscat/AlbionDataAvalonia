@@ -8,6 +8,7 @@ namespace AlbionDataAvalonia.Maps;
 internal static partial class AncientLandsMapData
 {
     public const string Master = "DRAGON_001";
+    public const string ImageFile = "avares://AlbionDataAvalonia/Assets/Maps/ancient-lands-schematic.webp";
     private sealed record Variant(string Layer, int Tier, string Pvp);
 
     public static string? Layout(string rawMapId, string? layout)
@@ -25,8 +26,8 @@ internal static partial class AncientLandsMapData
         var id = Layout(rawMapId, layout);
         if (id is null) return null;
         Variants.TryGetValue(id, out var variant);
-        return new(id, "Ancient Lands", "", "dragonarea", variant?.Pvp ?? "", variant?.Tier,
-            BoundsMin, BoundsMax, [], Outline: Ground);
+        return new(id, "Ancient Lands", ImageFile, "dragonarea", variant?.Pvp ?? "", variant?.Tier,
+            BoundsMin, BoundsMax, [], Outline: Ground, ImageUsesWorldCoordinates: true);
     }
 
     public static IReadOnlyList<MapPoi> Pois(string layout)
