@@ -14,7 +14,8 @@ public sealed class CombatMeterWindowService
         var user = settings.UserSettings;
         host = new(() => new CombatMeterViewModel(tracker, user, clipboard), model => model.Start(),
             new WindowMemory(() => user.CombatMeterWindowOpen, open => user.CombatMeterWindowOpen = open,
-                () => user.CombatMeterWindowPlacement, placement => user.CombatMeterWindowPlacement = placement), restoreSize: true);
+                () => user.CombatMeterOptions.Overlay ? user.CombatMeterOverlayWindowPlacement : user.CombatMeterWindowPlacement,
+                placement => { if (user.CombatMeterOptions.Overlay) user.CombatMeterOverlayWindowPlacement = placement; else user.CombatMeterWindowPlacement = placement; }), restoreSize: true);
     }
 
     public void RestoreIfOpen() => host.RestoreIfOpen();

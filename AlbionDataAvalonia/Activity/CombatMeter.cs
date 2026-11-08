@@ -24,6 +24,19 @@ public sealed record CombatMeterSnapshot(DateTime Start, DateTime End, IReadOnly
     public CombatMeterContribution Overall { get; init; } = CombatMeterContribution.Empty;
 }
 
+public sealed record CombatMeterMetricsSnapshot(CombatMeterSnapshot Damage, CombatMeterSnapshot DamageReceived,
+    CombatMeterSnapshot Healing, CombatMeterSnapshot HealingReceived)
+{
+    public CombatMeterSnapshot For(CombatMeterMetric metric) => metric switch
+    {
+        CombatMeterMetric.Damage => Damage,
+        CombatMeterMetric.DamageReceived => DamageReceived,
+        CombatMeterMetric.Healing => Healing,
+        CombatMeterMetric.HealingReceived => HealingReceived,
+        _ => throw new ArgumentOutOfRangeException(nameof(metric))
+    };
+}
+
 /// <summary>Bounded, process-local health observations, independent of the Activity database.
 /// Membership is frozen when the event arrives. No later roster change rewrites history.</summary>
 public sealed class CombatMeter
@@ -140,11 +153,28 @@ public sealed class CombatMeter
                 value.Amount / (activeRate ? Math.Max(1, value.ActiveSeconds) : elapsed),
                 total > 0 ? value.Amount / total * 100 : 0, value.Hits);
             var rows = totals.Where(x => x.Value.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase))
-                .Select(x => new CombatMeterRow(x.Key, x.Value.Name, x.Value.Amount,
-                    Contribution(x.Value).Rate, Contribution(x.Value).Share, x.Value.Hits, x.Value.IsPersonal)).OrderByDescending(x => x.Amount)
+                .Select(x =>
+                {
+                    var value = Contribution(x.Value);
+                    return new CombatMeterRow(x.Key, x.Value.Name, x.Value.Amount,
+                        value.Rate, value.Share, x.Value.Hits, x.Value.IsPersonal);
+                }).OrderByDescending(x => x.Amount)
                 .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToArray();
             return new(start, end, rows, total, overall.Hits, truncated)
             { Personal = Contribution(personal), Party = Contribution(party), Overall = Contribution(overall) };
+        }
+    }
+
+    public CombatMeterMetricsSnapshot SnapshotAll(DateTime now, TimeSpan? window, DateTime? from, DateTime? to,
+        CombatMeterScope scope, CombatMeterTargets targets, bool includeSelfHealing, bool activeRate, string search)
+    {
+        // Hold the same gate across all four projections so capture, pause or reset cannot split the overview.
+        lock (sync)
+        {
+            CombatMeterSnapshot Read(CombatMeterMetric metric) => Snapshot(now, window, from, to,
+                scope, metric, targets, includeSelfHealing, activeRate, search);
+            return new(Read(CombatMeterMetric.Damage), Read(CombatMeterMetric.DamageReceived),
+                Read(CombatMeterMetric.Healing), Read(CombatMeterMetric.HealingReceived));
         }
     }
 
