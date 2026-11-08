@@ -36,6 +36,7 @@ A free, open-source companion app for Albion Online on Windows, Linux and macOS.
 - [Installation](#installation)
 - [First start](#first-start)
 - [Activity](#activity)
+- [Combat statistics](#combat-statistics)
 - [Trades](#trades)
 - [Awakened items](#awakened-items)
 - [Settings](#settings)
@@ -320,6 +321,18 @@ The client makes a backup every 24 hours and keeps the three newest, plus ones a
 - [Download statistics](https://tooomm.github.io/github-release-stats/?username=jpcodecraft&repository=AlbionDataAvalonia)
 
 Made by [JP CodeCraft](https://jpcodecraft.com/), the developer behind Albion Free Market. Free and open source; see the [license](LICENSE).
+
+## Combat statistics
+
+Open **Activity › Combat statistics** for a separate damage and healing meter. Choose **Me**, **Group (including me)**, **My city faction**, or **All observed players**. The faction view includes nearby players outside your group whose observed city flag matches yours. If your own faction is unknown, take down and raise your faction flag once while capture is running. Unknown affiliations stay excluded; guilds, alliances and red PvP flags are not treated as city factions.
+
+Switch between damage dealt, healing done, damage received and healing received. Each player has a total, DPS/HPS, share and observation count. Choose a rolling period, custom minutes, a local date/time range, or **Since reset**. **Reset** clears only this meter and starts a fresh period; Activity history is kept. **Pause** skips incoming observations until resumed. Options include target/source type, player search, self-healing, active-time rates, row count, refresh speed and copying all filtered players.
+
+Enable **Overlay** for a borderless window. Drag its heading to move it and use the bottom-right grip to resize. Options control opacity and always-on-top. On Windows, **Ctrl+Alt+D** hides/shows it and **Ctrl+Alt+H** switches between window and overlay even while the game has focus. Click-through activates only when both shortcuts register and Options is closed. On Linux/macOS, shortcuts require focus and click-through is unavailable. **Activity › Combat statistics** also restores a hidden window. Use borderless/windowed game mode for desktop overlays; exclusive fullscreen may cover them.
+
+The meter uses only health events received by your client, including when Activity recording is off. It cannot measure players outside visibility, recover missed events, or separate overhealing from the observed health-change values. Membership is captured at event time. Data stays in memory for up to two hours or 200,000 observations, whichever limit is reached first, and clears on character/server change or app exit. The window remembers its settings, size and position.
+
+![Combat statistics with synthetic observations](docs/screenshots/combat-statistics.png)
 
 ### Crafting calculator
 

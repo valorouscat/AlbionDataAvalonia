@@ -323,6 +323,7 @@ public partial class App : Application
             vm.CompleteInitialization();
             services.GetRequiredService<ActivityStreamerWindowService>().RestoreIfOpen();
             services.GetRequiredService<ActivityMapWindowService>().RestoreIfOpen();
+            services.GetRequiredService<CombatMeterWindowService>().RestoreIfOpen();
             Log.Information("Startup initialization completed in {ElapsedMilliseconds} ms", startupStopwatch.ElapsedMilliseconds);
             _ = ReleaseStartupMemoryAsync();
         }
@@ -634,6 +635,7 @@ public static class ServiceCollectionExtensions
         collection.AddSingleton<ActivityStreamerWindowService>();
         collection.AddSingleton<MapDataService>();
         collection.AddSingleton<ActivityMapWindowService>();
+        collection.AddSingleton<CombatMeterWindowService>();
         collection.AddSingleton<LegendaryDefinitionsService>();
         collection.AddSingleton<LegendaryItemTrackerService>();
         collection.AddSingleton<LegendarySaleService>();

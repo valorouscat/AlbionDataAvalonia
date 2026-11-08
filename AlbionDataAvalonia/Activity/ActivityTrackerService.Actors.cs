@@ -74,6 +74,7 @@ public sealed partial class ActivityTrackerService
 
     private void BeginActorJoin(DateTime at)
     {
+        pendingCombatFlags.Clear();
         ClearPendingActorMetadata();
         pendingAbbeyObjects.Clear();
         actorJoinStartedAt = at;
