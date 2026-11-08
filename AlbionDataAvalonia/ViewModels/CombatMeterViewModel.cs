@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace AlbionDataAvalonia.ViewModels;
 
-public sealed record CombatMeterDisplayRow(int Rank, CombatMeterRow Value)
+public sealed record CombatMeterDisplayRow(int Rank, CombatMeterRow Value, string RateUnit = "")
 {
     public string Name => Value.Name;
     public string Amount => UiFormat.Whole(Value.Amount);
@@ -23,6 +23,17 @@ public sealed record CombatMeterDisplayRow(int Rank, CombatMeterRow Value)
     public string Share => $"{Value.Share:N1}%";
     public double ShareValue => Value.Share;
     public string Hits => UiFormat.Whole(Value.Hits);
+    public bool IsPersonal => Value.IsPersonal;
+    public string CompactAmount => UiFormat.Compact(Value.Amount);
+    public string RateLabel => $"{Rate} {RateUnit}";
+    public string ShareLabel => $"{Share} of total";
+    public string DetailTip => $"{Amount} total · {Hits} events";
+}
+
+public sealed record CombatMeterContributionHeader(string PersonalTotal, string PersonalDetail,
+    string GroupTotal, string GroupDetail, string ScopeTotal, string ScopeDetail)
+{
+    public static CombatMeterContributionHeader Empty { get; } = new("—", "", "—", "", "—", "");
 }
 
 public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
@@ -72,8 +83,10 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool showSettings;
     [ObservableProperty] private string search = "";
     [ObservableProperty] private string status = "Waiting for character";
+    [ObservableProperty] private bool isLive;
     [ObservableProperty] private string factionStatus = "";
     [ObservableProperty] private string total = "0";
+    [ObservableProperty] private CombatMeterContributionHeader contributionHeader = CombatMeterContributionHeader.Empty;
     [ObservableProperty] private string periodText = "";
     [ObservableProperty] private string participantsText = "";
     [ObservableProperty] private string error = "";
@@ -90,10 +103,23 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
     public bool IsCustomMinutes => SelectedPeriod.Value == -1;
     public bool IsCustomRange => SelectedPeriod.Value == -2;
     public bool IsFactionScope => SelectedScope.Value == CombatMeterScope.Faction;
+    public bool ShowGroupContribution => SelectedScope.Value != CombatMeterScope.Personal;
+    public bool ShowScopeContribution => SelectedScope.Value is CombatMeterScope.Faction or CombatMeterScope.AllObserved;
+    public int ContributionColumns => SelectedScope.Value == CombatMeterScope.Personal ? 1 : SelectedScope.Value == CombatMeterScope.Party ? 2 : 3;
+    public string GroupContributionLabel => IsFactionScope ? "My group in faction (including me)" : "My group (including me)";
+    public string ContributionHint => IsFactionScope
+        ? "Me and My group show contributions within this city faction only. Group members without a matching observed city flag are excluded. These totals overlap and must not be added. Search and Top N filter only the player ranking."
+        : "My group includes me. These totals overlap and must not be added. All contributions use the same period and combat filters; search and Top N filter only the player ranking.";
     public bool HasRows => Rows.Count > 0;
+    public bool ShowTable => HasRows && !IsOverlay;
+    public bool ShowOverlayRanking => HasRows && IsOverlay;
     public bool ShowControls => !IsOverlay || ShowSettings;
     public bool SupportsClickThrough => OperatingSystem.IsWindows();
     public string PauseText => tracker.CombatMeter.IsPaused ? "Resume" : "Pause";
+    public string OverlayButtonText => IsOverlay ? "Window" : "Overlay";
+    public string OverlayKeyHint => OperatingSystem.IsWindows()
+        ? "Ctrl+Alt+D hide / show · Ctrl+Alt+H window"
+        : "Ctrl+Alt+H window (while focused)";
     public string MetricTitle => SelectedMetric.Label;
     public string RateTitle => SelectedMetric.Value is CombatMeterMetric.Damage or CombatMeterMetric.DamageReceived ? "DPS" : "HPS";
     public string ShortcutsHelp => OperatingSystem.IsWindows()
@@ -132,9 +158,17 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
             OnPropertyChanged(nameof(IsCustomMinutes)); OnPropertyChanged(nameof(IsCustomRange));
         }
         if (e.PropertyName is nameof(IsOverlay) or nameof(ShowSettings)) OnPropertyChanged(nameof(ShowControls));
+        if (e.PropertyName is nameof(IsOverlay) or nameof(HasRows))
+        { OnPropertyChanged(nameof(ShowTable)); OnPropertyChanged(nameof(ShowOverlayRanking)); }
+        if (e.PropertyName == nameof(IsOverlay)) OnPropertyChanged(nameof(OverlayButtonText));
         if (e.PropertyName == nameof(IsOverlay)) { IsHidden = false; ShowSettings = false; }
         if (e.PropertyName == nameof(SelectedMetric)) { OnPropertyChanged(nameof(MetricTitle)); OnPropertyChanged(nameof(RateTitle)); }
-        if (e.PropertyName == nameof(SelectedScope)) OnPropertyChanged(nameof(IsFactionScope));
+        if (e.PropertyName == nameof(SelectedScope))
+        {
+            OnPropertyChanged(nameof(IsFactionScope)); OnPropertyChanged(nameof(ShowGroupContribution));
+            OnPropertyChanged(nameof(ShowScopeContribution)); OnPropertyChanged(nameof(GroupContributionLabel));
+            OnPropertyChanged(nameof(ContributionHint)); OnPropertyChanged(nameof(ContributionColumns));
+        }
         if (e.PropertyName == nameof(Search)) { searchDebouncer.Trigger(); return; }
         if (e.PropertyName is { } name && persisted.Contains(name))
         {
@@ -179,13 +213,26 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
         var seconds = IsCustomMinutes ? Math.Clamp(CustomMinutes, 1, 120) * 60 : SelectedPeriod.Value;
         snapshot = tracker.CombatMeter.Snapshot(DateTime.UtcNow, seconds > 0 ? TimeSpan.FromSeconds(seconds) : null,
             from, to, SelectedScope.Value, SelectedMetric.Value, SelectedTargets.Value, IncludeSelfHealing, ActiveRate, Search);
-        Rows.ReplaceAll(snapshot.Rows.Take(SelectedLimit.Value).Select((x, i) => new CombatMeterDisplayRow(i + 1, x)));
+        Rows.ReplaceAll(snapshot.Rows.Take(SelectedLimit.Value).Select((x, i) => new CombatMeterDisplayRow(i + 1, x, RateTitle)));
         OnPropertyChanged(nameof(HasRows));
         Total = UiFormat.Whole(snapshot.Total);
+        var basis = SelectedScope.Value switch
+        { CombatMeterScope.Party => "group", CombatMeterScope.Faction => "faction", _ => "all observed" };
+        var personalDetail = $"{UiFormat.Whole(snapshot.Personal.Rate)} {RateTitle}";
+        if (ShowGroupContribution) personalDetail += $" · {snapshot.Personal.Share:N1}% of {basis}";
+        if (ShowScopeContribution)
+            personalDetail += snapshot.Party.Amount > 0
+                ? $"\n{snapshot.Personal.Amount / snapshot.Party.Amount * 100:N1}% of my group"
+                : "\nNo group contribution in this scope";
+        var groupDetail = $"{UiFormat.Whole(snapshot.Party.Rate)} {RateTitle}";
+        if (ShowScopeContribution) groupDetail += $" · {snapshot.Party.Share:N1}% of {basis}";
+        ContributionHeader = new(UiFormat.Whole(snapshot.Personal.Amount), personalDetail,
+            UiFormat.Whole(snapshot.Party.Amount), groupDetail, Total, $"{UiFormat.Whole(snapshot.Overall.Rate)} {RateTitle}");
         PeriodText = $"{UiFormat.LocalTime(snapshot.Start)} – {UiFormat.LocalTime(snapshot.End)} · {UiFormat.Duration(snapshot.End - snapshot.Start)}";
-        ParticipantsText = $"{UiFormat.Count(snapshot.Rows.Count, "player")} · {UiFormat.Count(snapshot.Observations, "observation")}";
+        ParticipantsText = $"{UiFormat.Count(snapshot.Rows.Count, "matching player")} · {UiFormat.Count(snapshot.Observations, "observation")} in scope";
+        IsLive = !tracker.CombatMeter.IsPaused && tracker.CombatCaptureReady;
         var captureStatus = tracker.CombatMeter.IsPaused ? "Paused — incoming events are skipped"
-            : tracker.CombatCaptureReady ? "Live" : "Waiting for confirmed game traffic";
+            : IsLive ? "Live" : "Waiting for confirmed game traffic";
         Status = $"{SelectedScope.Label} · {captureStatus}";
         var flag = tracker.CombatFactionFlag;
         var faction = flag switch { 1 => "Martlock", 2 => "Lymhurst", 3 => "Bridgewatch", 4 => "Fort Sterling", 5 => "Thetford", 6 => "Caerleon", _ => "" };
@@ -195,7 +242,7 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
         if (snapshot.Truncated) Error = "Oldest observations were removed by the 2-hour / 200,000-event memory limit. The period shows retained data.";
     }
 
-    private void ClearRows() { snapshot = null; Rows.ReplaceAll([]); Total = "—"; PeriodText = ""; ParticipantsText = ""; OnPropertyChanged(nameof(HasRows)); }
+    private void ClearRows() { snapshot = null; Rows.ReplaceAll([]); Total = "—"; ContributionHeader = CombatMeterContributionHeader.Empty; PeriodText = ""; ParticipantsText = ""; OnPropertyChanged(nameof(HasRows)); }
     [RelayCommand] private void Reset() { tracker.CombatMeter.Reset(DateTime.UtcNow); SelectedPeriod = Periods[0]; CopyStatus = ""; Refresh(); }
     [RelayCommand] private void TogglePause() { tracker.CombatMeter.SetPaused(!tracker.CombatMeter.IsPaused, DateTime.UtcNow); OnPropertyChanged(nameof(PauseText)); Refresh(); }
     [RelayCommand] private void ToggleOverlay() => IsOverlay = !IsOverlay;
@@ -206,9 +253,14 @@ public sealed partial class CombatMeterViewModel : ViewModelBase, IDisposable
     private async Task Copy()
     {
         if (snapshot is null) return;
-        var text = new StringBuilder($"{MetricTitle} | {SelectedScope.Label} | {PeriodText}\nPlayer\tTotal\t{RateTitle}\tShare\tObservations\n");
+        var text = new StringBuilder($"{MetricTitle} | {SelectedScope.Label} | {PeriodText}\nOverlapping contributions (do not add)\nSummary\tTotal\t{RateTitle}\tShare of scope\tObservations\n");
+        void Summary(string label, CombatMeterContribution value) => text.AppendLine($"{label}\t{value.Amount.ToString("0.##", CultureInfo.InvariantCulture)}\t{value.Rate.ToString("0.##", CultureInfo.InvariantCulture)}\t{value.Share.ToString("0.##", CultureInfo.InvariantCulture)}%\t{value.Hits}");
+        Summary("Me", snapshot.Personal);
+        if (ShowGroupContribution) Summary(GroupContributionLabel, snapshot.Party);
+        if (ShowScopeContribution) Summary(SelectedScope.Label, snapshot.Overall);
+        text.AppendLine("\nMatching players\nPlayer\tTotal\t" + RateTitle + "\tShare of scope\tObservations");
         foreach (var r in snapshot.Rows) text.AppendLine($"{r.Name}\t{r.Amount.ToString("0.##", CultureInfo.InvariantCulture)}\t{r.Rate.ToString("0.##", CultureInfo.InvariantCulture)}\t{r.Share.ToString("0.##", CultureInfo.InvariantCulture)}%\t{r.Hits}");
-        CopyStatus = await clipboard.SetTextAsync(text.ToString()) ? "Copied all filtered players" : "Could not copy";
+        CopyStatus = await clipboard.SetTextAsync(text.ToString()) ? "Copied contributions and matching players" : "Could not copy";
     }
     public void Dispose() { disposed = true; timer.Stop(); timer.Tick -= Tick; searchDebouncer.Dispose(); }
 }

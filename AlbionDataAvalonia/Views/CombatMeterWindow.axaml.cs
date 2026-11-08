@@ -50,8 +50,8 @@ public partial class CombatMeterWindow : Window
         ShowInTaskbar = !vm.IsOverlay;
         ShowActivated = !vm.IsOverlay;
         Topmost = vm.IsOverlay && vm.Pinned;
-        MinWidth = vm.IsOverlay ? 360 : 640;
-        MinHeight = vm.IsOverlay ? 240 : 460;
+        MinWidth = vm.IsOverlay ? 540 : 640;
+        MinHeight = vm.IsOverlay ? 400 : 560;
         TransparencyLevelHint = vm.IsOverlay ? [WindowTransparencyLevel.Transparent] : [WindowTransparencyLevel.None];
         Background = vm.IsOverlay ? null : UiPalette.Brush("UiWindowBrush");
         var native = false;

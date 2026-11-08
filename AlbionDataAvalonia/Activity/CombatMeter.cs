@@ -11,9 +11,18 @@ public enum CombatMeterTargets { All, Players, Mobs }
 
 public sealed record CombatMeterActor(string Id, string Name, ActivityActorKind Kind,
     ActorRelationship Relationship, bool SameFaction);
-public sealed record CombatMeterRow(string Id, string Name, double Amount, double Rate, double Share, int Hits);
+public sealed record CombatMeterRow(string Id, string Name, double Amount, double Rate, double Share, int Hits, bool IsPersonal = false);
+public sealed record CombatMeterContribution(double Amount, double Rate, double Share, int Hits)
+{
+    public static CombatMeterContribution Empty { get; } = new(0, 0, 0, 0);
+}
 public sealed record CombatMeterSnapshot(DateTime Start, DateTime End, IReadOnlyList<CombatMeterRow> Rows,
-    double Total, long Observations, bool Truncated);
+    double Total, long Observations, bool Truncated)
+{
+    public CombatMeterContribution Personal { get; init; } = CombatMeterContribution.Empty;
+    public CombatMeterContribution Party { get; init; } = CombatMeterContribution.Empty;
+    public CombatMeterContribution Overall { get; init; } = CombatMeterContribution.Empty;
+}
 
 /// <summary>Bounded, process-local health observations, independent of the Activity database.
 /// Membership is frozen when the event arrives. No later roster change rewrites history.</summary>
@@ -102,7 +111,9 @@ public sealed class CombatMeter
             if (truncated) start = retainedFrom;
             if (start > end) start = end;
             var totals = new Dictionary<string, Aggregate>();
-            long count = 0;
+            var personal = new Aggregate("Me");
+            var party = new Aggregate("My group");
+            var overall = new Aggregate("Scope");
             for (var i = first; i < events.Count; i++)
             {
                 var e = events[i];
@@ -116,23 +127,36 @@ public sealed class CombatMeter
                 if (actor.Kind != ActivityActorKind.Player || !InScope(actor, scope)) continue;
                 if (targets == CombatMeterTargets.Players && other.Kind != ActivityActorKind.Player
                     || targets == CombatMeterTargets.Mobs && other.Kind != ActivityActorKind.Mob) continue;
-                if (!actor.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase)) continue;
                 if (!totals.TryGetValue(actor.Id, out var a)) totals.Add(actor.Id, a = new(actor.Name));
-                a.Amount += Math.Abs(e.Delta); a.Hits++; count++;
-                // A player's activity spans include seven seconds after each selected observation.
-                var until = e.At.AddSeconds(7) < end ? e.At.AddSeconds(7) : end;
-                var begins = e.At > a.ActiveUntil ? e.At : a.ActiveUntil;
-                a.ActiveSeconds += Math.Max(0, (until - begins).TotalSeconds);
-                if (until > a.ActiveUntil) a.ActiveUntil = until;
+                Accumulate(a, e, end);
+                a.IsPersonal |= actor.Relationship == ActorRelationship.Self;
+                Accumulate(overall, e, end);
+                if (actor.Relationship == ActorRelationship.Self) Accumulate(personal, e, end);
+                if (actor.Relationship is ActorRelationship.Self or ActorRelationship.Party) Accumulate(party, e, end);
             }
-            var total = totals.Values.Sum(x => x.Amount);
+            var total = overall.Amount;
             var elapsed = Math.Max(1, (end - start).TotalSeconds);
-            var rows = totals.Select(x => new CombatMeterRow(x.Key, x.Value.Name, x.Value.Amount,
-                x.Value.Amount / (activeRate ? Math.Max(1, x.Value.ActiveSeconds) : elapsed),
-                total > 0 ? x.Value.Amount / total * 100 : 0, x.Value.Hits)).OrderByDescending(x => x.Amount)
+            CombatMeterContribution Contribution(Aggregate value) => new(value.Amount,
+                value.Amount / (activeRate ? Math.Max(1, value.ActiveSeconds) : elapsed),
+                total > 0 ? value.Amount / total * 100 : 0, value.Hits);
+            var rows = totals.Where(x => x.Value.Name.Contains(search.Trim(), StringComparison.OrdinalIgnoreCase))
+                .Select(x => new CombatMeterRow(x.Key, x.Value.Name, x.Value.Amount,
+                    Contribution(x.Value).Rate, Contribution(x.Value).Share, x.Value.Hits, x.Value.IsPersonal)).OrderByDescending(x => x.Amount)
                 .ThenBy(x => x.Name, StringComparer.OrdinalIgnoreCase).ToArray();
-            return new(start, end, rows, total, count, truncated);
+            return new(start, end, rows, total, overall.Hits, truncated)
+            { Personal = Contribution(personal), Party = Contribution(party), Overall = Contribution(overall) };
         }
+    }
+
+    private static void Accumulate(Aggregate value, Observation observation, DateTime end)
+    {
+        value.Amount += Math.Abs(observation.Delta);
+        value.Hits++;
+        // Union of selected event spans, for a player or the entire overlapping summary.
+        var until = observation.At.AddSeconds(7) < end ? observation.At.AddSeconds(7) : end;
+        var begins = observation.At > value.ActiveUntil ? observation.At : value.ActiveUntil;
+        value.ActiveSeconds += Math.Max(0, (until - begins).TotalSeconds);
+        if (until > value.ActiveUntil) value.ActiveUntil = until;
     }
 
     private static bool InScope(CombatMeterActor actor, CombatMeterScope scope) => scope switch
@@ -153,6 +177,7 @@ public sealed class CombatMeter
         public string Name { get; } = name;
         public double Amount, ActiveSeconds;
         public int Hits;
+        public bool IsPersonal;
         public DateTime ActiveUntil;
     }
 }
