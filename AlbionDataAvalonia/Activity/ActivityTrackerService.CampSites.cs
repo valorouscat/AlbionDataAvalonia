@@ -51,7 +51,7 @@ public sealed partial class ActivityTrackerService
             roamingBosses[id] = chest with { IsDepleted = true, IsInView = false, SeenAtUtc = at };
             liveMapVersion++;
         }
-        else if (map?.Kind == ActivityMapKind.MistsDungeon) ForgetLiveActor(id);
+        else if (map?.Kind is ActivityMapKind.MistsDungeon or ActivityMapKind.DragonArea) ForgetLiveActor(id);
     }
 
     public void ObserveSiteDestroyed(DebugEventProbeEvent packet)

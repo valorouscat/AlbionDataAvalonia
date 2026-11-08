@@ -76,6 +76,8 @@ public sealed class MapDataService : IDisposable
     {
         if (string.IsNullOrWhiteSpace(rawMapId)) return null;
         cancellationToken.ThrowIfCancellationRequested();
+        if (AncientLandsMapData.Zone(rawMapId, layout) is { } ancient) return ancient;
+        if (AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.DragonArea) return null;
         if (MistsMapData.AbbeyZone(rawMapId, layout) is { } abbey) return abbey;
         if (AlbionLocations.ResolveActivityLocation(rawMapId).Kind == ActivityMapKind.AbyssalDepths
             && DepthsMapData.Master(rawMapId, layout) is { } depthsMaster && DepthsMapData.Zone(depthsMaster) is { } depths)
@@ -124,8 +126,8 @@ public sealed class MapDataService : IDisposable
             }
 
             var name = Path.GetFileNameWithoutExtension(zone.ImageFile);
-            var image = zone.ImageFile == MistsMapData.AbbeyImageFile
-                ? LoadAbbeyImage()
+            var image = IsBundledImage(zone.ImageFile)
+                ? LoadBundledImage(zone.ImageFile)
                 : LoadBitmapAsync($"{MapsBase}/images/{Uri.EscapeDataString(name)}.webp", Path.Combine("images", SafeFileName(name) + ".webp"));
             images.AddFirst((zone.ImageFile, image));
             // Decoded open-world minimaps are large, so only the last few stay in memory.
@@ -134,16 +136,18 @@ public sealed class MapDataService : IDisposable
         }
     }
 
-    private static Task<Bitmap?> LoadAbbeyImage()
+    private static bool IsBundledImage(string file) => file is MistsMapData.AbbeyImageFile or AncientLandsMapData.ImageFile;
+
+    private static Task<Bitmap?> LoadBundledImage(string file)
     {
         try
         {
-            using var stream = AssetLoader.Open(new Uri(MistsMapData.AbbeyImageFile));
+            using var stream = AssetLoader.Open(new Uri(file));
             return Task.FromResult<Bitmap?>(new Bitmap(stream));
         }
         catch (Exception error) when (error is IOException or InvalidOperationException)
         {
-            Log.Warning(error, "Could not load the bundled Abbey terrain image; using its schematic");
+            Log.Warning(error, "Could not load bundled map image {ImageFile}; using its schematic", file);
             return Task.FromResult<Bitmap?>(null);
         }
     }
@@ -173,7 +177,7 @@ public sealed class MapDataService : IDisposable
     /// but for the Mists and Depths spots that come with the app.</summary>
     public Task<MapZoneFeatures> GetFeaturesAsync(MapZone zone) =>
         // A zone the client draws itself has no AlbionWorld feature file.
-        (zone.ImageFile.Length == 0 || zone.ImageFile == MistsMapData.AbbeyImageFile) ? Task.FromResult(new MapZoneFeatures([], [], [.. MistsMapData.Pois(zone.Id), .. DepthsMapData.Pois(zone.Id)]))
+        (zone.ImageFile.Length == 0 || IsBundledImage(zone.ImageFile)) ? Task.FromResult(new MapZoneFeatures([], [], [.. MistsMapData.Pois(zone.Id), .. DepthsMapData.Pois(zone.Id), .. AncientLandsMapData.Pois(zone.Id)]))
             : features.GetOrAdd(zone.Id, _ => LoadFeaturesAsync(zone));
 
     public Task<Bitmap?> GetIconImageAsync(string markerType) =>

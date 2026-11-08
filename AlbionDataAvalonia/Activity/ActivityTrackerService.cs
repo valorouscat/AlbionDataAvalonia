@@ -451,7 +451,7 @@ public sealed partial class ActivityTrackerService : IDisposable
         if (sameCharacter) RestoreLocationMetadata();
         mapEnteredAt = at;
         PlaceMistsDungeonEntrances(pendingLayoutJoin, at);
-        mapMetadata = WithDepthsPlacement(WithDepthsFloor(WithMistsLayout(mapMetadata), previous));
+        mapMetadata = WithAncientLandsLayout(WithDepthsPlacement(WithDepthsFloor(WithMistsLayout(mapMetadata), previous)));
         ReplayAbbeyObjects(pendingLayoutJoin, at);
         partialEntry = !enabled;
         awaitingContext = !actors.HasIdentity;

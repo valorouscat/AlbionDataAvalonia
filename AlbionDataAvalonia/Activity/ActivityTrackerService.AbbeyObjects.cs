@@ -57,7 +57,7 @@ public sealed partial class ActivityTrackerService
         ObserveMapObject(packet, new(id, kind, position.X, position.Y, Utc(packet.CapturedAt), name) { SourceTemplate = template }, abbeyOnly: false);
     }
 
-    private void ObserveMapObject(BaseEvent packet, ActivityLiveActor actor, bool abbeyOnly)
+    private void ObserveMapObject(BaseEvent packet, ActivityLiveActor actor, bool abbeyOnly, bool ancientOnly = false)
     {
         lock (sync)
         {
@@ -67,16 +67,19 @@ public sealed partial class ActivityTrackerService
             if (actorJoinStartedAt is { } started && at >= started)
             {
                 if (pendingAbbeyObjects.Count >= 256) pendingAbbeyObjects.RemoveAt(0);
-                pendingAbbeyObjects.Add(new(actor, packet.ConnectionId, packet.MessageIdentity, started, abbeyOnly));
+                pendingAbbeyObjects.Add(new(actor, packet.ConnectionId, packet.MessageIdentity, started, abbeyOnly, ancientOnly));
             }
             else if (HasConfirmedContext && at >= mapEnteredAt
-                && SameConnection(packet.ConnectionId, packet.MessageIdentity)) PlaceMapObject(actor, abbeyOnly);
+                && SameConnection(packet.ConnectionId, packet.MessageIdentity)) PlaceMapObject(actor, abbeyOnly, ancientOnly);
         }
     }
 
-    private void PlaceMapObject(ActivityLiveActor actor, bool abbeyOnly)
+    private void PlaceMapObject(ActivityLiveActor actor, bool abbeyOnly, bool ancientOnly = false)
     {
-        if (abbeyOnly ? map?.Kind != ActivityMapKind.MistsDungeon : map?.Kind is not (ActivityMapKind.Mists or ActivityMapKind.OpenWorld)) return;
+        if (ancientOnly ? map?.Kind != ActivityMapKind.DragonArea
+            : abbeyOnly ? map?.Kind is not (ActivityMapKind.MistsDungeon or ActivityMapKind.DragonArea)
+            : map?.Kind is not (ActivityMapKind.Mists or ActivityMapKind.OpenWorld or ActivityMapKind.DragonArea)) return;
+        if (actor.Kind == ActivityLiveActorKind.Altar && !AncientLandsMapData.IsAltar(actor.X, actor.Y)) return;
         if (actor.Kind == ActivityLiveActorKind.OtherSite && !MistsMapData.IsSlotCenter(mapMetadata.Layout, mapMetadata.LayoutTurns, actor.X, actor.Y)) return;
         PlaceAbbeyObject(actor);
     }
@@ -126,7 +129,7 @@ public sealed partial class ActivityTrackerService
             foreach (var observation in pendingAbbeyObjects.Where(x => x.JoinStartedAt == startedAt
                 && x.Actor.SeenAtUtc <= joinedAt && joinedAt - x.Actor.SeenAtUtc <= LandmarkLead
                 && SameConnection(x.ConnectionId, x.Identity)).OrderBy(x => x.Actor.SeenAtUtc))
-                PlaceMapObject(observation.Actor, observation.AbbeyOnly);
+                PlaceMapObject(observation.Actor, observation.AbbeyOnly, observation.AncientOnly);
         pendingAbbeyObjects.Clear();
     }
 
@@ -154,5 +157,5 @@ public sealed partial class ActivityTrackerService
     }
 
     private sealed record AbbeyObjectObservation(ActivityLiveActor Actor, string ConnectionId,
-        PhotonMessageIdentity? Identity, DateTime JoinStartedAt, bool AbbeyOnly);
+        PhotonMessageIdentity? Identity, DateTime JoinStartedAt, bool AbbeyOnly, bool AncientOnly);
 }

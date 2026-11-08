@@ -75,6 +75,8 @@ internal static class ActivityPacketSubscriptions
         builder.SubscribeEvent<MistsLandmarkEvent>((int)EventCodes.NewMistsBorderExit, packet => { activity.ObserveMistsLandmark(packet); return Task.CompletedTask; });
         // Dungeon exits carry a GUID at 1 and the position at 2; the adapter reuses the shared decoder.
         builder.SubscribeEvent<DebugEventProbeEvent>((int)EventCodes.NewMistsDungeonExit, packet => { activity.ObserveMistsDungeonExit(packet); return Task.CompletedTask; });
+        foreach (var code in new[] { EventCodes.NewTeleporterNode, EventCodes.NewDragonAreaExit, EventCodes.NewLoreSnippetObject, EventCodes.NewBuilding })
+            builder.SubscribeEvent<DebugEventProbeEvent>((int)code, packet => { activity.ObserveAncientLandsObject(packet, code); return Task.CompletedTask; });
         AbbeyObject(builder, EventCodes.NewLootChest, activity);
         AbbeyObject(builder, EventCodes.NewTreasureChest, activity);
         AbbeyObject(builder, EventCodes.NewShrine, activity);

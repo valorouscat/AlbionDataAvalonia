@@ -43,7 +43,7 @@ public sealed partial class ActivityTrackerService
             var current = positionEpoch == mapEpoch ? liveHead : null;
             ActivityPathPoint[] trail = liveHead is { } head && (liveTrail.Count == 0 || liveTrail[^1] != head)
                 ? [.. liveTrail, head] : liveTrail.ToArray();
-            return new(liveMapVersion, map?.RawLocationId ?? "", map?.DisplayName ?? "", current, heading,
+            return new(liveMapVersion, map?.RawLocationId ?? "", map?.Kind == ActivityMapKind.DragonArea ? "Ancient Lands" : map?.DisplayName ?? "", current, heading,
                 trail, liveMarkers.ToArray(), mapMetadata.Layout, mapMetadata.LayoutTurns, CurrentResourceNodes(),
                 CurrentResourceMobs(), CurrentRoamingBosses(), CurrentHostiles(), CurrentWisps(), depthsRecognition);
         }
