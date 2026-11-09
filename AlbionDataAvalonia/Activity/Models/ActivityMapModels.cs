@@ -13,7 +13,7 @@ public enum ActivityMapMarkerKind { Kill, Loot, Gathering, Death }
 /// </summary>
 public sealed record ActivityMapMarker(ActivityMapMarkerKind Kind, string RawMapId, DateTime CapturedAtUtc, double X, double Y,
     string Title, string Detail, bool IsOwn = true, Guid EventId = default, string Subject = "", long Quantity = 0, long? Value = null,
-    string ItemUniqueName = "", int Quality = 1, string MobUniqueName = "")
+    string ItemUniqueName = "", int Quality = 1, string MobUniqueName = "", bool IsFishing = false)
 {
     // Positions are always the local character's, so a party member's event is placed where this
     // character stood when the client saw it. IsOwn lets the map show only the character's own events.
@@ -44,7 +44,7 @@ public sealed record ActivityMapMarker(ActivityMapMarkerKind Kind, string RawMap
                 (ActivityMapMarkerKind.Loot, self ? "Looted" : $"{source} looted", From(value.LootSourceName), self, item),
             ActivityEventKind.Gathered when self || party =>
                 (ActivityMapMarkerKind.Gathering, self ? "Gathered" : $"{source} gathered", "", self, item),
-            ActivityEventKind.FishingReward when self || party =>
+            ActivityEventKind.FishingReward when (self || party) && confirmed =>
                 (ActivityMapMarkerKind.Gathering, self ? "Caught" : $"{source} caught", "", self, item),
             _ => null
         };
@@ -52,8 +52,9 @@ public sealed record ActivityMapMarker(ActivityMapMarkerKind Kind, string RawMap
         var hasItems = found.Kind is ActivityMapMarkerKind.Loot or ActivityMapMarkerKind.Gathering;
         return new(found.Kind, value.RawMapId, value.CapturedAtUtc, x, y, found.Title, found.Detail, found.Own, value.Id, found.Subject,
             hasItems ? Math.Max(0, value.Quantity) : 0, hasItems ? TotalValue(value) : null,
-            hasItems ? value.ItemUniqueName : "", value.Quality is >= 1 and <= 5 ? value.Quality.Value : 1,
-            value.Kind != ActivityEventKind.MobKilled ? "" : string.IsNullOrWhiteSpace(value.MobUniqueName) ? value.TargetName : value.MobUniqueName);
+            hasItems ? value.ItemUniqueName ?? "" : "", value.Quality is >= 1 and <= 5 ? value.Quality.Value : 1,
+            value.Kind != ActivityEventKind.MobKilled ? "" : string.IsNullOrWhiteSpace(value.MobUniqueName) ? value.TargetName : value.MobUniqueName,
+            value.Kind == ActivityEventKind.FishingReward);
     }
 
     private static string Name(string name, string fallback) => string.IsNullOrWhiteSpace(name) ? fallback : name;

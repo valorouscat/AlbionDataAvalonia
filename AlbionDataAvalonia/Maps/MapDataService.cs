@@ -357,7 +357,8 @@ public sealed class MapDataService : IDisposable
                 .Where(x => x.X is { } featureX && x.Z is { } featureZ && double.IsFinite(featureX) && double.IsFinite(featureZ))
                 .ToArray();
             return new(placed.Select(Icon).OfType<MapZoneIcon>().ToArray(), placed.Select(ResourceSpawn).OfType<MapResourceSpawn>().ToArray(),
-                [.. placed.Select(Poi).OfType<MapPoi>(), .. MistsMapData.Pois(zone.Id)]);
+                [.. placed.Select(Poi).OfType<MapPoi>(), .. MistsMapData.Pois(zone.Id)],
+                placed.Select(FishingSpot).OfType<MapFishingSpot>().ToArray(), FishingDataAvailable: true);
         }
         catch (Exception error) when (error is HttpRequestException or IOException or JsonException or TaskCanceledException)
         {
@@ -421,6 +422,12 @@ public sealed class MapDataService : IDisposable
         if (words.Any(x => x is "BOSS" or "ENDBOSS" or "MINIBOSS" or "VETERAN" or "ELITE" or "LARGE" or "RAID" or "LEGENDARY" or "EPIC")) return 3;
         return words.Any(x => x is "MEDIUM" or "GROUP" or "DUO" or "UNCOMMON" or "RARE" or "STANDARD") ? 2 : 1;
     }
+
+    // Fishing layout locations are separate from ordinary harvestable resource candidates.
+    private static MapFishingSpot? FishingSpot(Feature feature) =>
+        feature.Type == "fishingzone" && feature.Details?.GetValueOrDefault("zone") is { ValueKind: JsonValueKind.String } zoneValue
+            && zoneValue.GetString() is { Length: > 0 } zoneType
+            ? new(zoneType.ToUpperInvariant(), new(feature.X!.Value, feature.Z!.Value), feature.Source == "dynamic") : null;
 
     // AlbionWorld lists, by the game's resource type and tier, the spots an open-world zone picks its ordinary nodes
     // from ("resource_candidate", thousands a zone), the nodes a layout section places itself ("harvestable") and the
@@ -616,6 +623,8 @@ public sealed class MapDataService : IDisposable
         public string? Label { get; set; }
         public string? Mob { get; set; }
         public string? ResourceType { get; set; }
+        public string? Source { get; set; }
+        public Dictionary<string, JsonElement>? Details { get; set; }
         public string? Band { get; set; }
         [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
         public int? Tier { get; set; }

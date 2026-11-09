@@ -56,9 +56,33 @@ public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, Ex
 /// </summary>
 public sealed record MapPoi(MapPoiKind Kind, string Label, int Grade, MapPoint Position, double Radius = 0, IReadOnlyList<string>? Notes = null);
 
-/// <summary>A zone's minimap icons, resource spawn spots and points of interest, read from one AlbionWorld feature file.</summary>
+/// <summary>The fishing locations explicitly described by layout data.</summary>
+public enum MapFishingSpotKind { Water, School, Treasure, Shark, Other }
+
+/// <summary>A possible fishing location from layout data, never proof of a live school.</summary>
+public sealed record MapFishingSpot(string ZoneType, MapPoint Position, bool Dynamic)
+{
+    public bool IsOcean => ZoneType.Contains("OCEAN", StringComparison.OrdinalIgnoreCase) || ZoneType.Contains("SALTWATER", StringComparison.OrdinalIgnoreCase);
+    public bool IsFreshwater => ZoneType.Contains("FRESHWATER", StringComparison.OrdinalIgnoreCase);
+    public MapFishingSpotKind Kind => ZoneType.Contains("SHARK", StringComparison.OrdinalIgnoreCase) ? MapFishingSpotKind.Shark
+        : ZoneType.Contains("TREASURE", StringComparison.OrdinalIgnoreCase) ? MapFishingSpotKind.Treasure
+        : ZoneType.Contains("SPOT_FISH", StringComparison.OrdinalIgnoreCase) || ZoneType.Contains("SPOT_SWARM", StringComparison.OrdinalIgnoreCase) ? MapFishingSpotKind.School
+        : ZoneType.Contains("BASE", StringComparison.OrdinalIgnoreCase) || ZoneType.Contains("DEFAULT", StringComparison.OrdinalIgnoreCase) ? MapFishingSpotKind.Water
+        : MapFishingSpotKind.Other;
+    public string Label => Kind switch
+    {
+        MapFishingSpotKind.School => "Possible fishing school",
+        MapFishingSpotKind.Treasure => "Possible sunken treasure",
+        MapFishingSpotKind.Shark => "Possible shark spot",
+        MapFishingSpotKind.Water => "Fishing water",
+        _ => "Possible fishing spot"
+    };
+    public string WaterLabel => IsOcean ? "Saltwater" : IsFreshwater ? "Freshwater" : "Unknown water type";
+}
+
+/// <summary>A zone's minimap icons, resource and fishing locations, and points of interest.</summary>
 public sealed record MapZoneFeatures(IReadOnlyList<MapZoneIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns,
-    IReadOnlyList<MapPoi> Pois)
+    IReadOnlyList<MapPoi> Pois, IReadOnlyList<MapFishingSpot>? FishingSpots = null, bool FishingDataAvailable = false)
 {
     public static MapZoneFeatures Empty { get; } = new([], [], []);
 }
