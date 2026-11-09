@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:AlbionDataAvalonia.ViewModels"
+             xmlns:controls="using:AlbionDataAvalonia.Views.Controls"
+             x:Class="AlbionDataAvalonia.Views.FishingMapView"
+             x:DataType="vm:FishingMapViewModel">
+    <StackPanel Spacing="12">
+        <controls:InfoBanner Kind="Info" Title="Fishing locations" Message="{Binding CoverageText}" />
+        <CheckBox Content="Show fishing locations" IsChecked="{Binding ShowLocations}" />
+        <TextBlock Classes="UiCaption" Text="Fishing shares the map with all other enabled layers. Change resource and POI filters in the Map tab." TextWrapping="Wrap" />
+        <controls:FilterField Label="Water">
+            <controls:SegmentedSelector ItemsSource="{Binding WaterOptions}" SelectedIndex="{Binding WaterIndex}" />
+        </controls:FilterField>
+        <StackPanel Spacing="4">
+            <TextBlock Classes="UiLabel" Text="Possible places" />
+            <WrapPanel MaxWidth="370">
+                <ToggleButton Classes="UiLegend" Content="Schools" IsChecked="{Binding ShowSchools}" ToolTip.Tip="Fish-shaped outline: possible FISH and SWARM locations" />
+                <ToggleButton Classes="UiLegend" Content="Treasure" IsChecked="{Binding ShowTreasure}" ToolTip.Tip="Gold square: possible sunken treasure location" />
+                <ToggleButton Classes="UiLegend" Content="Sharks" IsChecked="{Binding ShowSharks}" ToolTip.Tip="Red triangle: possible shark location" />
+                <ToggleButton Classes="UiLegend" Content="Open water" IsChecked="{Binding ShowWater}" ToolTip.Tip="Faint ring: centre of a fishing water area; not its boundary" />
+                <ToggleButton Classes="UiLegend" Content="Other" IsChecked="{Binding ShowOther}" ToolTip.Tip="Unclassified fishing locations; see the raw type in the tooltip" />
+            </WrapPanel>
+            <CheckBox Content="Include procedural placements" IsChecked="{Binding IncludeDynamic}"
+                      ToolTip.Tip="Possible locations from dynamic layout sections. The active placement is not confirmed." />
+            <TextBlock Classes="UiCaption" Text="{Binding SpotSummary}" TextWrapping="Wrap" />
+        </StackPanel>
+        <Border Classes="UiCard Subtle">
+            <StackPanel Spacing="4">
+                <TextBlock Classes="UiLabel" Text="Nearest possible place" />
+                <TextBlock Classes="UiCaption" Text="{Binding NearestText}" TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+        <StackPanel Spacing="6">
+            <CheckBox Content="Show confirmed catches on map" IsChecked="{Binding ShowCatches}" />
+            <TextBlock Classes="UiCaption" Text="{Binding CatchScopeText}" TextWrapping="Wrap" />
+            <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                <controls:StatTile Classes="Small" Label="Rewards" Value="{Binding Summary.Rewards}" />
+                <controls:StatTile Grid.Column="1" Classes="Small" Label="Items" Value="{Binding Summary.Items}" />
+                <controls:StatTile Grid.Column="2" Classes="Small" Label="Item types" Value="{Binding Summary.Types}" />
+                <controls:StatTile Grid.Row="1" Classes="Small" Label="Known value" Value="{Binding Summary.Value}" />
+                <controls:StatTile Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Classes="Small" Label="Last catch" Value="{Binding Summary.LastCatch}" />
+            </Grid>
+            <TextBlock Classes="UiCaption" Text="{Binding Summary.PriceDetail}" TextWrapping="Wrap" />
+            <TextBlock Classes="UiCaption" Text="Rewards can include fish, seaweed and treasure. Several rewards may belong to one cast. Prices are estimates, not sale proceeds." TextWrapping="Wrap" />
+            <ListBox ItemsSource="{Binding Catches}" MaxHeight="190" IsVisible="{Binding HasCatches}"
+                     AutomationProperties.Name="Your fishing rewards">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FishingCatchRow">
+                        <controls:ItemCell Classes="Compact" IconSize="28" ItemUniqueName="{Binding UniqueName}" ImageQuality="{Binding Quality}"
+                                           Title="{Binding Name}" Subtitle="{Binding Detail}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <controls:EmptyState IsVisible="{Binding !HasCatches}" Message="No confirmed catches here yet"
+                                 Hint="Enable activity recording in Settings, fish in game, or choose a recorded visit in History. Only catches with a recorded position appear here." />
+        </StackPanel>
+        <Expander Header="Fishing notes">
+            <StackPanel Spacing="8">
+                <TextBlock Classes="UiCaption" Text="Rivers and lakes use freshwater lists; the coast uses saltwater lists. Possible fish depend on the water, biome and zone tier. A school marker does not identify the next fish." TextWrapping="Wrap" />
+                <TextBlock Classes="UiCaption" Text="Rare fish can appear in more than one biome. Roads, Mists and Ancient Lands have their own fish. Layout coverage varies; an empty map does not prove there is no fishable water." TextWrapping="Wrap" />
+                <TextBlock Classes="UiCaption" Text="Use bait to shorten the wait for a bite. Seaweed Salad improves fishing speed. Check your rod tier and fishing gear before travelling." TextWrapping="Wrap" />
+                <TextBlock Classes="UiCaption" Text="Catch markers show where your character stood. Candidate locations do not show current stock or a respawn countdown." TextWrapping="Wrap" />
+                <Button Classes="UiLink" Content="Fishing guide and catch calculator ↗" Command="{Binding OpenGuideCommand}" />
+            </StackPanel>
+        </Expander>
+    </StackPanel>
+</UserControl>

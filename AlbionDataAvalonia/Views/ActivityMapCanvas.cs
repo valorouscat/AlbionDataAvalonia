@@ -310,6 +310,7 @@ public sealed class ActivityMapCanvas : Control
 
         if (scene.Layers.HasFlag(ActivityMapLayers.ResourceSpawns)) DrawResourceSpawns(context, scene, scale);
         if (scene.Layers.HasFlag(ActivityMapLayers.Pois)) DrawPois(context, scene, scale);
+        if (scene.Layers.HasFlag(ActivityMapLayers.Fishing)) DrawFishingSpots(context, scene, scale);
         if (scene.Layers.HasFlag(ActivityMapLayers.Resources))
         {
             DrawResources(context, scene, scale);
@@ -437,6 +438,53 @@ public sealed class ActivityMapCanvas : Control
             var rect = new Rect(at.X - iconSize / 2, at.Y - iconSize / 2, iconSize, iconSize);
             context.DrawImage(image, new Rect(image.Size), rect);
             hits.Add(new Hit(at, iconSize / 2 + 2, icon.Label, [], []));
+        }
+    }
+
+    // Cluster only locations of the same kind and water type; schools must not hide treasure or sharks.
+    private void DrawFishingSpots(DrawingContext context, ActivityMapScene scene, double scale)
+    {
+        var groups = new Dictionary<(MapFishingSpotKind Kind, bool Ocean, bool Fresh, int X, int Y), List<MapFishingSpot>>();
+        foreach (var spot in scene.FishingSpots ?? [])
+        {
+            var at = ToScreen(ImagePoint(scene, spot.Position.X, spot.Position.Y), scale);
+            if (!Visible(at, 16)) continue;
+            var key = (spot.Kind, spot.IsOcean, spot.IsFreshwater, (int)System.Math.Floor(at.X / 18), (int)System.Math.Floor(at.Y / 18));
+            if (!groups.TryGetValue(key, out var list)) groups[key] = list = new();
+            list.Add(spot);
+        }
+        foreach (var group in groups.Values.OrderBy(x => x[0].Kind == MapFishingSpotKind.Water ? 0 : 1))
+        {
+            var spot = group[0];
+            var at = ToScreen(ImagePoint(scene, spot.Position.X, spot.Position.Y), scale);
+            var color = spot.Kind switch
+            {
+                MapFishingSpotKind.Treasure => UiPalette.Color("UiMapChestColor"),
+                MapFishingSpotKind.Shark => UiPalette.Color("UiMapPoiBossColor"),
+                _ => ActivityPalette.Fishing
+            };
+            using (context.PushOpacity(spot.Kind == MapFishingSpotKind.Water ? 0.35 : 0.85))
+            {
+                if (spot.Kind == MapFishingSpotKind.Treasure)
+                    context.DrawRectangle(null, UiPalette.Pen(color, 2), new Rect(at.X - 5, at.Y - 4, 10, 8), 1, 1);
+                else if (spot.Kind == MapFishingSpotKind.Shark)
+                    context.DrawGeometry(null, UiPalette.Pen(color, 2), Polygon(new(at.X, at.Y - 7), new(at.X + 7, at.Y + 5), new(at.X - 7, at.Y + 5)));
+                else
+                {
+                    context.DrawEllipse(null, UiPalette.Pen(color, 2), at, 6, spot.Kind == MapFishingSpotKind.Water ? 6 : 4);
+                    if (spot.Kind == MapFishingSpotKind.School)
+                        context.DrawLine(UiPalette.Pen(color, 2), new(at.X - 6, at.Y), new(at.X - 10, at.Y - 4));
+                }
+                if (group.Count > 1)
+                {
+                    var label = ChartDrawing.Text(UiFormat.Whole(group.Count), 10, color, FontWeight.SemiBold);
+                    label.Draw(context, new Point(at.X + 7, at.Y - 10));
+                }
+            }
+            hits.Add(new(at, 12, group.Count == 1 ? spot.Label : $"{UiFormat.Count(group.Count, "possible fishing location")}",
+                [spot.WaterLabel, "Layout locations, not confirmed active fish", "Depletion and respawn are unknown",
+                    group.Any(x => x.Dynamic) ? "Includes possible procedural layout placements" : "Fixed layout placement",
+                    .. group.Select(x => x.ZoneType).Distinct().Take(4)], []));
         }
     }
 
@@ -1092,7 +1140,7 @@ public sealed class ActivityMapCanvas : Control
         // Newest first: a group sits on its latest event and fades with it.
         foreach (var marker in scene.Markers.OrderByDescending(x => x.CapturedAtUtc))
         {
-            var layer = marker.Kind switch
+            var layer = marker.IsFishing ? ActivityMapLayers.FishingCatches : marker.Kind switch
             {
                 ActivityMapMarkerKind.Kill => ActivityMapLayers.Kills,
                 ActivityMapMarkerKind.Loot => ActivityMapLayers.Loot,
@@ -1148,7 +1196,7 @@ public sealed class ActivityMapCanvas : Control
                     // A party member's event gets a light ring so it reads apart from the character's own.
                     if (cluster.Members.All(x => !x.IsOwn))
                         context.DrawEllipse(null, UiPalette.Pen(UiPalette.Color("UiMapPartyRingColor"), 1.4), at, count > 1 ? 12 : 10.5, count > 1 ? 12 : 10.5);
-                    DrawMarkerShape(context, cluster.Kind, at, count > 1 ? 7.5 : 6.5);
+                    DrawMarkerShape(context, cluster.Kind, at, count > 1 ? 7.5 : 6.5, cluster.Members.All(x => x.IsFishing));
                     if (count > 1) ChartDrawing.DrawCountBadge(context, at, count);
                 }
 
@@ -1160,7 +1208,7 @@ public sealed class ActivityMapCanvas : Control
 
     // A pickup or harvest shows its item like the lists do: icon, name and EMV. A mob kill shows the mob's portrait.
     private static Hit MarkerHit(Point at, ActivityMapMarker marker, ActivityMapScene scene) =>
-        new(at, 9, marker.Title, new[] { marker.Detail, When(marker.CapturedAtUtc, scene) }.Where(x => x.Length > 0).ToArray(),
+        new(at, 9, marker.Title, new[] { marker.Detail, marker.IsFishing ? "Catch recorded at your character position, not the bobber" : "", When(marker.CapturedAtUtc, scene) }.Where(x => x.Length > 0).ToArray(),
             HasItems(marker.Kind) ? [ItemLine(marker.ItemUniqueName, marker.Quality, marker.Subject, marker.Quantity, marker.Value, marker.Value is null)]
             : IsMobKill(marker) ? [MobLine(marker.MobUniqueName, marker.Subject, 1)] : []);
 
@@ -1191,7 +1239,7 @@ public sealed class ActivityMapCanvas : Control
         members.GroupBy(x => (x.Subject, x.ItemUniqueName, x.Quality))
             .OrderByDescending(x => x.Sum(m => m.Value ?? 0)).ThenByDescending(x => x.Sum(m => m.Quantity)).ThenBy(x => x.Key.Subject).ToArray();
 
-    private static string GroupTitle(ActivityMapMarkerKind kind, IReadOnlyList<ActivityMapMarker> members) => kind switch
+    private static string GroupTitle(ActivityMapMarkerKind kind, IReadOnlyList<ActivityMapMarker> members) => members.All(x => x.IsFishing) ? UiFormat.Count(members.Count, "fishing reward") : kind switch
     {
         ActivityMapMarkerKind.Kill => UiFormat.Count(members.Count, "kill"),
         ActivityMapMarkerKind.Loot => UiFormat.Count(members.Count, "pickup"),
@@ -1204,6 +1252,7 @@ public sealed class ActivityMapCanvas : Control
     private static IReadOnlyList<string> GroupLines(ActivityMapMarkerKind kind, IReadOnlyList<ActivityMapMarker> members, ActivityMapScene scene)
     {
         var lines = new List<string>();
+        if (members.Any(x => x.IsFishing)) lines.Add("Catches recorded at your character position, not the bobber");
         if (HasItems(kind))
         {
             var items = ItemGroups(members).Length;
@@ -1260,9 +1309,9 @@ public sealed class ActivityMapCanvas : Control
         return MarkerShapes[(kind, radius)] = shape;
     }
 
-    private static void DrawMarkerShape(DrawingContext context, ActivityMapMarkerKind kind, Point at, double radius)
+    private static void DrawMarkerShape(DrawingContext context, ActivityMapMarkerKind kind, Point at, double radius, bool fishing = false)
     {
-        var fill = UiPalette.Brush(ActivityPalette.MapMarker(kind));
+        var fill = UiPalette.Brush(fishing ? ActivityPalette.Fishing : ActivityPalette.MapMarker(kind));
         switch (kind)
         {
             case ActivityMapMarkerKind.Kill:

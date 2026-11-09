@@ -135,6 +135,8 @@
                             ToolTip.Tip="Damage and healing by player, group or city faction, with a separate overlay." Margin="10,0,0,4" />
                     <Button Classes="UiAction" Content="{Binding StreamerWindowButtonText}" Command="{Binding ToggleStreamerWindowCommand}" IsVisible="{Binding CanOpenStreamerWindow}"
                             ToolTip.Tip="Compact window for streaming. Set it up in Settings › Streamer." Margin="10,0,0,4" />
+                    <Button Classes="UiAction" Content="Fishing map" Command="{Binding OpenFishingMapCommand}" IsVisible="{Binding CanOpenMapWindow}"
+                            ToolTip.Tip="Open the Fishing tab with possible locations and your confirmed catches" />
                     <Button Classes="UiAction" Content="{Binding MapWindowButtonText}" Command="{Binding ToggleMapWindowCommand}" IsVisible="{Binding CanOpenMapWindow}"
                             ToolTip.Tip="Live map of your current zone with your path and events, and a replay of past runs." Margin="10,0,0,4" />
                     <Button Classes="UiAction" Content="{Binding RecordingButtonText}" Command="{Binding ToggleRecordingCommand}" Margin="10,0,0,4" />
