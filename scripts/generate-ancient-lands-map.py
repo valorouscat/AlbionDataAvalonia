@@ -57,12 +57,16 @@ def classify(name):
         return 'Boss', 'Fire Drake spawn', 3
     if upper.startswith('SPAWNPOINT_') and upper.endswith(('_BOSS', '_MINIBOSS')):
         return 'Boss', 'Drake spawn' if 'DRAKE' in upper else 'Possible boss spawn' if upper.endswith('_BOSS') else 'Possible miniboss spawn', 3 if upper.endswith('_BOSS') else 2
+    if name == 'DRAGON_KPR_FANATICS_RUNESTONE':
+        return 'EnergyShrine', 'Possible Spirit Essence statue', 2
     if name == 'DRAGON_REWARD_SHRINE':
-        return 'Altar', 'Dragon altar', 2
+        return 'Altar', 'Dragon reward altar', 2
     if name.startswith('DRAGON_KPR_FANATICS_TELEPORTER_A'):
         return 'Teleporter', 'Leygate', 1
     if name.startswith('DRAGON_KPR_FANATICS_EXIT_AREA'):
         return 'ExitUp', 'Ancient Lands exit', 2
+    if name == 'LocalQuestRewardSpawnLocation':
+        return 'Key', 'Possible island key reward', 2
     if name == 'LORE_SPOT':
         return 'Lore', 'Lore spot', 1
     return None
@@ -235,6 +239,8 @@ def main(source):
         for kind,label,grade,x,y,section in sorted(found):
             note = ('A possible position from alternative island sections/rotations; alternatives do not all spawn together'
                     if section else 'A template position; availability depends on the instance and its progress')
+            if kind == 'Key':
+                note = 'A possible island-key reward position after an island quest; does not confirm that a key has spawned'
             if kind == 'Teleporter':
                 note = 'Possible Leygate position; its active state and destination are not confirmed'
             lines.append(f'            new(MapPoiKind.{kind}, {quoted(label)}, {grade}, new({num(x)}, {num(y)}), Notes: [{quoted(note)}, "Not a confirmed live sighting"]),')

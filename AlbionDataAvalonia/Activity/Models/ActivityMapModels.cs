@@ -99,7 +99,7 @@ public sealed record ActivityResourceNode(long Id, string Family, int Tier, int 
 public sealed record ActivityResourceMob(long Id, string Family, int Tier, int Enchantment, double X, double Y, DateTime SeenAtUtc,
     string MobUniqueName, string MobName, string ItemUniqueName, bool IsInView = true);
 
-public enum ActivityLiveActorKind { Boss, Miniboss, Dungeon, EventDungeon, Chest, EventMob, AbbeyEntrance, Shrine, Reward, CampSite, ResourceSite, OtherSite, Teleporter, Exit, Altar, Lore }
+public enum ActivityLiveActorKind { Boss, Miniboss, Dungeon, EventDungeon, Chest, EventMob, AbbeyEntrance, Shrine, Reward, CampSite, ResourceSite, OtherSite, Teleporter, Exit, Altar, Lore, EnergyShrine }
 public enum CampChestReward { Unknown, Books, Loot }
 
 /// <summary>An observed dynamic POI. Mobs retain their last observed position outside visibility and across map revisits until clearing or app closure. The legacy scene/settings slot is preserved.</summary>
@@ -112,6 +112,7 @@ public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, doub
     public bool IsDepleted { get; init; }
     public string SourceTemplate { get; init; } = "";
     public string ObservationNote { get; init; } = "";
+    public DateTime StateObservedAtUtc { get; init; }
     public bool IsCampChest => CampChestDefinition.Length > 0;
     public bool IsSite => Kind is ActivityLiveActorKind.CampSite or ActivityLiveActorKind.ResourceSite or ActivityLiveActorKind.OtherSite;
     public bool IsMob => !string.IsNullOrEmpty(MobUniqueName);
@@ -130,7 +131,8 @@ public sealed record ActivityLiveActor(long Id, ActivityLiveActorKind Kind, doub
         ActivityLiveActorKind.OtherSite => "Dynamic site",
         ActivityLiveActorKind.Teleporter => "Leygate",
         ActivityLiveActorKind.Exit => "Ancient Lands exit",
-        ActivityLiveActorKind.Altar => "Dragon altar",
+        ActivityLiveActorKind.Altar => "Dragon reward altar",
+        ActivityLiveActorKind.EnergyShrine => "Spirit Essence statue",
         ActivityLiveActorKind.Lore => "Lore spot",
         _ => "Event mob"
     };

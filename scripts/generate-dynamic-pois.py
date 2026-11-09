@@ -31,6 +31,13 @@ def main(source: str) -> None:
             kind = "Boss"
         if kind is None and "HALLOWEEN" in name and "_RESOURCE" not in name:
             kind = "EventMob"
+        # Spirit Essence-bearing Ancient Ghostlights are categorized as ordinary trash.
+        # Match only the six explicit T6/T7 Dragon Area definitions.
+        if kind is None and name in {
+            f"T{tier}_MOB_DA_KEEPER_FANATIC_WISP_PURPLE_{mode}TRASH"
+            for tier in (6, 7) for mode in ("", "VETERAN_", "ELITE_")
+        }:
+            kind = "EventMob"
         if name and kind:
             found[name] = kind
     lines = [
