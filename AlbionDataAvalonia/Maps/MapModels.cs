@@ -33,7 +33,7 @@ public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position
 }
 
 /// <summary>The kinds of point of interest the map shows in one layer, each drawn its own way.</summary>
-public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown, Lever, Teleporter, Lore }
+public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown, Lever, Teleporter, Lore, EnergyShrine }
 
 /// <summary>
 /// A point of interest from the game files, a spot where something can stand rather than what stands there now:

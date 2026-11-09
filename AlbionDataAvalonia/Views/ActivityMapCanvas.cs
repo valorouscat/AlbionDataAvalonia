@@ -747,6 +747,12 @@ public sealed class ActivityMapCanvas : Control
                     context.DrawEllipse(UiPalette.Brush("UiMapMarkerEdgeColor"), null, at, 1.6 * size, 1.6 * size);
                     break;
                 }
+            case MapPoiKind.EnergyShrine:
+                context.DrawEllipse(null, UiPalette.Pen(UiPalette.Color("UiMapPoiWispColor"), 1.5), at, 7, 7);
+                context.DrawGeometry(UiPalette.Brush("UiMapPoiWispColor"), OutlinePen, Polygon(
+                    new(at.X + 1, at.Y - 6), new(at.X - 4, at.Y + 1), new(at.X, at.Y + 1),
+                    new(at.X - 1, at.Y + 6), new(at.X + 4, at.Y - 1), new(at.X, at.Y - 1)));
+                break;
             case MapPoiKind.Teleporter:
                 context.DrawEllipse(null, UiPalette.Pen(UiPalette.Color("UiMapPoiShrineColor"), 2), at, 5, 7);
                 context.DrawEllipse(UiPalette.Brush("UiMapPoiShrineColor"), null, at, 2, 2);
@@ -811,6 +817,7 @@ public sealed class ActivityMapCanvas : Control
             {
                 ActivityLiveActorKind.Chest => "UiMapChestColor",
                 ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward => "UiMapPoiShrineColor",
+                ActivityLiveActorKind.EnergyShrine => "UiMapPoiWispColor",
                 ActivityLiveActorKind.CampSite => "UiMapPoiCampColor",
                 ActivityLiveActorKind.ResourceSite => "UiMapPoiWispColor",
                 ActivityLiveActorKind.OtherSite => "UiMapPoiShrineColor",
@@ -841,7 +848,7 @@ public sealed class ActivityMapCanvas : Control
             {
                 DrawPoiMark(context, at, new(MapPoiKind.Camp, boss.Name, 2, new(boss.X, boss.Y)));
             }
-            else if (!boss.IsMob && boss.Kind is ActivityLiveActorKind.Chest or ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward or ActivityLiveActorKind.Teleporter or ActivityLiveActorKind.Exit or ActivityLiveActorKind.Altar or ActivityLiveActorKind.Lore)
+            else if (!boss.IsMob && boss.Kind is ActivityLiveActorKind.Chest or ActivityLiveActorKind.Shrine or ActivityLiveActorKind.Reward or ActivityLiveActorKind.Teleporter or ActivityLiveActorKind.Exit or ActivityLiveActorKind.Altar or ActivityLiveActorKind.Lore or ActivityLiveActorKind.EnergyShrine)
             {
                 var symbol = boss.Kind switch
                 {
@@ -851,6 +858,7 @@ public sealed class ActivityMapCanvas : Control
                     ActivityLiveActorKind.Exit => MapPoiKind.ExitUp,
                     ActivityLiveActorKind.Altar => MapPoiKind.Altar,
                     ActivityLiveActorKind.Lore => MapPoiKind.Lore,
+                    ActivityLiveActorKind.EnergyShrine => MapPoiKind.EnergyShrine,
                     _ => MapPoiKind.Camp
                 };
                 DrawPoiMark(context, at, new(symbol, boss.Name, 2, new(boss.X, boss.Y)));
@@ -959,6 +967,7 @@ public sealed class ActivityMapCanvas : Control
         MapPoiKind.Key => "key spawn",
         MapPoiKind.Coffer => "coffer spot",
         MapPoiKind.Altar => "altar",
+        MapPoiKind.EnergyShrine => "Spirit Essence statue",
         MapPoiKind.Teleporter => "Leygate",
         MapPoiKind.Lore => "lore spot",
         MapPoiKind.ExitUp => "exit up",
