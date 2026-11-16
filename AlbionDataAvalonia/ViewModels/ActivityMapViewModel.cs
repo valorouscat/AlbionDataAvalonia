@@ -64,6 +64,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         this.persistence = persistence;
         this.maps = maps;
         this.settings = settings;
+        Fishing = new FishingMapViewModel(settings, Rebuild);
+        selectedActivityIndex = settings.MapFishingMode ? 1 : 0;
         soundFiles = files;
         hostileSoundService = sound;
         hostileSoundEnabled = settings.MapHostileSoundEnabled;
@@ -225,7 +227,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         | (ShowGathering ? ActivityMapLayers.Gathering : 0) | (ShowDeaths ? ActivityMapLayers.Deaths : 0) | (ShowFeatures ? ActivityMapLayers.Features : 0)
         | (ShowResources ? ActivityMapLayers.Resources : 0) | (ShowResourceSpawns ? ActivityMapLayers.ResourceSpawns : 0)
         | (ShowPois ? ActivityMapLayers.Pois : 0) | (ShowRoamingBosses ? ActivityMapLayers.RoamingBosses : 0)
-        | (ShowHostileAlert ? ActivityMapLayers.HostileAlert : 0) | (IsLive && ShowWisps ? ActivityMapLayers.Wisps : 0);
+        | (ShowHostileAlert ? ActivityMapLayers.HostileAlert : 0) | (IsLive && ShowWisps ? ActivityMapLayers.Wisps : 0)
+        | (Fishing.ShowLocations ? ActivityMapLayers.Fishing : 0) | (Fishing.ShowCatches ? ActivityMapLayers.FishingCatches : 0);
 
     private double FadeSeconds => FadeOptionValues[Math.Clamp(SelectedFadeIndex, 0, FadeOptionValues.Length - 1)] * 60d;
 
@@ -555,7 +558,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             Turned(zone?.Zone?.Rooms ?? [], turns), Turned(zone?.Zone?.Outline ?? [], turns), ShowRoamingBosses ? sites.Actors.OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
-            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps(), ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps(), ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false,
+            FishingSpots: FishingSpots(zone, turns));
     }
 
     // No one can attack the character in a blue zone, so a player there is no threat.
@@ -721,7 +725,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             Layers, turns, ResourceSpawns: SpawnSpots(zone, option.RawMapId, option.Layout, option.LayoutTurns),
             Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: Turned(zone?.Zone?.Rooms ?? [], turns), Outline: Turned(zone?.Zone?.Outline ?? [], turns), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
-            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false,
+            FishingSpots: FishingSpots(zone, turns));
     }
 
     private static bool WaitingForInstanceOrientation(string rawMapId, int? turns) =>
@@ -737,7 +742,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
     private static ZoneView? WithInstanceOrientation(ZoneView? zone, string rawMapId, int? turns) =>
         zone?.Zone is { } map && WaitingForInstanceOrientation(rawMapId, turns)
-            ? zone with { Zone = map with { Rooms = [], Outline = [] }, Image = null, Exits = [], Icons = [], Pois = [], ResourceSpawns = [] }
+            ? zone with { Zone = map with { Rooms = [], Outline = [] }, Image = null, Exits = [], Icons = [], Pois = [], ResourceSpawns = [], FishingSpots = [] }
             : zone;
 
     // Template features follow the instance's turn; observed world positions never turn.
@@ -812,7 +817,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
                 failed = true;
             }
             return new ZoneView(rawMapId, zone, image, await frameTask, exits, shownIcons, features.ResourceSpawns, features.Pois, zone.DisplayName,
-                ZoneDescription(zone), zone.Geometry, failed);
+                ZoneDescription(zone), zone.Geometry, failed, features.FishingSpots, features.FishingDataAvailable);
         }
         catch (Exception error) when (error is HttpRequestException or TaskCanceledException or System.IO.IOException or JsonException)
         {
@@ -983,5 +988,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     }
 
     private sealed record ZoneView(string RawMapId, MapZone? Zone, Bitmap? Image, Bitmap? Frame, IReadOnlyList<ActivityMapExit> Exits,
-        IReadOnlyList<ActivityMapIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns, IReadOnlyList<MapPoi> Pois, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed);
+        IReadOnlyList<ActivityMapIcon> Icons, IReadOnlyList<MapResourceSpawn> ResourceSpawns, IReadOnlyList<MapPoi> Pois, string Title, string Subtitle, MapImageGeometry? Geometry, bool Failed,
+        IReadOnlyList<MapFishingSpot>? FishingSpots = null, bool FishingDataAvailable = false);
 }

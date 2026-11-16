@@ -17,46 +17,58 @@
         </Style>
     </Window.Styles>
 
-    <Grid x:Name="MapContents" RowDefinitions="Auto,*,Auto">
+    <Grid x:Name="MapContents" RowDefinitions="Auto,Auto,*,Auto">
         <Border IsVisible="{Binding !IsOverlay}" BorderBrush="{DynamicResource UiDividerBrush}" BorderThickness="0,0,0,1" Padding="12,8,12,4">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <WrapPanel>
                 <controls:SegmentedSelector ItemsSource="{Binding ModeOptions}" SelectedIndex="{Binding SelectedModeIndex}"
-                                                 AutomationProperties.Name="Map mode" VerticalAlignment="Center" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="0,0,0,4">
-                    <ComboBox ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun}" IsVisible="{Binding IsHistory}"
-                              MinWidth="260" MaxWidth="420" AutomationProperties.Name="Run" PlaceholderText="No runs with positions yet">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ActivityMapRunOption">
-                                <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <ComboBox ItemsSource="{Binding RunMaps}" SelectedItem="{Binding SelectedRunMap}" MinWidth="150"
-                              IsVisible="{Binding HasMultipleRunMaps}" AutomationProperties.Name="Map in this run">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:ActivityMapRunMapOption">
-                                <TextBlock Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <StackPanel VerticalAlignment="Center" Spacing="1">
-                        <TextBlock Classes="UiSectionTitle" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                        <TextBlock Text="{Binding Subtitle}" Classes="UiLabel"
-                                   IsVisible="{Binding Subtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                    </StackPanel>
+                                            AutomationProperties.Name="Map mode" VerticalAlignment="Center" Margin="0,0,12,4" />
+                <ComboBox ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun}" IsVisible="{Binding IsHistory}"
+                          MinWidth="260" MaxWidth="350" Margin="0,0,12,4" AutomationProperties.Name="Run" PlaceholderText="No runs with positions yet">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ActivityMapRunOption">
+                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ComboBox ItemsSource="{Binding RunMaps}" SelectedItem="{Binding SelectedRunMap}" MinWidth="150" MaxWidth="280" Margin="0,0,12,4"
+                          IsVisible="{Binding HasMultipleRunMaps}" AutomationProperties.Name="Map in this run">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ActivityMapRunMapOption">
+                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <StackPanel VerticalAlignment="Center" Spacing="1" MaxWidth="280" Margin="0,0,12,4">
+                    <TextBlock Classes="UiSectionTitle" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Subtitle}" Classes="UiLabel" TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding Subtitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                 </StackPanel>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <controls:SegmentedSelector ItemsSource="{Binding ScopeOptions}" SelectedIndex="{Binding SelectedScopeIndex}"
-                                                     AutomationProperties.Name="Events shown"
-                                                     ToolTip.Tip="Personal shows your own events. Party adds your party's, with a light ring, placed where you were when the client saw them. The path is always yours." />
-                    <TextBlock Text="Fade after" Classes="UiLabel" VerticalAlignment="Center" Margin="8,0,0,4" IsVisible="{Binding IsLive}" />
+                <controls:SegmentedSelector ItemsSource="{Binding ScopeOptions}" SelectedIndex="{Binding SelectedScopeIndex}"
+                                            AutomationProperties.Name="Events shown" Margin="0,0,12,4" VerticalAlignment="Center"
+                                            ToolTip.Tip="Personal shows your own events. Party adds your party's, with a light ring, placed where you were when the client saw them. The path is always yours. Fishing totals are always personal." />
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,0,0,4" VerticalAlignment="Center" IsVisible="{Binding IsLive}">
+                    <TextBlock Text="Fade after" Classes="UiLabel" VerticalAlignment="Center" />
                     <controls:SegmentedSelector ItemsSource="{Binding FadeOptions}" SelectedIndex="{Binding SelectedFadeIndex}"
-                                                     AutomationProperties.Name="Fade path and events after" IsVisible="{Binding IsLive}" />
+                                                AutomationProperties.Name="Fade path and events after" />
                 </StackPanel>
-            </Grid>
+            </WrapPanel>
         </Border>
 
-        <Grid Grid.Row="1">
+            <Border Grid.Row="1" Classes="UiOverlay" IsVisible="{Binding ShowOverlayBar}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" MaxWidth="440">
+                <StackPanel Spacing="4">
+                    <WrapPanel>
+                        <Border Background="{DynamicResource UiOverlayBrush}" Padding="8,4" Cursor="SizeAll" PointerPressed="OverlayDrag_PointerPressed">
+                            <TextBlock Text="Map overlay" Classes="UiLabel" />
+                        </Border>
+                        <Button Content="Settings" Classes="UiGhost" Command="{Binding ToggleOverlayControlsCommand}" />
+                        <Button Content="Hide" Classes="UiGhost" Command="{Binding ToggleOverlayVisibilityCommand}" ToolTip.Tip="Ctrl+Alt+M on Windows" />
+                        <Button Content="Exit overlay" Classes="UiGhost" Command="{Binding ExitOverlayCommand}" />
+                    </WrapPanel>
+                    <TextBlock Text="{Binding OverlayError}" Classes="UiError" TextWrapping="Wrap" IsVisible="{Binding HasOverlayError}" />
+                </StackPanel>
+            </Border>
+
+        <Grid Grid.Row="2">
             <views:ActivityMapCanvas x:Name="MapCanvas" Scene="{Binding Scene}" Follow="{Binding Follow, Mode=TwoWay}" />
 
             <Panel IsVisible="{Binding ShowMapControls}">
@@ -85,9 +97,9 @@
             </StackPanel>
 
             <Border Classes="UiOverlay" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="12" MaxWidth="420" MaxHeight="480" Padding="12">
-                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                        <TextBlock Text="Map filters" Classes="UiSectionTitle" VerticalAlignment="Center" />
+                        <TextBlock Text="Map &amp; fishing" Classes="UiSectionTitle" VerticalAlignment="Center" />
                         <Button Grid.Column="1" Classes="UiGhost" Command="{Binding ToggleLegendCommand}"
                                 AutomationProperties.Name="Show or hide map filters">
                             <Panel>
@@ -96,10 +108,20 @@
                             </Panel>
                         </Button>
                     </Grid>
-                    <Grid Grid.Row="1" IsVisible="{Binding !LegendCollapsed}" RowDefinitions="Auto,*" RowSpacing="8">
-                        <controls:SegmentedSelector ItemsSource="{Binding FilterTabs}" SelectedIndex="{Binding SelectedFilterTab}" AutomationProperties.Name="Map filter section" />
+                    <controls:SegmentedSelector Grid.Row="1" ItemsSource="{Binding ActivityOptions}" SelectedIndex="{Binding SelectedActivityIndex}" AutomationProperties.Name="Map activity tab" />
+                    <Grid Grid.Row="2" IsVisible="{Binding !LegendCollapsed}" RowDefinitions="Auto,*" RowSpacing="8">
+                        <controls:SegmentedSelector ItemsSource="{Binding FilterTabs}" SelectedIndex="{Binding SelectedFilterTab}" IsVisible="{Binding !IsFishingMode}" AutomationProperties.Name="Map filter section" />
                         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <Panel>
+                                <StackPanel Spacing="10" IsVisible="{Binding IsFishingMode}">
+                                    <WrapPanel>
+                                        <ToggleButton Classes="UiLegend" Content="Your path" IsChecked="{Binding ShowPath}" />
+                                        <ToggleButton Classes="UiLegend" Content="Hostile alert" IsChecked="{Binding ShowHostileAlert}" IsVisible="{Binding IsLive}"
+                                                      ToolTip.Tip="Keep the existing warning for nearby hostile players while fishing" />
+                                    </WrapPanel>
+                                    <views:FishingMapView DataContext="{Binding Fishing}" />
+                                </StackPanel>
+                                <Panel IsVisible="{Binding !IsFishingMode}">
                                 <StackPanel Spacing="10" IsVisible="{Binding IsLayersTab}">
                                     <StackPanel Spacing="4">
                                         <TextBlock Text="Layers" Classes="UiLabel" />
@@ -130,12 +152,16 @@
                                                     <TextBlock Text="Loot" />
                                                 </StackPanel>
                                             </ToggleButton>
-                                            <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowGathering}" ToolTip.Tip="Resources gathered and fish caught">
+                                            <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowGathering}" ToolTip.Tip="Resources gathered; fishing catches have their own layer">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                     <Path Data="M5,0 L10,9 L0,9 Z" Fill="{DynamicResource UiActivityGatheringBrush}" Stroke="{DynamicResource UiMarkerOutlineBrush}" StrokeThickness="1" VerticalAlignment="Center" />
                                                     <TextBlock Text="Gathering" />
                                                 </StackPanel>
                                             </ToggleButton>
+                                            <ToggleButton Classes="UiLegend" Content="Fishing places" IsChecked="{Binding Fishing.ShowLocations}"
+                                                          ToolTip.Tip="Possible fishing locations from the map files; combine with any other enabled layers" />
+                                            <ToggleButton Classes="UiLegend" Content="Catches" IsChecked="{Binding Fishing.ShowCatches}"
+                                                          ToolTip.Tip="Confirmed fishing rewards, independent of the gathering layer" />
                                             <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowDeaths}" ToolTip.Tip="Deaths and knockdowns">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                                     <Path Data="M1,1 L9,9 M9,1 L1,9" Stroke="{DynamicResource UiActivityDeathBrush}" StrokeThickness="2" VerticalAlignment="Center" />
@@ -392,6 +418,7 @@
                                         </StackPanel>
                                     </Border>
                                 </StackPanel>
+                                </Panel>
                             </Panel>
                         </ScrollViewer>
                     </Grid>
@@ -404,26 +431,13 @@
                 <Button Classes="UiIcon MapTool" Content="⤢" FontSize="{DynamicResource UiFontSizeCompact}" Click="Fit_Click" ToolTip.Tip="Fit to view" AutomationProperties.Name="Fit to view" />
             </StackPanel>
             </Panel>
-            <Border Classes="UiOverlay" IsVisible="{Binding ShowOverlayBar}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" MaxWidth="440">
-                <StackPanel Spacing="4">
-                    <WrapPanel>
-                        <Border Background="{DynamicResource UiOverlayBrush}" Padding="8,4" Cursor="SizeAll" PointerPressed="OverlayDrag_PointerPressed">
-                            <TextBlock Text="Map overlay" Classes="UiLabel" />
-                        </Border>
-                        <Button Content="Settings" Classes="UiGhost" Command="{Binding ToggleOverlayControlsCommand}" />
-                        <Button Content="Hide" Classes="UiGhost" Command="{Binding ToggleOverlayVisibilityCommand}" ToolTip.Tip="Ctrl+Alt+M on Windows" />
-                        <Button Content="Exit overlay" Classes="UiGhost" Command="{Binding ExitOverlayCommand}" />
-                    </WrapPanel>
-                    <TextBlock Text="{Binding OverlayError}" Classes="UiError" TextWrapping="Wrap" IsVisible="{Binding HasOverlayError}" />
-                </StackPanel>
-            </Border>
             <Border Classes="UiOverlay" IsVisible="{Binding ShowOverlayBar}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="8"
                     Padding="6" PointerPressed="OverlayResize_PointerPressed" ToolTip.Tip="Drag to resize overlay" AutomationProperties.Name="Resize overlay">
                 <TextBlock Text="↘" Classes="UiLabel" />
             </Border>
         </Grid>
 
-        <Panel Grid.Row="2" IsVisible="{Binding !IsOverlay}">
+        <Panel Grid.Row="3" IsVisible="{Binding !IsOverlay}">
         <Border IsVisible="{Binding IsHistory}" BorderBrush="{DynamicResource UiDividerBrush}" BorderThickness="0,1,0,0" Padding="12,8">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="10">
                 <Button Content="{Binding PlayButtonText}" Command="{Binding TogglePlayCommand}" Width="34" Height="34" CornerRadius="17"

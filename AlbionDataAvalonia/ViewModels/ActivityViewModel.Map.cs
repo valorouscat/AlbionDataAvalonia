@@ -18,6 +18,8 @@ public partial class ActivityViewModel
 
     [RelayCommand] private void ToggleMapWindow() => MapWindow?.Toggle();
 
+    [RelayCommand] private void OpenFishingMap() => MapWindow?.ShowFishing();
+
     private void DisposeMapWindow()
     {
         if (MapWindow is not null) MapWindow.IsOpenChanged -= OnMapWindowOpenChanged;
