@@ -691,12 +691,14 @@ public sealed class ActivityMapCanvas : Control
                     context.DrawRectangle(UiPalette.Brush("UiMapChestLidColor"), null, new Rect(at.X - 1, lidY - 1, 2, 3));
                     break;
                 }
-            case MapPoiKind.Boss:
+            case MapPoiKind.Boss or MapPoiKind.Miniboss:
                 {
                     var half = 7 * size;
                     context.DrawGeometry(UiPalette.Brush("UiMapPoiBossColor"), WhitePen, Polygon(
                         new Point(at.X, at.Y - half), new Point(at.X + half, at.Y), new Point(at.X, at.Y + half), new Point(at.X - half, at.Y)));
-                    context.DrawEllipse(UiPalette.Brush("UiMapMarkerEdgeColor"), null, at, 1.6 * size, 1.6 * size);
+                    if (poi.Kind == MapPoiKind.Miniboss)
+                        context.DrawLine(WhitePen, new Point(at.X - 3, at.Y), new Point(at.X + 3, at.Y));
+                    else context.DrawEllipse(UiPalette.Brush("UiMapMarkerEdgeColor"), null, at, 1.6 * size, 1.6 * size);
                     break;
                 }
             case MapPoiKind.EnergyShrine:
@@ -914,6 +916,7 @@ public sealed class ActivityMapCanvas : Control
     {
         MapPoiKind.Chest => "chest spot",
         MapPoiKind.Boss => "boss spot",
+        MapPoiKind.Miniboss => "miniboss spot",
         MapPoiKind.Shrine => "shrine",
         MapPoiKind.Camp => "mob camp spot",
         MapPoiKind.Key => "key spawn",
