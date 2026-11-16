@@ -33,7 +33,7 @@ public sealed record MapResourceSpawn(string Family, int Tier, MapPoint Position
 }
 
 /// <summary>The kinds of point of interest the map shows in one layer, each drawn its own way.</summary>
-public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown, Lever, Teleporter, Lore, EnergyShrine }
+public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, ExitUp, ExitDown, Lever, Teleporter, Lore, EnergyShrine, Miniboss }
 
 /// <summary>
 /// A point of interest from the game files, a spot where something can stand rather than what stands there now:
@@ -42,6 +42,7 @@ public enum MapPoiKind { Chest, Boss, Shrine, Camp, Wisp, Key, Coffer, Altar, Ex
 /// Hellgate chests, a Mists dungeon's boss chests) or, when Radius is set, a Mists camp slot whose chest stands within
 /// Radius of it if the instance puts a camp there. Roads chests are left out, since the game gives them an icon.</item>
 /// <item>Boss: where the layout spawns a boss or miniboss.</item>
+/// <item>Miniboss: an Abbey miniboss in a regular room's mob layer, replaced if that room becomes a boss room.</item>
 /// <item>Shrine: a Corrupted Dungeon's shrine and other shrines.</item>
 /// <item>Camp: one of the spots the game picks a zone's mob camps from.</item>
 /// <item>Wisp: where a Mists wisp can appear.</item>

@@ -60,7 +60,7 @@ internal static partial class MistsMapData
         return bestScore >= 1 && runnerUp < bestScore && runnerUp * 2 <= bestScore ? best : null;
     }
 
-    /// <summary>The layout's camp slots or Abbey's possible bosses, room rewards and other static points.</summary>
+    /// <summary>The layout's camp slots or Abbey's possible bosses, minibosses, boss chests and other static points.</summary>
     public static IReadOnlyList<MapPoi> Pois(string layout)
     {
         if (AbbeyPoints.TryGetValue(layout, out var points)) return points;
