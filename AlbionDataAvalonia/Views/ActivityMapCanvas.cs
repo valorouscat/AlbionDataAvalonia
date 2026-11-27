@@ -498,7 +498,7 @@ public sealed class ActivityMapCanvas : Control
         foreach (var node in resources)
         {
             var at = ToScreen(ImagePoint(scene, node.X, node.Y), scale);
-            if (!Visible(at, Math.Max(clusterRadius, 16 * scene.ResourceIconScale))) continue;
+            if (!Visible(at, Math.Max(clusterRadius, ResourceMapGlyph.OuterHalfSize * scene.ResourceIconScale))) continue;
             var cellX = (int)Math.Floor(at.X / cellSize);
             var cellY = (int)Math.Floor(at.Y / cellSize);
             ResourceGroup? group = null;
@@ -520,11 +520,11 @@ public sealed class ActivityMapCanvas : Control
         {
             var best = group.Nodes[0];
             var count = group.Nodes.Count;
-            const double radius = ResourceMapGlyph.OuterHalfSize;
+            const double radius = ResourceMapGlyph.HalfHeight;
             var at = group.At;
             using var opacity = context.PushOpacity(scene.ResourceIconOpacity * (group.Nodes.Any(x => x.IsInView) ? 1 : 0.55));
             using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
-            ResourceMapGlyph.Draw(context, at, best.Family, best.Tier, best.Enchantment, false, false, InvalidateVisual);
+            ResourceMapGlyph.Draw(context, at, best.Family, best.Tier, best.Enchantment, false, false);
             var charges = group.Nodes.Sum(x => (long)x.Charges);
             var left = ChartDrawing.Text(UiFormat.Whole(charges), 8,
                 UiPalette.Color("UiMapResourceChargesColor"), FontWeight.Bold);
@@ -542,9 +542,15 @@ public sealed class ActivityMapCanvas : Control
         Matrix.CreateTranslation(-at.X, -at.Y) * Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(at.X, at.Y);
 
     private void AddResourceHit(Hit hit, ActivityMapScene scene) =>
-        hits.Add(hit with { Radius = (ResourceMapGlyph.OuterHalfSize + 2) * scene.ResourceIconScale });
+        hits.Add(hit with
+        {
+            Radius = ResourceMapGlyph.OuterHalfSize * scene.ResourceIconScale,
+            Area = new Rect(hit.At.X - (ResourceMapGlyph.HalfWidth + 2) * scene.ResourceIconScale,
+                hit.At.Y - (ResourceMapGlyph.HalfHeight + 2) * scene.ResourceIconScale,
+                (ResourceMapGlyph.Width + 4) * scene.ResourceIconScale, (ResourceMapGlyph.Height + 4) * scene.ResourceIconScale)
+        });
 
-    // Living resources use the same exact item art as nodes, with a small diamond badge.
+    // Living resources share the compact resource silhouette, with a small diamond badge.
     private void DrawResourceMobs(DrawingContext context, ActivityMapScene scene, double scale)
     {
         if (scene.ResourceMobs is not { Count: > 0 } mobs) return;
@@ -555,7 +561,7 @@ public sealed class ActivityMapCanvas : Control
             var at = anchor;
             using var opacity = context.PushOpacity(scene.ResourceIconOpacity * (mob.IsInView ? 1 : 0.55));
             using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
-            ResourceMapGlyph.Draw(context, at, mob.Family, mob.Tier, mob.Enchantment, true, false, InvalidateVisual);
+            ResourceMapGlyph.Draw(context, at, mob.Family, mob.Tier, mob.Enchantment, true, false);
             var notes = new List<string> { $"Seen {UiFormat.Ago(mob.SeenAtUtc, scene.NowUtc)}",
                 mob.IsInView ? "In view · Kill it, then gather from it" : "Out of view · Last known position, remembered until cleared or the app closes" };
             if (mob.Family == "Hide")
@@ -583,7 +589,7 @@ public sealed class ActivityMapCanvas : Control
             if (!Visible(at, corners.Max(p => Distance(p, at)))) continue;
             var color = group.Count() == 1 ? ActivityPalette.Resource(group.First().Family) : UiPalette.Color("UiMapPoiCampColor");
             var shape = Polygon(corners);
-            using (context.PushOpacity(scene.ResourceSpawnIconOpacity))
+            using (PushLayerOpacity(context, new Rect(Bounds.Size), scene.ResourceSpawnIconOpacity))
             {
                 using (context.PushOpacity(0.08)) context.DrawGeometry(UiPalette.Brush(color), null, shape);
                 context.DrawGeometry(null, new ImmutablePen(UiPalette.Brush(color), 1.5, new ImmutableDashStyle([4, 3], 0)), shape);
@@ -618,7 +624,7 @@ public sealed class ActivityMapCanvas : Control
             var spawn = spawns[index];
             if (spawn.AreaHalfSize > 0) continue;
             var at = ToScreen(ImagePoint(scene, spawn.Position.X, spawn.Position.Y), scale);
-            if (!Visible(at, Math.Max(clusterRadius, 16 * scene.ResourceIconScale))) continue;
+            if (!Visible(at, Math.Max(clusterRadius, ResourceMapGlyph.OuterHalfSize * scene.ResourceIconScale))) continue;
             var cellX = (int)Math.Floor(at.X / cellSize);
             var cellY = (int)Math.Floor(at.Y / cellSize);
             SpawnGroup? group = null;
@@ -642,10 +648,11 @@ public sealed class ActivityMapCanvas : Control
             var best = group.Spawns[0];
             var at = group.At;
             using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
-            using (context.PushOpacity(scene.ResourceSpawnIconOpacity))
+            using (PushLayerOpacity(context, new Rect(at.X - ResourceMapGlyph.OuterHalfSize, at.Y - ResourceMapGlyph.HalfHeight - 2,
+                ResourceMapGlyph.OuterHalfSize * 2, ResourceMapGlyph.Height + 4), scene.ResourceSpawnIconOpacity))
             {
                 ResourceMapGlyph.Draw(context, at, best.Family, best.HasMultipleTiers ? 0 : best.Tier,
-                    null, best.Mob, true, InvalidateVisual);
+                    null, best.Mob, true);
             }
 
             var hit = SpawnHit(at, group.Spawns);
@@ -1426,7 +1433,7 @@ public sealed class ActivityMapCanvas : Control
 
         // Equal-position markers should describe the topmost observation, rather than
         // the possible template spot underneath it. Nearest-marker selection is retained.
-        var next = hits.AsEnumerable().Reverse().Where(x => Distance(x.At, at) <= x.Radius).OrderBy(x => Distance(x.At, at)).FirstOrDefault();
+        var next = hits.AsEnumerable().Reverse().Where(x => x.Area?.Contains(at) ?? Distance(x.At, at) <= x.Radius).OrderBy(x => Distance(x.At, at)).FirstOrDefault();
         if (next != hovered)
         {
             hovered = next;
@@ -1489,7 +1496,7 @@ public sealed class ActivityMapCanvas : Control
 
     private static double Distance(Point a, Point b) => Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2));
 
-    private sealed record Hit(Point At, double Radius, string Title, IReadOnlyList<string> Lines, IReadOnlyList<ItemRow> Items);
+    private sealed record Hit(Point At, double Radius, string Title, IReadOnlyList<string> Lines, IReadOnlyList<ItemRow> Items, Rect? Area = null);
 
     private sealed record ItemRow(string UniqueName, int Quality, string Text, string Value, bool Mob = false);
 

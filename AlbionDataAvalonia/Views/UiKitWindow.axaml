@@ -17,8 +17,9 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="20" Spacing="24">
             <StackPanel Spacing="8">
-                <TextBlock Classes="UiTitle" Text="Resource tier frames" />
-                <TextBlock Classes="UiLabel" Text="Outer tier colors stay separate from the item icon's enchantment frame." />
+                <TextBlock Classes="UiTitle" Text="Resource tier accents" />
+                <TextBlock Classes="UiLabel" Text="Compact resource markers use a tier stripe and an explicit tier.enchantment label." />
+                <controls:ResourceMapSamples Height="150" />
                 <ItemsControl x:Name="TierSwatches">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>

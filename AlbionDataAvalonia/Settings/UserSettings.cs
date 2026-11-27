@@ -541,7 +541,7 @@ public partial class UserSettings : INotifyPropertyChanged
         get => mapResourceSpawnIconOpacity;
         set
         {
-            var clamped = Math.Clamp(value, 25, 100);
+            var clamped = Math.Clamp(value, 5, 100);
             if (mapResourceSpawnIconOpacity == clamped) return;
             mapResourceSpawnIconOpacity = clamped;
             OnPropertyChanged(nameof(MapResourceSpawnIconOpacity));

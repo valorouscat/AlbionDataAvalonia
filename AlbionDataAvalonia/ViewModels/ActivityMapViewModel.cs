@@ -105,9 +105,9 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         selectedResourceTier = UiOptions.Find(ResourceTierOptions, settings.MapResourceMinTier);
         selectedResourceSpawnTier = UiOptions.Nearest(ResourceTierOptions, settings.MapResourceSpawnMinTier);
         selectedLowerTiers = UiOptions.Nearest(LowerTierOptions, settings.MapResourceLowerTiers);
-        selectedIconSize = UiOptions.Nearest(IconSizeOptions, settings.MapResourceIconSize);
+        selectedIconSize = UiOptions.Nearest(IconSizeOptions, (int)Math.Round(settings.MapResourceIconSize * ResourceMapGlyph.Height / 100d));
         selectedIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceIconOpacity);
-        selectedSpawnIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceSpawnIconOpacity);
+        selectedSpawnIconOpacity = UiOptions.Nearest(SpawnIconOpacityOptions, settings.MapResourceSpawnIconOpacity);
         selectedClusterRadius = UiOptions.Nearest(ClusterRadiusOptions, settings.MapResourceClusterRadius);
         UpdateResourceTierFilters();
         liveTimer.Tick += (_, _) => RefreshLive();
@@ -130,9 +130,11 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         [new(new(0), ".0+"), new(new(0, true), ".0 only"), new(new(1), ".1+"), new(new(1, true), ".1 only"),
          new(new(2), ".2+"), new(new(2, true), ".2 only"), new(new(3), ".3+"), new(new(3, true), ".3 only"), new(new(4), ".4+"), new(new(4, true), ".4 only")];
     public IReadOnlyList<Option<int>> IconSizeOptions { get; } =
-        [new(50, "50%"), new(75, "75%"), new(100, "100%"), new(125, "125%"), new(150, "150%"), new(200, "200%")];
+        Enumerable.Range(11, 34).Select(height => new Option<int>(height, $"{height} px")).ToArray();
     public IReadOnlyList<Option<int>> IconOpacityOptions { get; } =
         [new(25, "25%"), new(50, "50%"), new(75, "75%"), new(100, "100%")];
+    public IReadOnlyList<Option<int>> SpawnIconOpacityOptions { get; } =
+        Enumerable.Range(1, 20).Select(step => new Option<int>(step * 5, $"{step * 5}%")).ToArray();
     public IReadOnlyList<Option<int>> ClusterRadiusOptions { get; } =
         [new(0, "Off"), new(8, "8 px"), new(12, "12 px"), new(16, "16 px"), new(24, "24 px"), new(32, "32 px"), new(48, "48 px"), new(64, "64 px")];
 
@@ -381,7 +383,8 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
 
     partial void OnSelectedIconSizeChanged(Option<int> value)
     {
-        settings.MapResourceIconSize = value.Value;
+        // Keep the existing percentage setting compatible; the slider and scene use exact pixel heights.
+        settings.MapResourceIconSize = (int)Math.Round(value.Value / ResourceMapGlyph.Height * 100);
         Rebuild();
     }
 
@@ -553,7 +556,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             null, null, Layers, turns, ShownResources(live.Resources), ShownResourceMobs(live.ResourceMobs),
             sites.Spawns(SpawnSpots(zone, live.RawMapId, live.Layout, live.LayoutTurns)), ShownPois(sites.Pois),
             Turned(zone?.Zone?.Rooms ?? [], turns), Turned(zone?.Zone?.Outline ?? [], turns), ShowRoamingBosses ? sites.Actors.OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
-            ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
+            ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / ResourceMapGlyph.Height,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
             ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps(), ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
     }
@@ -719,7 +722,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Scene = new ActivityMapScene($"history:{runMap.Run.Id}:{option.RawMapId}:{zone?.Zone?.Id}", geometry, zone?.Image, zone?.Frame, option.Points,
             markers, Turned(zone?.Exits ?? [], turns), Turned(zone?.Icons ?? [], turns), null, null, false, DateTime.UtcNow, 0, option.StartUtc, until,
             Layers, turns, ResourceSpawns: SpawnSpots(zone, option.RawMapId, option.Layout, option.LayoutTurns),
-            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: Turned(zone?.Zone?.Rooms ?? [], turns), Outline: Turned(zone?.Zone?.Outline ?? [], turns), ResourceIconScale: SelectedIconSize.Value / 100d,
+            Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: Turned(zone?.Zone?.Rooms ?? [], turns), Outline: Turned(zone?.Zone?.Outline ?? [], turns), ResourceIconScale: SelectedIconSize.Value / ResourceMapGlyph.Height,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
             ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
     }
