@@ -36,6 +36,14 @@ jobs:
           dotnet-version: "10.0.x"
           dotnet-quality: "ga"
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-dotnet10-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', '**/packages.lock.json', '**/NuGet.Config', '**/nuget.config', 'global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-dotnet10-
+
       - name: Publish macOS project (x64)
         run: |
           dotnet publish ./AlbionDataAvalonia.Desktop.MacOS/AlbionDataAvalonia.Desktop.MacOS.csproj --configuration Release -r osx-x64
@@ -58,17 +66,25 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-app-x64
+          compression-level: 0
           path: ./AlbionDataAvalonia.Desktop.MacOS/bin/Release/net10.0/osx-x64/publish/AFMDataClient_MacOS_x64.app.zip
 
       - name: Upload macOS artifact (arm64)
         uses: actions/upload-artifact@v4
         with:
           name: macos-app-arm64
+          compression-level: 0
           path: ./AlbionDataAvalonia.Desktop.MacOS/bin/Release/net10.0/osx-arm64/publish/AFMDataClient_MacOS_arm64.app.zip
 
   build:
     runs-on: windows-latest
-    needs: build-macos
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      release_channel: ${{ steps.get_version.outputs.release_channel }}
+      release_tag: ${{ steps.get_version.outputs.release_tag }}
+      release_name: ${{ steps.get_version.outputs.release_name }}
+      is_prerelease: ${{ steps.get_version.outputs.is_prerelease }}
+      commit_log: ${{ steps.get_diff.outputs.commit_log }}
 
     steps:
       - name: Checkout code
@@ -110,6 +126,13 @@ jobs:
           echo "RELEASE_TAG=$releaseTag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "RELEASE_NAME=$releaseName" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           echo "IS_PRERELEASE=$isPrerelease" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          @(
+            "version=$version",
+            "release_channel=$channel",
+            "release_tag=$releaseTag",
+            "release_name=$releaseName",
+            "is_prerelease=$isPrerelease"
+          ) | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           echo "Found version: $version"
           echo "Release channel: $channel"
           echo "Release tag: $releaseTag"
@@ -199,6 +222,7 @@ jobs:
           echo "Current Commit: $CURRENT_COMMIT"
           echo "Commit Log: $COMMIT_LOG"
           echo "COMMIT_LOG=$COMMIT_LOG" >> $GITHUB_ENV
+          echo "commit_log=$COMMIT_LOG" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Setup .NET
@@ -206,6 +230,14 @@ jobs:
         with:
           dotnet-version: "10.0.x"
           dotnet-quality: "ga"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-dotnet10-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', '**/packages.lock.json', '**/NuGet.Config', '**/nuget.config', 'global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-dotnet10-
 
       - name: Install zip
         run: choco install zip -y
@@ -215,6 +247,53 @@ jobs:
         run: |
           dotnet publish ./AlbionDataAvalonia.Desktop/AlbionDataAvalonia.Desktop.csproj --configuration Release
           dotnet publish ./AlbionDataAvalonia.Desktop.Linux/AlbionDataAvalonia.Desktop.Linux.csproj --configuration Release
+
+      - name: Compile .ISS to .EXE Installer
+        uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
+        with:
+          path: AlbionDataAvalonia.Desktop/pkg/inno.iss
+          options: /O+
+
+      - name: Stage Windows and Linux assets
+        run: |
+          $assetStage = Join-Path $env:RUNNER_TEMP "desktop-release"
+          New-Item -ItemType Directory -Path $assetStage -Force | Out-Null
+          @(
+            "C:/Users/runneradmin/Documents/Inno Setup Output/AFMDataClientSetup_v_${{ env.VERSION }}.exe",
+            "./AlbionDataAvalonia.Desktop.Linux/bin/Release/net10.0/linux-x64/publish/AFMDataClient_Linux64",
+            "./AlbionDataAvalonia.Desktop.Linux/bin/Release/net10.0/linux-x64/publish/AFMDataClient_Linux64_Installer.sh",
+            "./AlbionDataAvalonia.Desktop.Linux/bin/Release/net10.0/linux-x64/publish/AFMDataClient_Linux64_Uninstaller.sh"
+          ) | ForEach-Object { Copy-Item -LiteralPath $_ -Destination $assetStage -ErrorAction Stop }
+        shell: pwsh
+
+      - name: Upload Windows and Linux assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-release
+          path: ${{ runner.temp }}/desktop-release
+          if-no-files-found: error
+
+  release:
+    runs-on: windows-latest
+    needs: [build, build-macos]
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      RELEASE_CHANNEL: ${{ needs.build.outputs.release_channel }}
+      RELEASE_TAG: ${{ needs.build.outputs.release_tag }}
+      RELEASE_NAME: ${{ needs.build.outputs.release_name }}
+      IS_PRERELEASE: ${{ needs.build.outputs.is_prerelease }}
+      COMMIT_LOG: ${{ needs.build.outputs.commit_log }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Windows and Linux assets
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-release
+          path: release-assets
 
       - name: Download macOS artifact (x64)
         uses: actions/download-artifact@v4
@@ -227,12 +306,6 @@ jobs:
         with:
           name: macos-app-arm64
           path: AlbionDataAvalonia.Desktop.MacOS/bin/Release/net10.0/osx-arm64/publish
-
-      - name: Compile .ISS to .EXE Installer
-        uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
-        with:
-          path: AlbionDataAvalonia.Desktop/pkg/inno.iss
-          options: /O+
 
       - name: Create Tag
         id: create_tag
@@ -261,7 +334,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: C:/Users/runneradmin/Documents/Inno Setup Output/AFMDataClientSetup_v_${{ env.VERSION }}.exe
+          asset_path: ./release-assets/AFMDataClientSetup_v_${{ env.VERSION }}.exe
           asset_name: AFMDataClientSetup_v_${{ env.VERSION }}.exe
           asset_content_type: application/octet-stream
 
@@ -271,7 +344,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./AlbionDataAvalonia.Desktop.Linux/bin/Release/net10.0/linux-x64/publish/AFMDataClient_Linux64
+          asset_path: ./release-assets/AFMDataClient_Linux64
           asset_name: AFMDataClient_Linux64
           asset_content_type: application/octet-stream
 
@@ -281,7 +354,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./AlbionDataAvalonia.Desktop.Linux/bin/Release/net10.0/linux-x64/publish/AFMDataClient_Linux64_Installer.sh
+          asset_path: ./release-assets/AFMDataClient_Linux64_Installer.sh
           asset_name: AFMDataClient_Linux64_Installer.sh
           asset_content_type: application/x-sh
 
@@ -291,7 +364,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./AlbionDataAvalonia.Desktop.Linux/bin/Release/net10.0/linux-x64/publish/AFMDataClient_Linux64_Uninstaller.sh
+          asset_path: ./release-assets/AFMDataClient_Linux64_Uninstaller.sh
           asset_name: AFMDataClient_Linux64_Uninstaller.sh
           asset_content_type: application/x-sh
 
@@ -322,7 +395,6 @@ jobs:
           path: release-metadata
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
-          submodules: recursive
 
       - name: Create LatestVersion.json
         run: |

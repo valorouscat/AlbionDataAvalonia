@@ -32,6 +32,14 @@ jobs:
           dotnet-version: "10.0.x"
           dotnet-quality: "ga"
 
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-dotnet10-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', '**/packages.lock.json', '**/NuGet.Config', '**/nuget.config', 'global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-dotnet10-
+
       - name: Set fork version
         run: |
           $version = "1.0.$(git rev-list --count HEAD).0"

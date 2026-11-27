@@ -14,6 +14,11 @@ on:
 permissions:
   contents: read
 
+# New commits supersede only testing installers of the same branch, never a release.
+concurrency:
+  group: fork-installer-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   installer:
     runs-on: windows-latest
@@ -27,6 +32,14 @@ jobs:
         with:
           dotnet-version: "10.0.x"
           dotnet-quality: "ga"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-dotnet10-${{ hashFiles('**/*.csproj', '**/*.props', '**/*.targets', '**/packages.lock.json', '**/NuGet.Config', '**/nuget.config', 'global.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-dotnet10-
 
       - name: Set fork version
         run: |
@@ -43,10 +56,11 @@ jobs:
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
         with:
           path: AlbionDataAvalonia.Desktop/pkg/inno.iss
-          options: /O+
+          options: /O+ /DMyAppCompression=lzma/fast
 
       - uses: actions/upload-artifact@v4
         with:
           name: AFMDataClientSetup_v_${{ env.VERSION }}
           path: C:/Users/runneradmin/Documents/Inno Setup Output/AFMDataClientSetup_v_${{ env.VERSION }}.exe
           if-no-files-found: error
+          compression-level: 0

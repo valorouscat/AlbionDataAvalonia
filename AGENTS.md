@@ -52,5 +52,8 @@ Keep commits focused and write imperative, sentence-case messages, mirroring exi
 - Publish a stable version equal to or greater than the active beta only after the beta code has been merged into `master` and is intentionally being promoted. When stable catches up to or exceeds beta, the workflow removes the beta entry from `LatestVersion.json`; beta users remain opted in, receive no downgrade, and become eligible again when the next beta is published.
 - Never publish a numerically lower version within either channel, and do not bypass the updater or installer downgrade protections.
 
+## Installer Pipeline
+- Testing installers may pass ISCC `/DMyAppCompression=lzma/fast`; omitting the override preserves the release compression (`lzma`). Keep ReadyToRun enabled. See `docs/DEVELOPMENT.md` for NuGet caching, same-ref test-build cancellation and the manual parallel-build/publication boundary.
+
 ## Configuration & Security Notes
 Do not commit personal credentials or `AppData/` dumps; sample defaults live in `DefaultAppSettings.json` and `DefaultUserSettings.json`. When adjusting logging or network capture behavior (`Logging/`, `Network/`), double-check that verbose output stays behind user-controlled settings. Document any new environment variables or installer flags in `docs/DEVELOPMENT.md` and this guide. The README is for players: keep it to installing and using the client, with screenshots in `docs/screenshots`, and put technical detail in `docs/DEVELOPMENT.md`.
