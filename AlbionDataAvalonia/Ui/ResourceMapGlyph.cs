@@ -4,11 +4,11 @@ using System.Globalization;
 
 namespace AlbionDataAvalonia.Ui;
 
-/// <summary>A colored resource silhouette and explicit tier/enchantment on an opaque, compact plate.</summary>
+/// <summary>A square resource plate: silhouette above separate tier and enchantment badges.</summary>
 internal static class ResourceMapGlyph
 {
-    public const double Width = 46;
-    public const double Height = 22;
+    public const double Width = 34;
+    public const double Height = 34;
     public const double HalfWidth = Width / 2;
     public const double HalfHeight = Height / 2;
     public const double OuterHalfSize = HalfWidth + 2;
@@ -17,27 +17,32 @@ internal static class ResourceMapGlyph
         bool mob, bool possible)
     {
         var box = new Rect(at.X - HalfWidth, at.Y - HalfHeight, Width, Height);
-        var ink = UiPalette.Color("UiMapResourceInkColor");
-        context.DrawRectangle(UiPalette.Brush("UiMapResourcePlateColor"),
-            UiPalette.Pen(UiPalette.Color("UiMapResourceEdgeColor"), 2), box, 4, 4);
-        // A full colored rim reads at a glance; only observed enchantments may claim a color.
-        if (!possible && enchantment is >= 1 and <= 4)
-            context.DrawRectangle(null, UiPalette.Pen(ActivityPalette.Enchantment(enchantment.Value), 2), box, 4, 4);
-        context.DrawRectangle(UiPalette.Brush(ActivityPalette.ResourceTier(tier)), null,
-            new Rect(box.X + 1, box.Y + 4, 2, 14), 1, 1);
-        ResourceMapSymbol.Draw(context, new Rect(box.X + 5, box.Y + 3, 16, 16), family);
+        var digit = UiPalette.Color("UiMapResourceEdgeColor");
+        var muted = UiPalette.Color("UiMapResourceMutedColor");
+        var plate = UiPalette.Color("UiMapResourcePlateColor");
+        var neutral = UiPalette.Blend(plate, muted, 0.22);
+        context.DrawRectangle(UiPalette.Brush(plate), UiPalette.Pen(digit, 2), box, 4, 4);
+        ResourceMapSymbol.Draw(context, new Rect(at.X - 8, box.Y + 2, 16, 16), family);
 
-        // A candidate never claims an observed enchantment; a mixed-tier spot also leaves its tier unknown.
-        var tierText = ChartDrawing.Text(tier > 0 ? tier.ToString(CultureInfo.InvariantCulture) : "?", 11, ink, FontWeight.SemiBold);
-        tierText.Draw(context, new Point(box.X + 24, at.Y - tierText.Height / 2));
-        var enchantText = ChartDrawing.Text(possible || enchantment is null ? ".?" : $".{enchantment.Value}", 11,
-            possible || enchantment is null || enchantment == 0
-                ? UiPalette.Color("UiMapResourceMutedColor") : ActivityPalette.Enchantment(enchantment.Value), FontWeight.SemiBold);
-        enchantText.Draw(context, new Point(box.X + 31, at.Y - enchantText.Height / 2));
+        var tierBox = new Rect(at.X - 12, box.Y + 20, 10, 12);
+        var enchantBox = new Rect(at.X - 1, box.Y + 20, 13, 12);
+        var level = enchantment.GetValueOrDefault();
+        var knownEnchantment = !possible && enchantment is >= 0 and <= 4;
+        context.DrawRectangle(UiPalette.Brush(tier > 0 ? ActivityPalette.ResourceTier(tier) : neutral), null, tierBox, 2, 2);
+        context.DrawRectangle(UiPalette.Brush(knownEnchantment && level > 0
+            ? ActivityPalette.Enchantment(level) : neutral), null, enchantBox, 2, 2);
+
+        var tierText = ChartDrawing.Text(tier > 0 ? tier.ToString(CultureInfo.InvariantCulture) : "?", 11,
+            tier > 0 ? digit : muted, FontWeight.SemiBold);
+        tierText.Draw(context, new Point(tierBox.Center.X - tierText.Width / 2, tierBox.Center.Y - tierText.Height / 2));
+        // Static candidates never claim a current enchantment, even when their possible tier is known.
+        var enchantText = ChartDrawing.Text(knownEnchantment ? $".{level}" : ".?", 11,
+            knownEnchantment && level > 0 ? digit : muted, FontWeight.SemiBold);
+        enchantText.Draw(context, new Point(enchantBox.Center.X - enchantText.Width / 2, enchantBox.Center.Y - enchantText.Height / 2));
 
         if (!mob) return;
-        // An outlined diamond distinguishes living resource mobs without replacing their resource silhouette.
-        var centre = new Point(box.Left + 4, box.Bottom - 3);
+        // The mob diamond sits beside the silhouette, leaving both numeric badges unobstructed.
+        var centre = new Point(box.Left + 4, box.Top + 14);
         var diamond = new StreamGeometry();
         using (var path = diamond.Open())
         {
@@ -47,6 +52,6 @@ internal static class ResourceMapGlyph
             path.LineTo(new Point(centre.X - 2.5, centre.Y));
             path.EndFigure(true);
         }
-        context.DrawGeometry(UiPalette.Brush("UiMapResourcePlateColor"), UiPalette.Pen(ink, 1), diamond);
+        context.DrawGeometry(UiPalette.Brush(plate), UiPalette.Pen(UiPalette.Color("UiMapResourceInkColor"), 1), diamond);
     }
 }

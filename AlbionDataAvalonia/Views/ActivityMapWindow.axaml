@@ -390,7 +390,7 @@
                                             <TextBlock Text="Applies to seen resources and possible spawn spots." Classes="UiFine" TextWrapping="Wrap" />
                                             <StackPanel Spacing="4">
                                                 <TextBlock Text="Icon size" Classes="UiLabel" />
-                                                <controls:OptionSlider ItemsSource="{Binding IconSizeOptions}" SelectedItem="{Binding SelectedIconSize}" HorizontalAlignment="Stretch" AutomationProperties.Name="Icon size" ToolTip.Tip="Resource marker height from 11 to 44 pixels, in 1-pixel steps; labels and hover areas scale together" />
+                                                <controls:OptionSlider ItemsSource="{Binding IconSizeOptions}" SelectedItem="{Binding SelectedIconSize}" HorizontalAlignment="Stretch" AutomationProperties.Name="Icon size" ToolTip.Tip="Resource marker height from 17 to 68 pixels, in 1-pixel steps; labels and hover areas scale together" />
                                             </StackPanel>
                                             <StackPanel Spacing="4">
                                                 <TextBlock Text="Grouping radius" Classes="UiLabel" />
