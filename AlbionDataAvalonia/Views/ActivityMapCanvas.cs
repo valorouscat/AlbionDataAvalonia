@@ -462,14 +462,14 @@ public sealed class ActivityMapCanvas : Control
         foreach (var node in resources)
         {
             var at = ToScreen(ImagePoint(scene, node.X, node.Y), scale);
-            if (!Visible(at, Math.Max(clusterRadius, 24 * scene.ResourceIconScale))) continue;
+            if (!Visible(at, Math.Max(clusterRadius, 16 * scene.ResourceIconScale))) continue;
             var cellX = (int)Math.Floor(at.X / cellSize);
             var cellY = (int)Math.Floor(at.Y / cellSize);
             ResourceGroup? group = null;
             for (var dx = -1; clusterRadius > 0 && dx <= 1 && group is null; dx++)
                 for (var dy = -1; dy <= 1 && group is null; dy++)
                     if (grid.TryGetValue((cellX + dx, cellY + dy), out var nearby))
-                        group = nearby.FirstOrDefault(x => Distance(x.At, at) <= clusterRadius);
+                        group = nearby.FirstOrDefault(x => x.Nodes[0].Family == node.Family && Distance(x.At, at) <= clusterRadius);
             if (group is null)
             {
                 group = new ResourceGroup(at);
@@ -484,61 +484,53 @@ public sealed class ActivityMapCanvas : Control
         {
             var best = group.Nodes[0];
             var count = group.Nodes.Count;
-            var radius = count > 1 ? 8.5 : 7.5;
+            const double radius = ResourceMapGlyph.HalfSize;
+            var at = group.At;
             using var opacity = context.PushOpacity(scene.ResourceIconOpacity * (group.Nodes.Any(x => x.IsInView) ? 1 : 0.55));
-            using var transform = context.PushTransform(ResourceIconTransform(group.At, scene.ResourceIconScale));
-            var edge = best.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(best.Enchantment), 2.4) : OutlinePen;
-            context.DrawEllipse(UiPalette.Brush(ActivityPalette.Resource(best.Family)), edge, group.At, radius, radius);
-            var tier = ChartDrawing.Text(best.Tier.ToString(CultureInfo.CurrentCulture), 9,
-                UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
-            tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
-
+            using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
+            ResourceMapGlyph.Draw(context, at, best.Family, best.Tier, best.Enchantment, false, false, InvalidateVisual);
             var charges = group.Nodes.Sum(x => (long)x.Charges);
             var left = ChartDrawing.Text(UiFormat.Whole(charges), 8,
                 UiPalette.Color("UiMapResourceChargesColor"), FontWeight.Bold);
-            var origin = new Point(group.At.X - left.Width / 2, group.At.Y + radius + 1);
+            var origin = new Point(at.X - left.Width / 2, at.Y + radius + 1);
             context.DrawRectangle(UiPalette.Brush(UiPalette.WithAlpha(UiPalette.Color("UiMapResourceTextColor"), 190)), null,
                 new Rect(origin.X - 2, origin.Y, left.Width + 4, left.Height), 3, 3);
             left.Draw(context, origin);
-            if (count > 1) ChartDrawing.DrawCountBadge(context, group.At, count);
-            var hit = count == 1 ? ResourceHit(group.At, best, scene) : ResourceGroupHit(group.At, group.Nodes);
-            hits.Add(hit with { Radius = hit.Radius * scene.ResourceIconScale });
+            if (count > 1) ChartDrawing.DrawCountBadge(context, at, count);
+            var hit = count == 1 ? ResourceHit(at, best, scene) : ResourceGroupHit(at, group.Nodes);
+            AddResourceHit(hit, scene);
         }
     }
 
     private static Matrix ResourceIconTransform(Point at, double scale) =>
         Matrix.CreateTranslation(-at.X, -at.Y) * Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(at.X, at.Y);
 
-    // A resource mob is a diamond in its resource's color, so it reads apart from the round nodes; mobs move and are
-    // few, so each is drawn on its own.
+    private void AddResourceHit(Hit hit, ActivityMapScene scene) =>
+        hits.Add(hit with { Radius = (ResourceMapGlyph.HalfSize + 2) * scene.ResourceIconScale });
+
+    // Living resources use the same exact item art as nodes, with a small diamond badge.
     private void DrawResourceMobs(DrawingContext context, ActivityMapScene scene, double scale)
     {
         if (scene.ResourceMobs is not { Count: > 0 } mobs) return;
-        const double radius = 8.5;
         foreach (var mob in mobs)
         {
-            var at = ToScreen(ImagePoint(scene, mob.X, mob.Y), scale);
-            if (!Visible(at, radius * scene.ResourceIconScale)) continue;
+            var anchor = ToScreen(ImagePoint(scene, mob.X, mob.Y), scale);
+            if (!Visible(anchor, 34 * scene.ResourceIconScale)) continue;
+            var at = anchor;
             using var opacity = context.PushOpacity(scene.ResourceIconOpacity * (mob.IsInView ? 1 : 0.55));
             using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
-            var edge = mob.Enchantment > 0 ? UiPalette.Pen(ActivityPalette.Enchantment(mob.Enchantment), 2.4) : OutlinePen;
-            var shape = new StreamGeometry();
-            using (var draw = shape.Open())
+            ResourceMapGlyph.Draw(context, at, mob.Family, mob.Tier, mob.Enchantment, true, false, InvalidateVisual);
+            var notes = new List<string> { $"Seen {UiFormat.Ago(mob.SeenAtUtc, scene.NowUtc)}",
+                mob.IsInView ? "In view · Kill it, then gather from it" : "Out of view · Last known position, remembered until cleared or the app closes" };
+            if (mob.Family == "Hide")
             {
-                draw.BeginFigure(new Point(at.X, at.Y - radius), true);
-                draw.LineTo(new Point(at.X + radius, at.Y));
-                draw.LineTo(new Point(at.X, at.Y + radius));
-                draw.LineTo(new Point(at.X - radius, at.Y));
-                draw.EndFigure(true);
+                if (ActivityResourceMobs.MaximumCharges(mob.MobUniqueName) is { } maximum)
+                    notes.Add($"Skinning capacity: up to {UiFormat.Count(maximum, "gather")}");
+                notes.Add("Current charges unknown while alive; gathering bonuses change the final hide yield");
             }
-
-            context.DrawGeometry(UiPalette.Brush(ActivityPalette.Resource(mob.Family)), edge, shape);
-            var tier = ChartDrawing.Text(mob.Tier.ToString(CultureInfo.CurrentCulture), 9, UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
-            tier.Draw(context, new Point(at.X - tier.Width / 2, at.Y - tier.Height / 2));
-            hits.Add(new Hit(at, 9 * scene.ResourceIconScale, $"{ResourceLabel(mob.Family, mob.Tier, mob.Enchantment)} mob",
-                [$"Seen {UiFormat.Ago(mob.SeenAtUtc, scene.NowUtc)}",
-                    mob.IsInView ? "In view · Kill it, then gather from it" : "Out of view · Last known position, remembered until cleared or the app closes"],
-                [new ItemRow(mob.MobUniqueName, 1, mob.MobName, "", Mob: true), new ItemRow(mob.ItemUniqueName, 1, ResourceLabel(mob.Family, mob.Tier, mob.Enchantment), "")]));
+            AddResourceHit(new Hit(at, 9, $"{ResourceLabel(mob.Family, mob.Tier, mob.Enchantment)} mob",
+                notes,
+                [new ItemRow(mob.MobUniqueName, 1, mob.MobName, "", Mob: true), new ItemRow(mob.ItemUniqueName, 1, ResourceLabel(mob.Family, mob.Tier, mob.Enchantment), "")]), scene);
         }
     }
 
@@ -561,7 +553,8 @@ public sealed class ActivityMapCanvas : Control
                 context.DrawGeometry(null, new ImmutablePen(UiPalette.Brush(color), 1.5, new ImmutableDashStyle([4, 3], 0)), shape);
                 using (context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale)))
                 {
-                    context.DrawEllipse(UiPalette.Brush("UiMapCountColor"), UiPalette.Pen(color, 1.5), at, 8, 8);
+                    context.DrawRectangle(UiPalette.Brush("UiMapCountColor"), UiPalette.Pen(color, 1.5),
+                        new Rect(at.X - 8, at.Y - 8, 16, 16), 3, 3);
                     var label = ChartDrawing.Text("?", 10, color, FontWeight.Bold);
                     label.Draw(context, new Point(at.X - label.Width / 2, at.Y - label.Height / 2));
                 }
@@ -574,8 +567,7 @@ public sealed class ActivityMapCanvas : Control
         }
     }
 
-    // A spawn spot is a square, or a hollow diamond for a resource mob's spot, so it reads apart from the round nodes
-    // in view. Spots close together on screen merge into the best of them; the tooltip counts what the group holds.
+    // Possible spots use an explicit question badge: the icon is not a confirmed node or observed enchantment.
     private void DrawResourceSpawns(DrawingContext context, ActivityMapScene scene, double scale)
     {
         if (scene.ResourceSpawns is not { Count: > 0 } spawns) return;
@@ -590,14 +582,14 @@ public sealed class ActivityMapCanvas : Control
             var spawn = spawns[index];
             if (spawn.AreaHalfSize > 0) continue;
             var at = ToScreen(ImagePoint(scene, spawn.Position.X, spawn.Position.Y), scale);
-            if (!Visible(at, Math.Max(clusterRadius, 10 * scene.ResourceIconScale))) continue;
+            if (!Visible(at, Math.Max(clusterRadius, 16 * scene.ResourceIconScale))) continue;
             var cellX = (int)Math.Floor(at.X / cellSize);
             var cellY = (int)Math.Floor(at.Y / cellSize);
             SpawnGroup? group = null;
             for (var dx = -1; clusterRadius > 0 && dx <= 1 && group is null; dx++)
                 for (var dy = -1; dy <= 1 && group is null; dy++)
                     if (grid.TryGetValue((cellX + dx, cellY + dy), out var nearby))
-                        group = nearby.FirstOrDefault(x => Distance(x.At, at) <= clusterRadius);
+                        group = nearby.FirstOrDefault(x => x.Spawns[0].Family == spawn.Family && x.Spawns[0].Mob == spawn.Mob && Distance(x.At, at) <= clusterRadius);
             if (group is null)
             {
                 group = new SpawnGroup(at);
@@ -609,37 +601,19 @@ public sealed class ActivityMapCanvas : Control
             group.Spawns.Add(spawn);
         }
 
-        const double half = 6;
         foreach (var group in Enumerable.Reverse(groups))
         {
             var best = group.Spawns[0];
-            var color = ActivityPalette.Resource(best.Family);
-            using var transform = context.PushTransform(ResourceIconTransform(group.At, scene.ResourceIconScale));
+            var at = group.At;
+            using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
             using (context.PushOpacity(scene.ResourceSpawnIconOpacity))
             {
-                if (best.Mob)
-                {
-                    var shape = new StreamGeometry();
-                    using (var draw = shape.Open())
-                    {
-                        draw.BeginFigure(new Point(group.At.X, group.At.Y - half - 1), true);
-                        draw.LineTo(new Point(group.At.X + half + 1, group.At.Y));
-                        draw.LineTo(new Point(group.At.X, group.At.Y + half + 1));
-                        draw.LineTo(new Point(group.At.X - half - 1, group.At.Y));
-                        draw.EndFigure(true);
-                    }
-
-                    context.DrawGeometry(null, UiPalette.Pen(color, 2), shape);
-                }
-                else context.DrawRectangle(UiPalette.Brush(color), OutlinePen, new Rect(group.At.X - half, group.At.Y - half, half * 2, half * 2), 2, 2);
-
-                var tier = ChartDrawing.Text(best.HasMultipleTiers ? "?" : best.Tier.ToString(CultureInfo.CurrentCulture), 8,
-                    best.Mob ? color : UiPalette.Color("UiMapResourceTextColor"), FontWeight.Bold);
-                tier.Draw(context, new Point(group.At.X - tier.Width / 2, group.At.Y - tier.Height / 2));
+                ResourceMapGlyph.Draw(context, at, best.Family, best.HasMultipleTiers ? 0 : best.Tier,
+                    null, best.Mob, true, InvalidateVisual);
             }
 
-            var hit = SpawnHit(group.At, group.Spawns);
-            hits.Add(hit with { Radius = hit.Radius * scene.ResourceIconScale });
+            var hit = SpawnHit(at, group.Spawns);
+            AddResourceHit(hit, scene);
         }
     }
 

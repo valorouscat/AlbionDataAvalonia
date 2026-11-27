@@ -1,0 +1,671 @@
+{
+  "retrieved": "2026-11-27",
+  "source": "Albion Online official Render Service",
+  "assets": [
+    {
+      "file": "T1_WOOD.png",
+      "url": "https://render.albiononline.com/v1/item/T1_WOOD.png?size=128&quality=1",
+      "sha256": "aba4b42fa9201221eeacbfc823c4acb5d13095c37521b31da181fdf8263c82a4"
+    },
+    {
+      "file": "T2_WOOD.png",
+      "url": "https://render.albiononline.com/v1/item/T2_WOOD.png?size=128&quality=1",
+      "sha256": "2f167a54886a6d50bf625aaf087426fafe096c302a1f124c497cf4c11ab8176d"
+    },
+    {
+      "file": "T3_WOOD.png",
+      "url": "https://render.albiononline.com/v1/item/T3_WOOD.png?size=128&quality=1",
+      "sha256": "e56de922e8f839279eaa4a5f619258cf20899bab618089509ee1016491a0d484"
+    },
+    {
+      "file": "T4_WOOD.png",
+      "url": "https://render.albiononline.com/v1/item/T4_WOOD.png?size=128&quality=1",
+      "sha256": "789525d83648828441105e1e21536cbe385dae9fa341573802a53bf3e196d207"
+    },
+    {
+      "file": "T5_WOOD.png",
+      "url": "https://render.albiononline.com/v1/item/T5_WOOD.png?size=128&quality=1",
+      "sha256": "1c67f39f94d00169e518497efaa65eeeb82c6bdfefca65c5e9d8f8631d25f641"
+    },
+    {
+      "file": "T6_WOOD.png",
+      "url": "https://render.albiononline.com/v1/item/T6_WOOD.png?size=128&quality=1",
+      "sha256": "bf8c4a8cc72c414d0162227fe4e2485b627dcec1fc574201ba8bacd386838291"
+    },
+    {
+      "file": "T7_WOOD.png",
+      "url": "https://render.albiononline.com/v1/item/T7_WOOD.png?size=128&quality=1",
+      "sha256": "0a901a93652b214da87274707278b090411d93158cecbeb6988c3a4ded46221b"
+    },
+    {
+      "file": "T8_WOOD.png",
+      "url": "https://render.albiononline.com/v1/item/T8_WOOD.png?size=128&quality=1",
+      "sha256": "4aae12e6f7de7b2ce05da0ce2a26c0106f60ac385604709d23d4978bb01828ad"
+    },
+    {
+      "file": "T1_ROCK.png",
+      "url": "https://render.albiononline.com/v1/item/T1_ROCK.png?size=128&quality=1",
+      "sha256": "ff8b0458fec64fd8c05c8a12d58fa9acd68b470ca3955d476d943ea5dc2a102d"
+    },
+    {
+      "file": "T2_ROCK.png",
+      "url": "https://render.albiononline.com/v1/item/T2_ROCK.png?size=128&quality=1",
+      "sha256": "39c6e1dc9f2c4457ddf08d3149190d425670f4ab78928d4c9bb364ce658b6611"
+    },
+    {
+      "file": "T3_ROCK.png",
+      "url": "https://render.albiononline.com/v1/item/T3_ROCK.png?size=128&quality=1",
+      "sha256": "6e7100c22b5f789dfaee66d6aa66e804174da89fee02c0e41564ec562e0fd9c8"
+    },
+    {
+      "file": "T4_ROCK.png",
+      "url": "https://render.albiononline.com/v1/item/T4_ROCK.png?size=128&quality=1",
+      "sha256": "9babe55a072cf695d4574d3c2da27c3ed8c80cf80058ce5d4a17c8c9764fc273"
+    },
+    {
+      "file": "T5_ROCK.png",
+      "url": "https://render.albiononline.com/v1/item/T5_ROCK.png?size=128&quality=1",
+      "sha256": "97606df8cceeee81bf3d786598ee2b1f5f256b7e41f8f201186bc8ffaa314676"
+    },
+    {
+      "file": "T6_ROCK.png",
+      "url": "https://render.albiononline.com/v1/item/T6_ROCK.png?size=128&quality=1",
+      "sha256": "e8eae2270a07075306cd53b4baa763d33b0787fd3f437bca21087be0afa09b23"
+    },
+    {
+      "file": "T7_ROCK.png",
+      "url": "https://render.albiononline.com/v1/item/T7_ROCK.png?size=128&quality=1",
+      "sha256": "bbe4785ea12f487760e32a6c8f11bc317859ee41c08086d6a0a47eb38f56eff2"
+    },
+    {
+      "file": "T8_ROCK.png",
+      "url": "https://render.albiononline.com/v1/item/T8_ROCK.png?size=128&quality=1",
+      "sha256": "aeeb32d09ef11d0196ab445f408e84b65d1bbae9aec40fb7bf3cfbe8af504935"
+    },
+    {
+      "file": "T1_HIDE.png",
+      "url": "https://render.albiononline.com/v1/item/T1_HIDE.png?size=128&quality=1",
+      "sha256": "ae34056bcf95e020d70efba35f6d2c0b672eb584ac24986a0a636ec8b5eb9a2a"
+    },
+    {
+      "file": "T2_HIDE.png",
+      "url": "https://render.albiononline.com/v1/item/T2_HIDE.png?size=128&quality=1",
+      "sha256": "a371003c6374bcb22335878f431932b3f994947704a86f8ec440ebe11bc1c392"
+    },
+    {
+      "file": "T3_HIDE.png",
+      "url": "https://render.albiononline.com/v1/item/T3_HIDE.png?size=128&quality=1",
+      "sha256": "0c3405895d70190fc18b4f8544545fbcbf64bf707ca62a48aa12415f2207be8b"
+    },
+    {
+      "file": "T4_HIDE.png",
+      "url": "https://render.albiononline.com/v1/item/T4_HIDE.png?size=128&quality=1",
+      "sha256": "1ebe898a40ac83bc207a00043504f74a591e7d98ce35a516af6d34b84c50e7bc"
+    },
+    {
+      "file": "T5_HIDE.png",
+      "url": "https://render.albiononline.com/v1/item/T5_HIDE.png?size=128&quality=1",
+      "sha256": "ffdd6f35bf1001425cee635b13824d581738599f249141aaed101493a7a4e623"
+    },
+    {
+      "file": "T6_HIDE.png",
+      "url": "https://render.albiononline.com/v1/item/T6_HIDE.png?size=128&quality=1",
+      "sha256": "234518a2532ea5d69e8454feb6412f2d4bfe806ceef82cba8adb494f370828b9"
+    },
+    {
+      "file": "T7_HIDE.png",
+      "url": "https://render.albiononline.com/v1/item/T7_HIDE.png?size=128&quality=1",
+      "sha256": "8f8aa3fd9b24a3533c6785171724af9f40d2aadd8657d11907d3d42ed98d7c38"
+    },
+    {
+      "file": "T8_HIDE.png",
+      "url": "https://render.albiononline.com/v1/item/T8_HIDE.png?size=128&quality=1",
+      "sha256": "127f5d99c1ad40640b0b7495b141b19d2a61701b905f3e21a361088adfd0651a"
+    },
+    {
+      "file": "T2_FIBER.png",
+      "url": "https://render.albiononline.com/v1/item/T2_FIBER.png?size=128&quality=1",
+      "sha256": "4e41d219b68da2669ab53b6c8f199fa52c4bf50a87b195ddf514fdb93e495e2c"
+    },
+    {
+      "file": "T3_FIBER.png",
+      "url": "https://render.albiononline.com/v1/item/T3_FIBER.png?size=128&quality=1",
+      "sha256": "a10b452c57942589358d98a6b723824c24b2618339f5a7b837c665ee71b71485"
+    },
+    {
+      "file": "T4_FIBER.png",
+      "url": "https://render.albiononline.com/v1/item/T4_FIBER.png?size=128&quality=1",
+      "sha256": "8f3ca9b404d6761569d44765dfdb86e73cd02708a5f3e4d092ef5f1f320e9bea"
+    },
+    {
+      "file": "T5_FIBER.png",
+      "url": "https://render.albiononline.com/v1/item/T5_FIBER.png?size=128&quality=1",
+      "sha256": "d2654db02ea8be7b563c0f7103b6419f02e31c73546f4ab3787e0efa5eb75a0a"
+    },
+    {
+      "file": "T6_FIBER.png",
+      "url": "https://render.albiononline.com/v1/item/T6_FIBER.png?size=128&quality=1",
+      "sha256": "3bed01a22c3f728681662fed8261c3a738e0c47597c3cac0706a8220a4b27abd"
+    },
+    {
+      "file": "T7_FIBER.png",
+      "url": "https://render.albiononline.com/v1/item/T7_FIBER.png?size=128&quality=1",
+      "sha256": "601adcee0942ad70f73dba75b83f39fcbfeefe5ce7fcf384e252ce673dcac8cf"
+    },
+    {
+      "file": "T8_FIBER.png",
+      "url": "https://render.albiononline.com/v1/item/T8_FIBER.png?size=128&quality=1",
+      "sha256": "9644530ea64e5876dc747b1970f241b100241ae05085f1bbd41ab17cffeae65e"
+    },
+    {
+      "file": "T2_ORE.png",
+      "url": "https://render.albiononline.com/v1/item/T2_ORE.png?size=128&quality=1",
+      "sha256": "d5aa43565dd5c8f61f5615c7a9c8c1bb9e95512b0424030c35bc885dd34d6080"
+    },
+    {
+      "file": "T3_ORE.png",
+      "url": "https://render.albiononline.com/v1/item/T3_ORE.png?size=128&quality=1",
+      "sha256": "c65b0f89531a7ee7e10948c00bcbe3ce010adc23af1b05c1fb894dbfd96734ba"
+    },
+    {
+      "file": "T4_ORE.png",
+      "url": "https://render.albiononline.com/v1/item/T4_ORE.png?size=128&quality=1",
+      "sha256": "0082cc7df98bc1db94850934617d720e199bf38896aeb2c98ff21299bdef71ca"
+    },
+    {
+      "file": "T5_ORE.png",
+      "url": "https://render.albiononline.com/v1/item/T5_ORE.png?size=128&quality=1",
+      "sha256": "4e85b34075e81dab8e1760b3af7c2cfece21ca54424ce425c8370800908c56f1"
+    },
+    {
+      "file": "T6_ORE.png",
+      "url": "https://render.albiononline.com/v1/item/T6_ORE.png?size=128&quality=1",
+      "sha256": "96d6006ed0f2a5b7f10d3cef98a52990dc3dbfb1614df2b3cee2ce6dea6ab3f6"
+    },
+    {
+      "file": "T7_ORE.png",
+      "url": "https://render.albiononline.com/v1/item/T7_ORE.png?size=128&quality=1",
+      "sha256": "5382ff9cb0f57a9f708dfa9a7858f0acf3f1d7c4eea7ad367788f7aa3a318c02"
+    },
+    {
+      "file": "T8_ORE.png",
+      "url": "https://render.albiononline.com/v1/item/T8_ORE.png?size=128&quality=1",
+      "sha256": "b2354e6b87989852ce4a34a8b29b60ea4f2c9ae7bdd20ede73c331055e41c19d"
+    },
+    {
+      "file": "T4_WOOD_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T4_WOOD_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "2ec0c3470417a9345fe5da9267d4ea4a8b9693f37c12d6f23ccc1ee00945b2ad"
+    },
+    {
+      "file": "T4_WOOD_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T4_WOOD_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "4f586f062cbdc6bdb0191c999267162bb3f5aea14ce551eac909e679f413e2bc"
+    },
+    {
+      "file": "T4_WOOD_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T4_WOOD_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "b11ef0b51f736d87636b9d6db9ad9d2c170932e45443082d2ef866a96647fa91"
+    },
+    {
+      "file": "T4_WOOD_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T4_WOOD_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "2753166f1f2e8679e159032663278fba9749ab26b0067668cedbecbf8636316b"
+    },
+    {
+      "file": "T5_WOOD_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T5_WOOD_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "6014e3e9e1c50dde0b24f873cc3375558c956b5100ea7c42fe11cbf583993948"
+    },
+    {
+      "file": "T5_WOOD_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T5_WOOD_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "6301f3586234a31446e055a231851ba365b57e456253aa81c915f5940f19b604"
+    },
+    {
+      "file": "T5_WOOD_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T5_WOOD_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "3f479692ae3acb3c30efc29541f1004e3f7b44971b9cdde002982c3f18480cee"
+    },
+    {
+      "file": "T5_WOOD_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T5_WOOD_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "cbc162ed6726f0db2b4d34dd109f9589e1b9426772ed4c5017c0a69cd4780b67"
+    },
+    {
+      "file": "T6_WOOD_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T6_WOOD_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "5a69684ced985ccab8f22bf03570013cbeed8e58d3d77ef580e1a32dff6c9761"
+    },
+    {
+      "file": "T6_WOOD_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T6_WOOD_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "df07e51c71fa402f605b5819fd8b31da61cd448ed3e83587c58e29da73d228b6"
+    },
+    {
+      "file": "T6_WOOD_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T6_WOOD_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "0caf138afe4b4cf57c7f9a8f2e4801295b3f79b6e75dbf7cdbfc3634d410eb1e"
+    },
+    {
+      "file": "T6_WOOD_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T6_WOOD_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "1e4ed2d8107fb1e5027e8b6bb702da4c9d85763a1f3fc578f1470cf5940ff7d7"
+    },
+    {
+      "file": "T7_WOOD_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T7_WOOD_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "d68214a81e49620284b84a548778b3b751dbf79af30a09e35b5168f1ab74ac03"
+    },
+    {
+      "file": "T7_WOOD_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T7_WOOD_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "c06f852fb42477624004ee9d080d6ba6a09b26cdf15c98a041a916150257f4fe"
+    },
+    {
+      "file": "T7_WOOD_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T7_WOOD_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "0e6945a9fc538f801f74c830bdc5db207d9282a763b768c5155cf4e432bc7621"
+    },
+    {
+      "file": "T7_WOOD_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T7_WOOD_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "25f705f98a63943d5aa47decec737a09f88de659d98cbf0a3aa3d19e51dc4860"
+    },
+    {
+      "file": "T8_WOOD_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T8_WOOD_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "2586c401c390443b94609be2e9690153ba067a5d5e06e00e44bf500f805c176c"
+    },
+    {
+      "file": "T8_WOOD_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T8_WOOD_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "210dcde93ea6292e00cf70c9095a1c1621551f027cedd09133f21f5be4f1e603"
+    },
+    {
+      "file": "T8_WOOD_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T8_WOOD_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "ddfc900e1cc2a4cba93ed669c1b7c215d91088b3cb2af48bd704e4db67853696"
+    },
+    {
+      "file": "T8_WOOD_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T8_WOOD_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "f2f15e23c919ba2ecef7c3c32f4018d7feb58066a0deb0daf83964ece9c6fdc2"
+    },
+    {
+      "file": "T4_ROCK_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T4_ROCK_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "b053edec7c43e9b53535d86d8fbe7b5ca4c2efe7d623657065b033393edc8de4"
+    },
+    {
+      "file": "T4_ROCK_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T4_ROCK_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "1d6ee7a6cde947f25bf27b20094da7afd774d7ff91752f03ecd5b35b52627344"
+    },
+    {
+      "file": "T4_ROCK_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T4_ROCK_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "eaba5fbef9f4623b851b4e05c43c1d134a7f5b78718185c2bbf5a757a859016c"
+    },
+    {
+      "file": "T5_ROCK_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T5_ROCK_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "417389ee773fab36c184fc5e2c8c4ec6a6f0baf2e065ed50572619cb00592a97"
+    },
+    {
+      "file": "T5_ROCK_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T5_ROCK_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "8151bd26b3976da2b6b1afd8614cb378b1060b100231cc357a648e06c8705530"
+    },
+    {
+      "file": "T5_ROCK_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T5_ROCK_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "41aecc567f33e56b707f6cd30f37f8183d7b6f42f9abbf45d533e6d271c0110a"
+    },
+    {
+      "file": "T6_ROCK_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T6_ROCK_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "050b43f0a61bbe3772b7d71666cf3998d29a21e0e02126f312a70114550a7a02"
+    },
+    {
+      "file": "T6_ROCK_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T6_ROCK_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "9677a57700309cd8f4669fb9139bf76b8cc47be12bb7a300aea4b31240c9296d"
+    },
+    {
+      "file": "T6_ROCK_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T6_ROCK_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "5e2905a59908b3969e593b7b12be6a446a5a8fe19ecd1cddc34a4a705df6cbb0"
+    },
+    {
+      "file": "T7_ROCK_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T7_ROCK_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "05af827291ba2e72cdf57fe4eba68dc0292390a2f03417048c3e7b70559108c1"
+    },
+    {
+      "file": "T7_ROCK_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T7_ROCK_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "6b76435bba6d84be115d727947686cb3397c9d1166643739c9193278c2f480af"
+    },
+    {
+      "file": "T7_ROCK_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T7_ROCK_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "50cbfce86a52ff9866adffe367f14bf479e54962b1a85c017bfccc779cb431e4"
+    },
+    {
+      "file": "T8_ROCK_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T8_ROCK_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "32a83cc4d0d8389425491c8b0f8e423314ad962c6688d050881e77576737d23e"
+    },
+    {
+      "file": "T8_ROCK_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T8_ROCK_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "bbe273d563bbaadbe55eddc3b5ba6d6d26e1d83a1c7f42b086ee18150b8a7d57"
+    },
+    {
+      "file": "T8_ROCK_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T8_ROCK_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "ae1b19035b3c90cf97359cddd0716977154824302038bc11f7ceed55d513b136"
+    },
+    {
+      "file": "T4_HIDE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T4_HIDE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "28b3018440727a09847f31077d31ee4d5b28054f0acd46df384fb3beda467aac"
+    },
+    {
+      "file": "T4_HIDE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T4_HIDE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "9b4fe06318c2156d05fbb6efd6b09dcc316de6ff129c37f34b5f6b8910b48d86"
+    },
+    {
+      "file": "T4_HIDE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T4_HIDE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "5709874a2e1453d752a8eaeff3928f2cbbd8c6d4c9aad8e4b2148ebbd35cf2b5"
+    },
+    {
+      "file": "T4_HIDE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T4_HIDE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "17ec2ecb52b43b6818c27ca04877d3c5634544db2f14758d1ed8da05f662f59c"
+    },
+    {
+      "file": "T5_HIDE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T5_HIDE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "f94affc0c0a4d595415ec8d72b56f18f08249a754173990b2cea122e18c2373f"
+    },
+    {
+      "file": "T5_HIDE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T5_HIDE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "5f379c93bda8d1ad48b977beae1d824a3d58b1d8c8f43b5e0d2f7dbb5e8e0e64"
+    },
+    {
+      "file": "T5_HIDE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T5_HIDE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "bb41cbe94d2392c77e64b0fa155540724c78ac5b89471022304b96e9c808ec68"
+    },
+    {
+      "file": "T5_HIDE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T5_HIDE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "342f1ff03a3cb6cbb153e3fafd75985f3980cece2dc48b7d35b754fb180b6570"
+    },
+    {
+      "file": "T6_HIDE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T6_HIDE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "495916d31bff10483bd56066106989d52cb8e6789eab0780829bb81d55feb65d"
+    },
+    {
+      "file": "T6_HIDE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T6_HIDE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "dc24dc46b20100d0cee73c67bf29c96dde147422a1e6d71ab9b25446b57a191d"
+    },
+    {
+      "file": "T6_HIDE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T6_HIDE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "dcba75cf23260d7edfffe9ae0b022099b38051ee0e47f246cb0bc56150978b87"
+    },
+    {
+      "file": "T6_HIDE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T6_HIDE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "f06f020b5cfe9e5eee76236efb1255beeb65d79d3677e66b63123f8a1a39a88c"
+    },
+    {
+      "file": "T7_HIDE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T7_HIDE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "2a142af1acaa2671c372e1521bfed6c5a2a44398897ff2b3f612b452d07a8349"
+    },
+    {
+      "file": "T7_HIDE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T7_HIDE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "a548bb34f641cbd19ddf9268fff3e206be5eca3366b5e72d63db32c9487419cd"
+    },
+    {
+      "file": "T7_HIDE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T7_HIDE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "c79a848f0937c504416d060806bcf597239e3cb34dab2dad62548b2f622215d9"
+    },
+    {
+      "file": "T7_HIDE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T7_HIDE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "f4ff396a2d8d768db29f36418d72ba2cdfb2fe6c40fc74f64483ea9e4a5a7cf0"
+    },
+    {
+      "file": "T8_HIDE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T8_HIDE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "f80b82589c483c8200a646fc603f67c901e8b2874c67aa88404dc609ca80df91"
+    },
+    {
+      "file": "T8_HIDE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T8_HIDE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "35a741763eab2f01b3faccd82903cfac22eb70c2e28d65efc98156d8ba73fac2"
+    },
+    {
+      "file": "T8_HIDE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T8_HIDE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "d3db36615db177a75fccf3ade5467a70742a13633dff674d4b3adb3cb3cdcedb"
+    },
+    {
+      "file": "T8_HIDE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T8_HIDE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "d109a80d96e726cafcf042e5e59a613e74338502e9fb62dbefdab0fff070f521"
+    },
+    {
+      "file": "T4_FIBER_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T4_FIBER_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "ed6d6d9173a0b09855eb15514553dcb7d1bd09c1b7c45838262b933447001d9f"
+    },
+    {
+      "file": "T4_FIBER_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T4_FIBER_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "2ff5afdc06546908ab5fbf9ccd7eca3d9c36b2aa521f2bc335a82bc7353e9169"
+    },
+    {
+      "file": "T4_FIBER_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T4_FIBER_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "a3c62e38516ec7e74691885670fc75238e1b68e220e5508dd520af8ce01540cd"
+    },
+    {
+      "file": "T4_FIBER_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T4_FIBER_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "413cff7dadfbcb061d87db0bd5cfc070fb7e3044cc85b3f9644f3e2ccc975016"
+    },
+    {
+      "file": "T5_FIBER_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T5_FIBER_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "c695383a05e913e9993a4cb574d26e7cac649726c694cf46bf72772703772ac3"
+    },
+    {
+      "file": "T5_FIBER_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T5_FIBER_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "e2c73237b4c123108bbc58fb4549e40a415c2976a57580dad366756d03fbb9b7"
+    },
+    {
+      "file": "T5_FIBER_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T5_FIBER_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "5c0447db080789771db65fdc3f04f1d9fba1c0ad310ce0082fa49085993d4823"
+    },
+    {
+      "file": "T5_FIBER_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T5_FIBER_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "359ddd3a5a2c0c4c1e0c984b05d9c9142fdbc8f4cf00c3f37989371586ebd5c7"
+    },
+    {
+      "file": "T6_FIBER_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T6_FIBER_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "d7d49684e6b573d8222a1dec4e10b18110b8223b930815ebbd4a550d81d12aae"
+    },
+    {
+      "file": "T6_FIBER_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T6_FIBER_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "eab2070918f67d38da3cc7ee43ea0db76fca0c920ca6bb5fe7ac00c2e0e74981"
+    },
+    {
+      "file": "T6_FIBER_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T6_FIBER_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "d3f32e2b5e2dc073de0d26aa5ee06db7b25778ff3af134500e402e080da306fc"
+    },
+    {
+      "file": "T6_FIBER_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T6_FIBER_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "a17ce4307811bf52996c00061fb0c9ee5c4d674dc70e40fe484bfd52b4565547"
+    },
+    {
+      "file": "T7_FIBER_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T7_FIBER_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "4f127829fc782bca77cca5be71a62e198d17b9330e2cebcd6c8795d58b7a6856"
+    },
+    {
+      "file": "T7_FIBER_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T7_FIBER_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "7ca5b4548c4455697bbb934091c4ea0f8e5c519a2b9b503b80ab451537a81022"
+    },
+    {
+      "file": "T7_FIBER_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T7_FIBER_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "589d182806a732aa7b1ef75aad84f74d6063ee840e5396f168911a4850c094da"
+    },
+    {
+      "file": "T7_FIBER_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T7_FIBER_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "74301b5aa4b7ac6bae1f80864c342d0d09adf5fc817b3bb21b051417e6befc77"
+    },
+    {
+      "file": "T8_FIBER_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T8_FIBER_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "46aa6ce6091806b335cba72ace86729048c302f51b2145c531aecb7386629e9d"
+    },
+    {
+      "file": "T8_FIBER_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T8_FIBER_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "055ef04cb066bf4baeac286498ebdce59e684c479792aa00b9d3c6819efd9a0c"
+    },
+    {
+      "file": "T8_FIBER_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T8_FIBER_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "21610b10f53d5bcf7132b26b7737a0b56038cdab74c24b534b159ee2a5fcb4e2"
+    },
+    {
+      "file": "T8_FIBER_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T8_FIBER_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "c9011185e7bd77a9dc7a561165c02bb9b816aba7deaab1d8614c0fd54e2b52e8"
+    },
+    {
+      "file": "T4_ORE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T4_ORE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "b17ba5bd348f9411ca34d9819c2151fbe95bedca5d7fbcf05e594d0c36cc87a9"
+    },
+    {
+      "file": "T4_ORE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T4_ORE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "8d402eca2fb50a00a691cdba7391b6d075b147a47921eb28a93e431481927454"
+    },
+    {
+      "file": "T4_ORE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T4_ORE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "989c7ed8eccfe9e168e941322b9a60d80bf3a5cd5642d0c8c2dd2f1e4631c6cc"
+    },
+    {
+      "file": "T4_ORE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T4_ORE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "6e5fa9c040680cd625836afb59a129136e729742ee319157d78cf31219ffbde2"
+    },
+    {
+      "file": "T5_ORE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T5_ORE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "b025265c65ba1a58dd437bf7fb404ce4d337e2c4cf98c9a9ad2d441c938e9949"
+    },
+    {
+      "file": "T5_ORE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T5_ORE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "c2815e52ceb5ac01b42c82c938e3776d77dc2e7dfa83602f74d08addb8216dd7"
+    },
+    {
+      "file": "T5_ORE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T5_ORE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "51289a8959d9556a35d292161b7e09b6e6125d52f67d9bca73a965f9dd6e5a06"
+    },
+    {
+      "file": "T5_ORE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T5_ORE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "509646842c65550e76e708c25630b5c6df5ba2ced1217a65c31405eb733e2d18"
+    },
+    {
+      "file": "T6_ORE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T6_ORE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "98c990f0f4d97f4496e95ff5c6680e1cd65654db22c152475e52457bdf0ecbd7"
+    },
+    {
+      "file": "T6_ORE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T6_ORE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "35fe64c1064d7d455a9d552404e7264ae97db973a16a9f02d5770083e6f03b8b"
+    },
+    {
+      "file": "T6_ORE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T6_ORE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "90224d2ecb3f991deffaf8a17f6ac9144e487343df112b7fe7fc4631953bdc89"
+    },
+    {
+      "file": "T6_ORE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T6_ORE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "de9e78e47e375c6906c01591e6ef68788b02863d2e70b59bb8f703ebd360dcf2"
+    },
+    {
+      "file": "T7_ORE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T7_ORE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "8bd2ad97c50a77091c0cc415e800b88bbb81915610cf4c1f99674dfdb82f3f38"
+    },
+    {
+      "file": "T7_ORE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T7_ORE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "15c6a22ea096bab9060241568994826eb45d7c9920c0e4fc16700e1e7e6e51e5"
+    },
+    {
+      "file": "T7_ORE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T7_ORE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "398c89c11c6950bac5a233b2e56fa22598d7b06093232250878aed85ba0a80fe"
+    },
+    {
+      "file": "T7_ORE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T7_ORE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "a19bc1a1a2c72df1c809c36dc3ce2807fd7afd3db2dda2313e7f1b8d25b47508"
+    },
+    {
+      "file": "T8_ORE_LEVEL1@1.png",
+      "url": "https://render.albiononline.com/v1/item/T8_ORE_LEVEL1%401.png?size=128&quality=1",
+      "sha256": "6c15aec92abf04874a25242e9a7e1f7b447474d1ce9816752f009307f38739d6"
+    },
+    {
+      "file": "T8_ORE_LEVEL2@2.png",
+      "url": "https://render.albiononline.com/v1/item/T8_ORE_LEVEL2%402.png?size=128&quality=1",
+      "sha256": "084017cca85e012146019a6fb8629cea77ebfc89d7ede1f838c6869e31a11186"
+    },
+    {
+      "file": "T8_ORE_LEVEL3@3.png",
+      "url": "https://render.albiononline.com/v1/item/T8_ORE_LEVEL3%403.png?size=128&quality=1",
+      "sha256": "bcf434952dd33b7dc58e7380a43b114f7012f2f13b9ca6310dec5106c84a14c2"
+    },
+    {
+      "file": "T8_ORE_LEVEL4@4.png",
+      "url": "https://render.albiononline.com/v1/item/T8_ORE_LEVEL4%404.png?size=128&quality=1",
+      "sha256": "e8e87d4b6b375b9b186ee7b721d1c1e49fc8f256dae24645c8e88c69bb9f3e75"
+    }
+  ]
+}

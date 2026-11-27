@@ -148,19 +148,19 @@
                                                     <TextBlock Text="Exits &amp; icons" />
                                                 </StackPanel>
                                             </ToggleButton>
-                                            <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResources}" IsVisible="{Binding IsLive}" ToolTip.Tip="Resource nodes the game has shown near you on this map, with their tier and the units left under each. A colored ring marks an enchanted node. Empty nodes disappear immediately. Resource mobs remain at their last known position after leaving view (faded) until confirmed death, clearing or app closure.">
+                                            <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResources}" IsVisible="{Binding IsLive}" ToolTip.Tip="Resource nodes the game has shown near you on this map, with their tier and the units left under each. The game item icon shows its tier and enchantment. A small diamond badge marks a living resource mob. Empty nodes disappear immediately. Resource mobs remain at their last known position after leaving view (faded) until confirmed death, clearing or app closure.">
                                                 <StackPanel Orientation="Horizontal" Spacing="2">
-                                                    <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceWoodBrush}" VerticalAlignment="Center" />
-                                                    <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceOreBrush}" VerticalAlignment="Center" />
-                                                    <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceFiberBrush}" VerticalAlignment="Center" />
-                                                    <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceHideBrush}" VerticalAlignment="Center" />
-                                                    <Ellipse Width="7" Height="7" Fill="{DynamicResource UiResourceStoneBrush}" VerticalAlignment="Center" />
+                                                    <Image Source="/Assets/Resources/T4_WOOD.png" Width="14" Height="14" VerticalAlignment="Center" />
+                                                    <Image Source="/Assets/Resources/T4_ORE.png" Width="14" Height="14" VerticalAlignment="Center" />
+                                                    <Image Source="/Assets/Resources/T4_FIBER.png" Width="14" Height="14" VerticalAlignment="Center" />
+                                                    <Image Source="/Assets/Resources/T4_HIDE.png" Width="14" Height="14" VerticalAlignment="Center" />
+                                                    <Image Source="/Assets/Resources/T4_ROCK.png" Width="14" Height="14" VerticalAlignment="Center" />
                                                     <TextBlock Text="Seen resources" Margin="4,0,0,0" />
                                                 </StackPanel>
                                             </ToggleButton>
-                                            <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResourceSpawns}" ToolTip.Tip="Where this zone can grow resource nodes and resource mobs, from the game files, like the interactive maps on the web. Squares are nodes and hollow diamonds are mobs, with the tier inside. These are possible spots, not what stands there now, and they need no packet reading.">
+                                            <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResourceSpawns}" ToolTip.Tip="Where this zone can grow resource nodes and resource mobs, from the game files, like the interactive maps on the web. Item icons show the possible resource and tier; a question badge marks unconfirmed availability and enchantment. A diamond badge marks a mob spot. These are possible spots, not what stands there now, and they need no packet reading.">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Border Width="9" Height="9" CornerRadius="2" Background="{DynamicResource UiResourceFiberBrush}" Opacity="0.6" VerticalAlignment="Center" />
+                                                    <Image Source="/Assets/Resources/T4_FIBER.png" Width="14" Height="14" Opacity="0.6" VerticalAlignment="Center" />
                                                     <TextBlock Text="Spawn spots" />
                                                 </StackPanel>
                                             </ToggleButton>

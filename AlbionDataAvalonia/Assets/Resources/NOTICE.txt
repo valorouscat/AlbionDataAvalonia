@@ -1,0 +1,4 @@
+Original Albion Online resource item art, downloaded unchanged from the official Render Service.
+Copyright Sandbox Interactive GmbH. Albion Online and its game assets belong to their respective owners.
+This project does not claim ownership of these images. No third-party application code is included.
+See sources.json for exact source URLs, retrieval date and SHA-256 checksums.
