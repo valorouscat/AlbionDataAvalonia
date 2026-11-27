@@ -9,8 +9,9 @@ public readonly record struct ResourceMobSighting(long Id, int MobIndex, double 
 
 /// <summary>
 /// Mobs that yield gathering resources: hide animals, and the critters, guardians and treasure mobs of wood, stone,
-/// fiber and ore. The generated catalog names them by the Harvestable loot mobs.json gives each. The packets are read
-/// from raw parameters, as the shared NewMob model has no position, following the community's open-source radars:
+/// fiber and ore. The generated catalog reads their resource families and tiers from Harvestable loot in mobs.json.
+/// The packets are read from raw parameters, as the shared NewMob model has no position, following the community's
+/// open-source radars:
 /// <list type="bullet">
 /// <item>NewMob: 0 id, 1 mob index, 7 position [x, y] (8 on older layouts), 33 enchantment.</item>
 /// <item>MobChangeState: 0 id, 1 enchantment.</item>
@@ -22,10 +23,13 @@ internal static partial class ActivityResourceMobs
     /// <summary>The resource family (as ActivityResourceIdentity names it) and tier a mob yields, or null for any other mob.</summary>
     public static (string Family, int Tier)? Resource(string? uniqueName)
     {
-        if (string.IsNullOrWhiteSpace(uniqueName) || !Catalog.TryGetValue(uniqueName, out var family)) return null;
-        return uniqueName.Length > 2 && uniqueName[0] is 'T' or 't' && uniqueName[1] is >= '1' and <= '8'
-            ? (family, uniqueName[1] - '0') : null;
+        return !string.IsNullOrWhiteSpace(uniqueName) && Catalog.TryGetValue(uniqueName, out var resource)
+            ? (resource.Family, resource.Tier) : null;
     }
+
+    /// <summary>Capacity from the game definition, never the current charges or the player's final gathering yield.</summary>
+    public static int? MaximumCharges(string? uniqueName) =>
+        !string.IsNullOrWhiteSpace(uniqueName) && Catalog.TryGetValue(uniqueName, out var resource) ? resource.MaximumCharges : null;
 
     public static ResourceMobSighting? ReadNew(IReadOnlyDictionary<byte, object> parameters)
     {

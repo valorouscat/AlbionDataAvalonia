@@ -6,6 +6,7 @@ using System;
 using System.ComponentModel;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using AlbionDataAvalonia.Maps;
 
 public enum StartupWindowMode
 {
@@ -545,6 +546,19 @@ public partial class UserSettings : INotifyPropertyChanged
             if (mapResourceSpawnIconOpacity == clamped) return;
             mapResourceSpawnIconOpacity = clamped;
             OnPropertyChanged(nameof(MapResourceSpawnIconOpacity));
+        }
+    }
+
+    private MapResourceIconStyle mapResourceIconStyle = MapResourceIconStyle.Symbols;
+    public MapResourceIconStyle MapResourceIconStyle
+    {
+        get => mapResourceIconStyle;
+        set
+        {
+            var style = Enum.IsDefined(value) ? value : MapResourceIconStyle.Symbols;
+            if (mapResourceIconStyle == style) return;
+            mapResourceIconStyle = style;
+            OnPropertyChanged(nameof(MapResourceIconStyle));
         }
     }
 

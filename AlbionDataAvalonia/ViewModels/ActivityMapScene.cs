@@ -67,4 +67,5 @@ public sealed record ActivityMapScene(
     double ResourceClusterRadius = 16,
     double ResourceSpawnIconOpacity = 0.5,
     IReadOnlyList<ActivityWisp>? Wisps = null,
-    bool ImageUsesWorldCoordinates = false);
+    bool ImageUsesWorldCoordinates = false,
+    MapResourceIconStyle ResourceIconStyle = MapResourceIconStyle.Symbols);

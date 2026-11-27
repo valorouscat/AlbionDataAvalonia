@@ -381,6 +381,9 @@
                                         <StackPanel Spacing="10">
                                             <TextBlock Text="Resource icons" Classes="UiSectionTitle" />
                                             <TextBlock Text="Applies to seen resources and possible spawn spots." Classes="UiFine" TextWrapping="Wrap" />
+                                            <controls:FilterField Label="Style">
+                                                <ComboBox ItemsSource="{Binding ResourceIconStyleOptions}" SelectedItem="{Binding SelectedResourceIconStyle}" HorizontalAlignment="Stretch" AutomationProperties.Name="Resource icon style" />
+                                            </controls:FilterField>
                                             <StackPanel Spacing="4">
                                                 <TextBlock Text="Icon size" Classes="UiLabel" />
                                                 <controls:OptionSlider ItemsSource="{Binding IconSizeOptions}" SelectedItem="{Binding SelectedIconSize}" HorizontalAlignment="Stretch" AutomationProperties.Name="Icon size" ToolTip.Tip="Scale resource markers, labels and hover areas" />

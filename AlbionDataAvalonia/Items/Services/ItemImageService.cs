@@ -1,4 +1,5 @@
 using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Serilog;
 using System;
 using System.Collections.Concurrent;
@@ -53,6 +54,20 @@ public sealed class ItemImageService : IDisposable
     {
         try
         {
+            // Base resource art is bundled for offline map markers; enchanted items keep the normal image cache.
+            var name = key.ItemUniqueName.ToUpperInvariant();
+            var parts = name.Split('_');
+            if (key.Quality == 1 && parts.Length == 2 && parts[0].Length == 2 && parts[0][0] == 'T'
+                && parts[0][1] is >= '1' and <= '8' && parts[1] is "WOOD" or "ROCK" or "HIDE" or "FIBER" or "ORE")
+            {
+                var uri = new Uri($"avares://AlbionDataAvalonia/Assets/Resources/{name}.png");
+                if (AssetLoader.Exists(uri))
+                {
+                    using var stream = AssetLoader.Open(uri);
+                    return Bitmap.DecodeToWidth(stream, DecodedWidth, BitmapInterpolationMode.HighQuality);
+                }
+            }
+
             var cachedImage = await TryLoadFreshDiskCacheAsync(key);
             if (cachedImage is not null)
             {
