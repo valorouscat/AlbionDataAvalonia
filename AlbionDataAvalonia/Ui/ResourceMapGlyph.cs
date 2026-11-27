@@ -1,60 +1,49 @@
-using AlbionDataAvalonia.Activity;
-using AlbionDataAvalonia.Items;
 using Avalonia;
 using Avalonia.Media;
-using System;
 using System.Globalization;
 
 namespace AlbionDataAvalonia.Ui;
 
-/// <summary>The game's item tile at the actual resource position, with its own tier and enchantment artwork.</summary>
+/// <summary>A colored resource silhouette and explicit tier/enchantment on an opaque, compact plate.</summary>
 internal static class ResourceMapGlyph
 {
-    public const double HalfSize = 13;
-    public const double OuterHalfSize = 17;
+    public const double Width = 46;
+    public const double Height = 22;
+    public const double HalfWidth = Width / 2;
+    public const double HalfHeight = Height / 2;
+    public const double OuterHalfSize = HalfWidth + 2;
 
     public static void Draw(DrawingContext context, Point at, string family, int tier, int? enchantment,
-        bool mob, bool possible, Action loaded)
+        bool mob, bool possible)
     {
-        var box = new Rect(at.X - HalfSize, at.Y - HalfSize, HalfSize * 2, HalfSize * 2);
-        // A dark plate and outer tier frame remain distinct from the item's original enchantment border.
-        var frame = box.Inflate(2);
-        context.DrawRectangle(UiPalette.Brush("UiMapCountColor"),
-            UiPalette.Pen(UiPalette.Color("UiMapMarkerOutlineColor"), 4.5), frame, 4, 4);
-        context.DrawRectangle(null, UiPalette.Pen(ActivityPalette.ResourceTier(tier), 2.5), frame, 4, 4);
-        var image = tier > 0
-            ? LazyItemImage.ForDrawing(ActivityResourceNodePackets.ItemUniqueName(family, tier, enchantment ?? 0), 1, loaded)
-            : null;
-        if (image is not null) context.DrawImage(image, new Rect(image.Size), box);
-        else
-        {
-            context.DrawRectangle(UiPalette.Brush("UiMapCountColor"),
-                UiPalette.Pen(UiPalette.Color("UiMapMarkerOutlineColor"), 1), box, 3, 3);
-            var label = ChartDrawing.Text(tier > 0 ? $"{tier}.{enchantment ?? 0}" : "?", 9,
-                UiPalette.Color("UiTextColor"), FontWeight.SemiBold);
-            label.Draw(context, new Point(at.X - label.Width / 2, at.Y - label.Height / 2));
-        }
+        var box = new Rect(at.X - HalfWidth, at.Y - HalfHeight, Width, Height);
+        var ink = UiPalette.Color("UiMapResourceInkColor");
+        context.DrawRectangle(UiPalette.Brush("UiMapResourcePlateColor"),
+            UiPalette.Pen(UiPalette.Color("UiMapResourceEdgeColor"), 2), box, 4, 4);
+        context.DrawRectangle(UiPalette.Brush(ActivityPalette.ResourceTier(tier)), null,
+            new Rect(box.X + 1, box.Y + 4, 2, 14), 1, 1);
+        ResourceMapSymbol.Draw(context, new Rect(box.X + 5, box.Y + 3, 16, 16), family);
 
-        // Static candidates disclose no current enchantment. A question badge covers the tier when it is unknown.
-        if (possible)
-        {
-            var badge = new Rect(box.Left - 1, box.Top - 1, 10, 11);
-            context.DrawRectangle(UiPalette.Brush("UiMapCountColor"), null, badge, 2, 2);
-            var text = ChartDrawing.Text("?", 9, UiPalette.Color("UiTextColor"), FontWeight.Bold);
-            text.Draw(context, new Point(badge.Center.X - text.Width / 2, badge.Center.Y - text.Height / 2));
-        }
+        // A candidate never claims an observed enchantment; a mixed-tier spot also leaves its tier unknown.
+        var tierText = ChartDrawing.Text(tier > 0 ? tier.ToString(CultureInfo.InvariantCulture) : "?", 11, ink, FontWeight.SemiBold);
+        tierText.Draw(context, new Point(box.X + 24, at.Y - tierText.Height / 2));
+        var enchantText = ChartDrawing.Text(possible || enchantment is null ? ".?" : $".{enchantment.Value}", 11,
+            possible || enchantment is null || enchantment == 0
+                ? UiPalette.Color("UiMapResourceMutedColor") : ActivityPalette.Enchantment(enchantment.Value), FontWeight.SemiBold);
+        enchantText.Draw(context, new Point(box.X + 31, at.Y - enchantText.Height / 2));
+
         if (!mob) return;
-        var centre = new Point(box.Left + 2, box.Bottom - 2);
+        // An outlined diamond distinguishes living resource mobs without replacing their resource silhouette.
+        var centre = new Point(box.Left + 4, box.Bottom - 3);
         var diamond = new StreamGeometry();
         using (var path = diamond.Open())
         {
-            path.BeginFigure(new Point(centre.X, centre.Y - 4), true);
-            path.LineTo(new Point(centre.X + 4, centre.Y));
-            path.LineTo(new Point(centre.X, centre.Y + 4));
-            path.LineTo(new Point(centre.X - 4, centre.Y));
+            path.BeginFigure(new Point(centre.X, centre.Y - 2.5), true);
+            path.LineTo(new Point(centre.X + 2.5, centre.Y));
+            path.LineTo(new Point(centre.X, centre.Y + 2.5));
+            path.LineTo(new Point(centre.X - 2.5, centre.Y));
             path.EndFigure(true);
         }
-        context.DrawGeometry(UiPalette.Brush("UiMapCountColor"),
-            UiPalette.Pen(UiPalette.Color("UiMapMarkerEdgeColor"), 1), diamond);
+        context.DrawGeometry(UiPalette.Brush("UiMapResourcePlateColor"), UiPalette.Pen(ink, 1), diamond);
     }
 }

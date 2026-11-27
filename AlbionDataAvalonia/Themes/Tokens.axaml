@@ -143,14 +143,27 @@
     <Color x:Key="UiMapCountEdgeColor">#80FFFFFF</Color>
     <SolidColorBrush x:Key="UiTooltipBrush" Color="{StaticResource UiTooltipColor}" />
 
-    <!-- Resource family/filter colors and enchantment accents. Item markers carry tier/enchantment in their game art. -->
-    <Color x:Key="UiResourceWoodColor">#B98552</Color>
-    <Color x:Key="UiResourceStoneColor">#AFAAA0</Color>
-    <Color x:Key="UiResourceOreColor">#7FA7D9</Color>
-    <Color x:Key="UiResourceFiberColor">#D8CF6B</Color>
-    <Color x:Key="UiResourceHideColor">#D7836A</Color>
+    <!-- Resource family/filter colors and enchantment accents. Compact markers share these family colors. -->
+    <Color x:Key="UiResourceWoodColor">#C99A62</Color>
+    <Color x:Key="UiResourceStoneColor">#CAD2D8</Color>
+    <Color x:Key="UiResourceOreColor">#9ED8F1</Color>
+    <Color x:Key="UiResourceFiberColor">#92D6A1</Color>
+    <Color x:Key="UiResourceHideColor">#EDCA91</Color>
     <Color x:Key="UiResourceOtherColor">#8CC9A8</Color>
-    <!-- Resource item underlays follow the game's tier colors, independently of the item's enchantment frame. -->
+    <!-- Solid resource silhouettes: only a few facets remain legible at 16 px. -->
+    <Color x:Key="UiMapResourcePlateColor">#111820</Color>
+    <Color x:Key="UiMapResourceEdgeColor">#090E13</Color>
+    <Color x:Key="UiMapResourceInkColor">#F4F4EF</Color>
+    <Color x:Key="UiMapResourceMutedColor">#A7B1B9</Color>
+    <Color x:Key="UiMapWoodCutColor">#E4BD88</Color>
+    <Color x:Key="UiMapWoodGrainColor">#785332</Color>
+    <Color x:Key="UiMapStoneShadeColor">#8F9EA8</Color>
+    <Color x:Key="UiMapStoneFaceColor">#AEBCC7</Color>
+    <Color x:Key="UiMapFiberVeinColor">#4F9B65</Color>
+    <Color x:Key="UiMapHideFoldColor">#BA8E54</Color>
+    <Color x:Key="UiMapOreFacetColor">#4F91B0</Color>
+    <Color x:Key="UiMapOreGlintColor">#D8F4FA</Color>
+    <!-- Resource marker stripes follow the game's tier colors, independently of the enchantment label. -->
     <Color x:Key="UiMapTier1Color">#92979F</Color>
     <Color x:Key="UiMapTier2Color">#C7CBCF</Color>
     <Color x:Key="UiMapTier3Color">#63AF72</Color>
