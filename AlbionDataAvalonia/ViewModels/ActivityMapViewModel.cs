@@ -106,7 +106,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         selectedResourceSpawnTier = UiOptions.Nearest(ResourceTierOptions, settings.MapResourceSpawnMinTier);
         selectedLowerTiers = UiOptions.Nearest(LowerTierOptions, settings.MapResourceLowerTiers);
         selectedIconSize = UiOptions.Nearest(IconSizeOptions, settings.MapResourceIconSize);
-        selectedResourceIconStyle = UiOptions.Find(ResourceIconStyleOptions, settings.MapResourceIconStyle);
         selectedIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceIconOpacity);
         selectedSpawnIconOpacity = UiOptions.Nearest(IconOpacityOptions, settings.MapResourceSpawnIconOpacity);
         selectedClusterRadius = UiOptions.Nearest(ClusterRadiusOptions, settings.MapResourceClusterRadius);
@@ -132,8 +131,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
          new(new(2), ".2+"), new(new(2, true), ".2 only"), new(new(3), ".3+"), new(new(3, true), ".3 only"), new(new(4), ".4+"), new(new(4, true), ".4 only")];
     public IReadOnlyList<Option<int>> IconSizeOptions { get; } =
         [new(50, "50%"), new(75, "75%"), new(100, "100%"), new(125, "125%"), new(150, "150%"), new(200, "200%")];
-    public IReadOnlyList<Option<MapResourceIconStyle>> ResourceIconStyleOptions { get; } =
-        [new(MapResourceIconStyle.Symbols, "Symbols"), new(MapResourceIconStyle.ItemArt, "Item art"), new(MapResourceIconStyle.Classic, "Classic")];
     public IReadOnlyList<Option<int>> IconOpacityOptions { get; } =
         [new(25, "25%"), new(50, "50%"), new(75, "75%"), new(100, "100%")];
     public IReadOnlyList<Option<int>> ClusterRadiusOptions { get; } =
@@ -174,7 +171,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
     [ObservableProperty] private Option<int> selectedLowerTiers;
     [ObservableProperty] private IReadOnlyList<ActivityMapResourceTierFilterViewModel> resourceTierFilters = [];
     [ObservableProperty] private Option<int> selectedIconSize;
-    [ObservableProperty] private Option<MapResourceIconStyle> selectedResourceIconStyle;
     [ObservableProperty] private Option<int> selectedIconOpacity;
     [ObservableProperty] private Option<int> selectedSpawnIconOpacity;
     [ObservableProperty] private Option<int> selectedClusterRadius;
@@ -389,12 +385,6 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         Rebuild();
     }
 
-    partial void OnSelectedResourceIconStyleChanged(Option<MapResourceIconStyle> value)
-    {
-        settings.MapResourceIconStyle = value.Value;
-        Rebuild();
-    }
-
     partial void OnSelectedIconOpacityChanged(Option<int> value)
     {
         settings.MapResourceIconOpacity = value.Value;
@@ -565,7 +555,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             Turned(zone?.Zone?.Rooms ?? [], turns), Turned(zone?.Zone?.Outline ?? [], turns), ShowRoamingBosses ? sites.Actors.OrderBy(x => x.Kind == ActivityLiveActorKind.Boss).ThenBy(x => x.Tier).ToArray() : [],
             ShownHostiles(live.Hostiles, zone?.Zone), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
-            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps(), ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false, ResourceIconStyle: SelectedResourceIconStyle.Value);
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, Wisps: ShownWisps(), ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
     }
 
     // No one can attack the character in a blue zone, so a player there is no threat.
@@ -731,7 +721,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
             Layers, turns, ResourceSpawns: SpawnSpots(zone, option.RawMapId, option.Layout, option.LayoutTurns),
             Pois: ShownPois(Turned(zone?.Pois ?? [], turns)), Rooms: Turned(zone?.Zone?.Rooms ?? [], turns), Outline: Turned(zone?.Zone?.Outline ?? [], turns), ResourceIconScale: SelectedIconSize.Value / 100d,
             ResourceIconOpacity: SelectedIconOpacity.Value / 100d, ResourceClusterRadius: SelectedClusterRadius.Value,
-            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false, ResourceIconStyle: SelectedResourceIconStyle.Value);
+            ResourceSpawnIconOpacity: SelectedSpawnIconOpacity.Value / 100d, ImageUsesWorldCoordinates: zone?.Zone?.ImageUsesWorldCoordinates ?? false);
     }
 
     private static bool WaitingForInstanceOrientation(string rawMapId, int? turns) =>

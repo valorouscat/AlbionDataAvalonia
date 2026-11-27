@@ -4,8 +4,6 @@ using System.Linq;
 
 namespace AlbionDataAvalonia.Maps;
 
-public enum MapResourceIconStyle { Symbols, ItemArt, Classic }
-
 public readonly record struct MapPoint(double X, double Y);
 
 /// <summary>A connection to another zone, at its position in this zone's local coordinates. A Mists dungeon's exits
