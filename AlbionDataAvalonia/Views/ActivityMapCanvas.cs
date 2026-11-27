@@ -484,7 +484,7 @@ public sealed class ActivityMapCanvas : Control
         {
             var best = group.Nodes[0];
             var count = group.Nodes.Count;
-            const double radius = ResourceMapGlyph.HalfSize;
+            const double radius = ResourceMapGlyph.OuterHalfSize;
             var at = group.At;
             using var opacity = context.PushOpacity(scene.ResourceIconOpacity * (group.Nodes.Any(x => x.IsInView) ? 1 : 0.55));
             using var transform = context.PushTransform(ResourceIconTransform(at, scene.ResourceIconScale));
@@ -506,7 +506,7 @@ public sealed class ActivityMapCanvas : Control
         Matrix.CreateTranslation(-at.X, -at.Y) * Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(at.X, at.Y);
 
     private void AddResourceHit(Hit hit, ActivityMapScene scene) =>
-        hits.Add(hit with { Radius = (ResourceMapGlyph.HalfSize + 2) * scene.ResourceIconScale });
+        hits.Add(hit with { Radius = (ResourceMapGlyph.OuterHalfSize + 2) * scene.ResourceIconScale });
 
     // Living resources use the same exact item art as nodes, with a small diamond badge.
     private void DrawResourceMobs(DrawingContext context, ActivityMapScene scene, double scale)

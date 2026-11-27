@@ -17,6 +17,24 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="20" Spacing="24">
             <StackPanel Spacing="8">
+                <TextBlock Classes="UiTitle" Text="Resource tier frames" />
+                <TextBlock Classes="UiLabel" Text="Outer tier colors stay separate from the item icon's enchantment frame." />
+                <ItemsControl x:Name="TierSwatches">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="views:UiKitSwatch">
+                            <StackPanel Width="200" Orientation="Horizontal" Spacing="8" Margin="0,0,8,8">
+                                <Border Width="28" Height="28" CornerRadius="{DynamicResource UiRadiusControl}" Background="{Binding Brush}"
+                                        BorderBrush="{DynamicResource UiBorderBrush}" BorderThickness="1" />
+                                <TextBlock Classes="UiFine" Text="{Binding Key}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+            <StackPanel Spacing="8">
                 <TextBlock Classes="UiTitle" Text="Colors" />
                 <TextBlock Classes="UiLabel" Text="Every Color and brush token in Themes/Tokens.axaml." />
                 <ItemsControl x:Name="Swatches">

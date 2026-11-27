@@ -18,6 +18,7 @@ public partial class UiKitWindow : Window
         InitializeComponent();
         DataContext = this;
         Swatches.ItemsSource = ColorTokens().ToList();
+        TierSwatches.ItemsSource = ColorTokens().Where(token => token.Key.StartsWith("UiMapTier", System.StringComparison.Ordinal)).ToList();
     }
 
     public IReadOnlyList<Option<int>> Choices { get; } = [new(0, "First"), new(1, "Second"), new(2, "Third")];

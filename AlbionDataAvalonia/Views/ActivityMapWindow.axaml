@@ -283,7 +283,7 @@
                                                                 </DataTemplate>
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
-                                                        <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResourceMobs}" IsVisible="{Binding ShowResourceTier}" ToolTip.Tip="Also show the mobs near you that yield resources, such as hide animals and ore, wood, fiber and stone critters, as diamonds in their resource's color with the tier inside. They follow the mobs as they move.">
+                                                        <ToggleButton Classes="UiLegend" IsChecked="{Binding ShowResourceMobs}" IsVisible="{Binding ShowResourceTier}" ToolTip.Tip="Also show living resources, such as hide animals and ore, wood, fiber and stone critters. Their item icon has a tier-colored outer frame and a small diamond badge. They follow the mobs as they move.">
                                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                                 <Path Data="M5,0 L10,5 L5,10 L0,5 Z" Fill="{DynamicResource UiResourceHideBrush}" Stroke="{DynamicResource UiMarkerOutlineBrush}" StrokeThickness="1" VerticalAlignment="Center" />
                                                                 <TextBlock Text="Mobs" />
