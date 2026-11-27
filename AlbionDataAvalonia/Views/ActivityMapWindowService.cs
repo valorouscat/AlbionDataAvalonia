@@ -56,10 +56,24 @@ public sealed class ActivityMapWindowService
         host.Show();
     }
 
+    public void ShowFishing()
+    {
+        Show();
+        if (host.ViewModel is not { } model) return;
+        model.SelectedActivityIndex = 1;
+        model.SelectedModeIndex = 0;
+        model.LegendCollapsed = false;
+        if (model.IsOverlay) model.OverlayControlsVisible = true;
+    }
+
     public void ShowRun(Guid runId)
     {
         Show();
         host.ViewModel?.ExitOverlayCommand.Execute(null);
-        host.ViewModel?.ShowRun(runId);
+        if (host.ViewModel is { } model)
+        {
+            model.SelectedActivityIndex = 0;
+            model.ShowRun(runId);
+        }
     }
 }
