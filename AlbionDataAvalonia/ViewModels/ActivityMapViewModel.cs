@@ -130,7 +130,7 @@ public sealed partial class ActivityMapViewModel : ObservableObject, IDisposable
         [new(new(0), ".0+"), new(new(0, true), ".0 only"), new(new(1), ".1+"), new(new(1, true), ".1 only"),
          new(new(2), ".2+"), new(new(2, true), ".2 only"), new(new(3), ".3+"), new(new(3, true), ".3 only"), new(new(4), ".4+"), new(new(4, true), ".4 only")];
     public IReadOnlyList<Option<int>> IconSizeOptions { get; } =
-        Enumerable.Range(11, 34).Select(height => new Option<int>(height, $"{height} px")).ToArray();
+        Enumerable.Range(17, 52).Select(height => new Option<int>(height, $"{height} px")).ToArray();
     public IReadOnlyList<Option<int>> IconOpacityOptions { get; } =
         [new(25, "25%"), new(50, "50%"), new(75, "75%"), new(100, "100%")];
     public IReadOnlyList<Option<int>> SpawnIconOpacityOptions { get; } =

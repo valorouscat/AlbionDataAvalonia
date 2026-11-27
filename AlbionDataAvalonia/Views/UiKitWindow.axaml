@@ -18,7 +18,7 @@
         <StackPanel Margin="20" Spacing="24">
             <StackPanel Spacing="8">
                 <TextBlock Classes="UiTitle" Text="Resource tier accents" />
-                <TextBlock Classes="UiLabel" Text="Compact resource markers use a tier stripe and an explicit tier.enchantment label." />
+                <TextBlock Classes="UiLabel" Text="Square resource markers place the silhouette above separate tier and enchantment badges." />
                 <controls:ResourceMapSamples Height="150" />
                 <ItemsControl x:Name="TierSwatches">
                     <ItemsControl.ItemsPanel>
