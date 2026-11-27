@@ -11,11 +11,17 @@ namespace AlbionDataAvalonia.Ui;
 internal static class ResourceMapGlyph
 {
     public const double HalfSize = 13;
+    public const double OuterHalfSize = 17;
 
     public static void Draw(DrawingContext context, Point at, string family, int tier, int? enchantment,
         bool mob, bool possible, Action loaded)
     {
         var box = new Rect(at.X - HalfSize, at.Y - HalfSize, HalfSize * 2, HalfSize * 2);
+        // A dark plate and outer tier frame remain distinct from the item's original enchantment border.
+        var frame = box.Inflate(2);
+        context.DrawRectangle(UiPalette.Brush("UiMapCountColor"),
+            UiPalette.Pen(UiPalette.Color("UiMapMarkerOutlineColor"), 4.5), frame, 4, 4);
+        context.DrawRectangle(null, UiPalette.Pen(ActivityPalette.ResourceTier(tier), 2.5), frame, 4, 4);
         var image = tier > 0
             ? LazyItemImage.ForDrawing(ActivityResourceNodePackets.ItemUniqueName(family, tier, enchantment ?? 0), 1, loaded)
             : null;

@@ -52,7 +52,7 @@ public partial class ActivityMapWindow : Window
     {
         if (UiDispatch.Repost(() => ModelChanged(sender, e))) return;
         if (e.PropertyName is nameof(ActivityMapViewModel.IsOverlay) or nameof(ActivityMapViewModel.OverlayPinned)
-            or nameof(ActivityMapViewModel.OverlayOpacity) or nameof(ActivityMapViewModel.OverlayClickThrough)
+            or nameof(ActivityMapViewModel.OverlayClickThrough)
             or nameof(ActivityMapViewModel.OverlayControlsVisible)) ApplyOverlay();
         else if (e.PropertyName == nameof(ActivityMapViewModel.IsOverlayHidden))
         {
@@ -81,16 +81,16 @@ public partial class ActivityMapWindow : Window
             if (opened) RestorePlacement(viewModel.OverlayPlacement(overlay), overlay);
             else { Width = overlay ? 480 : 980; Height = overlay ? 480 : 700; }
         }
-        var nativeOpacity = false;
         if (opened && overlayPlatform is { } platform)
         {
-            nativeOpacity = platform.Configure(overlay, viewModel.OverlayOpacity,
+            // Window-wide alpha would fade icons with the map. The canvas composites those layers independently.
+            platform.Configure(overlay, 100,
                 viewModel.OverlayClickThrough && !viewModel.OverlayControlsVisible, out var passing, out var error);
             viewModel.OverlayShortcutsAvailable = platform.ShortcutsAvailable;
             viewModel.OverlayClicksPassThrough = passing;
             viewModel.OverlayError = error;
         }
-        MapContents.Opacity = overlay && !nativeOpacity ? viewModel.OverlayOpacity / 100d : 1;
+        MapContents.Opacity = 1;
         if (changedMode && !overlay && opened && IsVisible) Activate();
     }
 

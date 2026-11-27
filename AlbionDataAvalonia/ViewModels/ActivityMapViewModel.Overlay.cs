@@ -8,12 +8,15 @@ namespace AlbionDataAvalonia.ViewModels;
 public sealed partial class ActivityMapViewModel
 {
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowMapControls), nameof(ShowOverlayBar), nameof(OverlayShortcutHelp))]
+    [NotifyPropertyChangedFor(nameof(ShowMapControls), nameof(ShowOverlayBar), nameof(OverlayShortcutHelp), nameof(MapLayerOpacity), nameof(IconLayerOpacity))]
     private bool isOverlay;
     [ObservableProperty] private bool overlayPinned;
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(OverlayOpacityText))]
+    [NotifyPropertyChangedFor(nameof(OverlayOpacityText), nameof(MapLayerOpacity))]
     private int overlayOpacity = 75;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OverlayIconOpacityText), nameof(IconLayerOpacity))]
+    private int overlayIconOpacity = 100;
     [ObservableProperty] private bool overlayClickThrough;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowMapControls), nameof(ShowOverlayBar))]
@@ -33,6 +36,9 @@ public sealed partial class ActivityMapViewModel
     public bool ShowOverlayBar => IsOverlay && !OverlayClicksPassThrough;
     public bool SupportsOverlayClickThrough => OperatingSystem.IsWindows();
     public string OverlayOpacityText => $"{OverlayOpacity}%";
+    public string OverlayIconOpacityText => $"{OverlayIconOpacity}%";
+    public double MapLayerOpacity => IsOverlay ? OverlayOpacity / 100d : 1;
+    public double IconLayerOpacity => IsOverlay ? OverlayIconOpacity / 100d : 1;
     public bool HasOverlayError => OverlayError.Length > 0;
     public string OverlayShortcutHelp => !OperatingSystem.IsWindows()
         ? "Ctrl+Alt+M hides the overlay; Ctrl+Alt+O toggles overlay mode while the map has focus. Global shortcuts and click-through require Windows. A hidden map can be restored from Activity › Show map."
@@ -45,6 +51,7 @@ public sealed partial class ActivityMapViewModel
         IsOverlay = settings.MapOverlayEnabled;
         OverlayPinned = settings.MapOverlayPinned;
         OverlayOpacity = settings.MapOverlayOpacity;
+        OverlayIconOpacity = settings.MapOverlayIconOpacity;
         OverlayClickThrough = settings.MapOverlayClickThrough;
     }
 
@@ -61,6 +68,11 @@ public sealed partial class ActivityMapViewModel
         if (value != settings.MapOverlayOpacity) OverlayOpacity = settings.MapOverlayOpacity;
     }
     partial void OnOverlayClickThroughChanged(bool value) => settings.MapOverlayClickThrough = value;
+    partial void OnOverlayIconOpacityChanged(int value)
+    {
+        settings.MapOverlayIconOpacity = value;
+        if (value != settings.MapOverlayIconOpacity) OverlayIconOpacity = settings.MapOverlayIconOpacity;
+    }
 
     [RelayCommand] private void ToggleOverlay() => IsOverlay = !IsOverlay;
     [RelayCommand] private void ExitOverlay() { IsOverlay = false; IsOverlayHidden = false; }

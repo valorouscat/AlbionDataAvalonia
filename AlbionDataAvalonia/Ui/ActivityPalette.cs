@@ -74,6 +74,20 @@ public static class ActivityPalette
         _ => "UiResourceOtherColor"
     });
 
+    /// <summary>The outer frame of a resource item tile; separate from its own enchantment artwork.</summary>
+    public static Color ResourceTier(int tier) => UiPalette.Color(tier switch
+    {
+        1 => "UiMapTier1Color",
+        2 => "UiMapTier2Color",
+        3 => "UiMapTier3Color",
+        4 => "UiMapTier4Color",
+        5 => "UiMapTier5Color",
+        6 => "UiMapTier6Color",
+        7 => "UiMapTier7Color",
+        8 => "UiMapTier8Color",
+        _ => "UiMapCountEdgeColor"
+    });
+
     /// <summary>The ring of an enchanted resource, as the game colors .1 to .4.</summary>
     public static Color Enchantment(int level) => UiPalette.Color(level switch
     {
