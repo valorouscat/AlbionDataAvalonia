@@ -20,6 +20,9 @@ internal static class ResourceMapGlyph
         var ink = UiPalette.Color("UiMapResourceInkColor");
         context.DrawRectangle(UiPalette.Brush("UiMapResourcePlateColor"),
             UiPalette.Pen(UiPalette.Color("UiMapResourceEdgeColor"), 2), box, 4, 4);
+        // A full colored rim reads at a glance; only observed enchantments may claim a color.
+        if (!possible && enchantment is >= 1 and <= 4)
+            context.DrawRectangle(null, UiPalette.Pen(ActivityPalette.Enchantment(enchantment.Value), 2), box, 4, 4);
         context.DrawRectangle(UiPalette.Brush(ActivityPalette.ResourceTier(tier)), null,
             new Rect(box.X + 1, box.Y + 4, 2, 14), 1, 1);
         ResourceMapSymbol.Draw(context, new Rect(box.X + 5, box.Y + 3, 16, 16), family);
