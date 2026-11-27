@@ -12,6 +12,12 @@
 #define WinPCapInstallerFile "..\\bin\\Release\\net10.0-windows\\win-x64\\publish\\ThirdParty\\WinPcap_4_1_3.exe"
 #define WinPCapInstallerFilePath "ThirdParty\WinPcap_4_1_3.exe"
 
+; Testing installers may override this with ISCC /DMyAppCompression=lzma/fast.
+; Release workflows omit the override and keep the normal compression setting.
+#ifndef MyAppCompression
+  #define MyAppCompression "lzma"
+#endif
+
 [Setup]
 AppId={#MyAppId}
 AppName={#MyAppName}
@@ -23,7 +29,7 @@ DefaultGroupName={#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppIconFilePath}
 OutputDir={#MyAppOutputDir}
 OutputBaseFilename={#MyAppOutputBaseFilename}_v_{#MyAppVersion}
-Compression=lzma
+Compression={#MyAppCompression}
 SolidCompression=yes
 SetupIconFile={#MyAppIconFile}
 WizardStyle=modern
