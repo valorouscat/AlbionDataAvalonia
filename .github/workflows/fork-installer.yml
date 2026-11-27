@@ -56,7 +56,10 @@ jobs:
         uses: Minionguyjpro/Inno-Setup-Action@v1.2.7
         with:
           path: AlbionDataAvalonia.Desktop/pkg/inno.iss
-          options: /O+ /DMyAppCompression=lzma/fast
+          # The action passes each nonempty line as a separate compiler argument.
+          options: |
+            /O+
+            /DMyAppCompression=lzma/fast
 
       - uses: actions/upload-artifact@v4
         with:
