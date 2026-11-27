@@ -38,6 +38,19 @@ public partial class UserSettings
         }
     }
 
+    private int mapOverlayIconOpacity = 100;
+    public int MapOverlayIconOpacity
+    {
+        get => mapOverlayIconOpacity;
+        set
+        {
+            var next = Math.Clamp(value, 20, 100);
+            if (mapOverlayIconOpacity == next) return;
+            mapOverlayIconOpacity = next;
+            OnPropertyChanged(nameof(MapOverlayIconOpacity));
+        }
+    }
+
     private WindowPlacement? mapOverlayWindowPlacement;
     public WindowPlacement? MapOverlayWindowPlacement
     {

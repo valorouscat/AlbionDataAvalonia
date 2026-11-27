@@ -29,6 +29,12 @@ public sealed class ActivityMapCanvas : Control
 
     public static readonly StyledProperty<bool> FollowProperty =
         AvaloniaProperty.Register<ActivityMapCanvas, bool>(nameof(Follow), defaultBindingMode: BindingMode.TwoWay);
+    public static readonly StyledProperty<double> MapOpacityProperty =
+        AvaloniaProperty.Register<ActivityMapCanvas, double>(nameof(MapOpacity), 1,
+            coerce: (_, value) => double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1);
+    public static readonly StyledProperty<double> IconOpacityProperty =
+        AvaloniaProperty.Register<ActivityMapCanvas, double>(nameof(IconOpacity), 1,
+            coerce: (_, value) => double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 1);
 
     private static Color MarkerOutline => UiPalette.Color("UiMapMarkerOutlineColor");
     private static ImmutablePen OutlinePen => UiPalette.Pen(MarkerOutline, 1.4);
@@ -87,7 +93,7 @@ public sealed class ActivityMapCanvas : Control
 
     static ActivityMapCanvas()
     {
-        AffectsRender<ActivityMapCanvas>(SceneProperty, FollowProperty);
+        AffectsRender<ActivityMapCanvas>(SceneProperty, FollowProperty, MapOpacityProperty, IconOpacityProperty);
     }
 
     public ActivityMapCanvas()
@@ -109,6 +115,18 @@ public sealed class ActivityMapCanvas : Control
     {
         get => GetValue(FollowProperty);
         set => SetValue(FollowProperty, value);
+    }
+
+    public double MapOpacity
+    {
+        get => GetValue(MapOpacityProperty);
+        set => SetValue(MapOpacityProperty, value);
+    }
+
+    public double IconOpacity
+    {
+        get => GetValue(IconOpacityProperty);
+        set => SetValue(IconOpacityProperty, value);
     }
 
     public void ZoomBy(double factor) => ZoomAround(new Point(Bounds.Width / 2, Bounds.Height / 2), factor);
@@ -273,9 +291,13 @@ public sealed class ActivityMapCanvas : Control
     private void RenderMap(DrawingContext context)
     {
         var bounds = new Rect(Bounds.Size);
-        context.FillRectangle(UiPalette.Brush("UiMapBackgroundColor"), bounds);
         hits.Clear();
-        if (Scene is not { } scene || bounds.Width <= 0 || bounds.Height <= 0) return;
+        if (Scene is not { } scene || bounds.Width <= 0 || bounds.Height <= 0)
+        {
+            using var opacity = context.PushOpacity(MapOpacity);
+            context.FillRectangle(UiPalette.Brush("UiMapBackgroundColor"), bounds);
+            return;
+        }
 
         var size = ImageSize(scene);
         var shown = scene.IsLive ? Shown(Stopwatch.GetTimestamp()) : null;
@@ -284,44 +306,52 @@ public sealed class ActivityMapCanvas : Control
         drawnGlide = shown;
         drawnScale = scale;
 
-        if (scene.Image is { } worldImage && scene.ImageUsesWorldCoordinates) DrawWorldImage(context, scene, worldImage, scale);
-        else if (scene.Image is { } image)
+        using (PushLayerOpacity(context, bounds, MapOpacity))
         {
-            var origin = ToScreen(new Point(0, 0), scale);
-            var rect = new Rect(origin, new Size(size.Width * scale, size.Height * scale));
-            if (scene.ImageQuarterTurns % 4 == 0) context.DrawImage(image, new Rect(image.Size), rect);
-            else
+            context.FillRectangle(UiPalette.Brush("UiMapBackgroundColor"), bounds);
+            if (scene.Image is { } worldImage && scene.ImageUsesWorldCoordinates) DrawWorldImage(context, scene, worldImage, scale);
+            else if (scene.Image is { } image)
             {
-                // A turned Mists layout turns about the centre of its square minimap.
-                var centre = rect.Center;
-                using (context.PushTransform(Matrix.CreateTranslation(-centre.X, -centre.Y)
-                    * Matrix.CreateRotation(scene.ImageQuarterTurns * Math.PI / 2) * Matrix.CreateTranslation(centre.X, centre.Y)))
-                    context.DrawImage(image, new Rect(image.Size), rect);
+                var origin = ToScreen(new Point(0, 0), scale);
+                var rect = new Rect(origin, new Size(size.Width * scale, size.Height * scale));
+                if (scene.ImageQuarterTurns % 4 == 0) context.DrawImage(image, new Rect(image.Size), rect);
+                else
+                {
+                    // A turned Mists layout turns about the centre of its square minimap.
+                    var centre = rect.Center;
+                    using (context.PushTransform(Matrix.CreateTranslation(-centre.X, -centre.Y)
+                        * Matrix.CreateRotation(scene.ImageQuarterTurns * Math.PI / 2) * Matrix.CreateTranslation(centre.X, centre.Y)))
+                        context.DrawImage(image, new Rect(image.Size), rect);
+                }
             }
+            else DrawZoneOutline(context, scene, scale);
+            DrawFrame(context, scene, size, scale);
         }
-        else DrawZoneOutline(context, scene, scale);
-        DrawFrame(context, scene, size, scale);
 
-        if (scene.Layers.HasFlag(ActivityMapLayers.Features))
+        using (PushLayerOpacity(context, bounds, IconOpacity))
         {
-            DrawIcons(context, scene, scale);
-            DrawExits(context, scene, scale);
+            if (scene.Layers.HasFlag(ActivityMapLayers.Features))
+            {
+                DrawIcons(context, scene, scale);
+                DrawExits(context, scene, scale);
+            }
+
+            if (scene.Layers.HasFlag(ActivityMapLayers.ResourceSpawns)) DrawResourceSpawns(context, scene, scale);
+            if (scene.Layers.HasFlag(ActivityMapLayers.Pois)) DrawPois(context, scene, scale);
+            if (scene.Layers.HasFlag(ActivityMapLayers.Resources))
+            {
+                DrawResources(context, scene, scale);
+                DrawResourceMobs(context, scene, scale);
+            }
+
+            if (scene.Layers.HasFlag(ActivityMapLayers.RoamingBosses)) DrawRoamingBosses(context, scene, scale);
+            if (scene.IsLive && scene.Layers.HasFlag(ActivityMapLayers.Wisps)) DrawWisps(context, scene, scale);
+            if (scene.Layers.HasFlag(ActivityMapLayers.Path)) DrawPath(context, scene, scale);
+            DrawMarkers(context, scene, scale);
+            DrawPosition(context, scene, scale, shown);
+            if (scene.Layers.HasFlag(ActivityMapLayers.HostileAlert)) DrawHostileAlert(context, scene, scale, shown);
         }
 
-        if (scene.Layers.HasFlag(ActivityMapLayers.ResourceSpawns)) DrawResourceSpawns(context, scene, scale);
-        if (scene.Layers.HasFlag(ActivityMapLayers.Pois)) DrawPois(context, scene, scale);
-        if (scene.Layers.HasFlag(ActivityMapLayers.Resources))
-        {
-            DrawResources(context, scene, scale);
-            DrawResourceMobs(context, scene, scale);
-        }
-
-        if (scene.Layers.HasFlag(ActivityMapLayers.RoamingBosses)) DrawRoamingBosses(context, scene, scale);
-        if (scene.IsLive && scene.Layers.HasFlag(ActivityMapLayers.Wisps)) DrawWisps(context, scene, scale);
-        if (scene.Layers.HasFlag(ActivityMapLayers.Path)) DrawPath(context, scene, scale);
-        DrawMarkers(context, scene, scale);
-        DrawPosition(context, scene, scale, shown);
-        if (scene.Layers.HasFlag(ActivityMapLayers.HostileAlert)) DrawHostileAlert(context, scene, scale, shown);
         // Icons are asked for only for the tooltip on view; one that arrives later redraws it.
         if (hovered is { } hover && pointer is { } at)
             ChartDrawing.DrawTooltip(context, bounds, at, hover.Title,
@@ -329,6 +359,12 @@ public sealed class ActivityMapCanvas : Control
                     : LazyItemImage.ForDrawing(row.UniqueName, row.Quality, InvalidateVisual), row.Text, row.Value, row.Mob)).ToArray(),
                 hover.Lines);
     }
+
+    // A mask composites a layer once. PushOpacity alone fades overlapping primitives separately, which would make
+    // the background plus terrain, or a multi-part icon, more opaque than the percentage selected by the user.
+    private static IDisposable? PushLayerOpacity(DrawingContext context, Rect bounds, double opacity) =>
+        opacity >= 1 ? null : context.PushOpacityMask(
+            UiPalette.Brush(UiPalette.WithAlpha(UiPalette.Color("UiMapMarkerEdgeColor"), opacity * 255)), bounds);
 
     // This texture's UV origin represents BoundsMin, with positive world X/Z to the right/down.
     // Project its three corners just like POIs, including the instance turn; no guessed pixel offsets.
